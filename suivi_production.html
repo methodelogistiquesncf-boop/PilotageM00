@@ -14,24 +14,23 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
 .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
 
-/* TOP BAR */
 .topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .date-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; }
 .date-box label { font-size: 12px; color: var(--muted); }
 .date-box input { border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; }
-.btn-print { margin-left: auto; padding: 6px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.btn-print { padding: 6px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
 .btn-print:hover { background: var(--surface2); }
 
-/* STATUS FIREBASE */
 #fbStatus { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
 #fbStatus.ok   { background: #d4f0de; color: #1a7a3c; }
 #fbStatus.err  { background: #fdeaea; color: #c03030; }
 #fbStatus.sync { background: #fff3cd; color: #856404; }
 
-/* WRAPPER SCROLLABLE */
-.wrap { overflow-x: auto; }
+#userBadge { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); margin-left: auto; }
+#userEmail { background: #e8e5df; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+#btnLogout { padding: 4px 10px; font-size: 11px; border: 1px solid #f0cece; border-radius: 6px; background: #fdeaea; color: #c03030; cursor: pointer; font-family: inherit; }
 
-/* TABLE */
+.wrap { overflow-x: auto; }
 table { border-collapse: collapse; background: var(--surface); border: 2px solid #555; }
 th, td { border: 1px solid #888; padding: 0; vertical-align: top; }
 
@@ -42,7 +41,7 @@ input.th-j { font-size: 11px; color: var(--muted); font-weight: 600; }
 input.th-header-input:focus { background: #f0f4ff; }
 
 .th-top.synth-col { background: #d4dff0; position: relative; }
-.th-top.synth-col::after { content: 'SYNTHÈSE'; display: block; font-size: 9px; letter-spacing: .08em; color: var(--accent); margin-top: 2px; }
+.th-top.synth-col::after { content: 'SYNTHESE'; display: block; font-size: 9px; letter-spacing: .08em; color: var(--accent); margin-top: 2px; }
 .btn-del-col { display: block; margin: 3px auto 0; padding: 1px 6px; font-size: 10px; border: 1px solid #f0cece; border-radius: 3px; background: #fdeaea; color: #c03030; cursor: pointer; }
 .btn-del-col:hover { background: #fbd5d5; }
 
@@ -79,7 +78,6 @@ input.score:focus { outline: 2px solid var(--accent); border-color: transparent;
 input.loco { font-size: 12px; font-weight: 700; color: #1a4fa0; border: none; background: transparent; outline: none; width: 100%; padding: 2px 4px; }
 input.loco:focus { background: #f0f4ff; border-radius: 3px; }
 
-/* BOTTOM BAR */
 .bottombar { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .btn { padding: 7px 16px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-family: inherit; }
 .btn-ghost { background: var(--surface); color: var(--muted); }
@@ -89,7 +87,6 @@ input.loco:focus { background: #f0f4ff; border-radius: 3px; }
 .btn-danger { background: var(--surface); color: #c03030; border-color: #f0cece; }
 .btn-danger:hover { background: #fdeaea; }
 
-/* MODALE GRAPHIQUE */
 .chart-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
 .chart-modal-overlay.open { display: flex; }
 .chart-modal { background: #fff; border-radius: 10px; padding: 24px; width: min(900px, 95vw); box-shadow: 0 8px 40px rgba(0,0,0,.3); position: relative; }
@@ -112,14 +109,18 @@ canvas#approsChart { width: 100% !important; }
 <div class="topbar">
   <div>
     <h1>Tableau de Suivi de Production</h1>
-    <div class="subtitle">Mise à jour quotidienne — synchronisation Firebase</div>
+    <div class="subtitle">Mise a jour quotidienne - synchronisation Firebase</div>
   </div>
   <div class="date-box">
     <label for="dateJour">Date de base :</label>
     <input type="date" id="dateJour">
   </div>
-  <span id="fbStatus" class="sync">⏳ Connexion…</span>
-  <button class="btn-print btn" onclick="window.print()">🖨 Imprimer</button>
+  <span id="fbStatus" class="sync">&#9203; Connexion...</span>
+  <div id="userBadge" style="display:none">
+    <span id="userEmail"></span>
+    <button id="btnLogout" onclick="doLogout()">Deconnexion</button>
+  </div>
+  <button class="btn-print btn" onclick="window.print()">Imprimer</button>
 </div>
 
 <div class="wrap">
@@ -134,33 +135,26 @@ canvas#approsChart { width: 100% !important; }
 </div>
 
 <div class="bottombar">
-  <button class="btn btn-danger"  onclick="resetAll()">↺ Réinitialiser</button>
-  <button class="btn btn-ghost"   onclick="exportCSV()">⬇ Exporter CSV</button>
-  <button class="btn btn-primary" onclick="addSynthCol()">➕ Ajouter colonne synthèse</button>
-  <button class="btn btn-primary" onclick="saveFirebase()">☁️ Sauvegarder</button>
-  <button class="btn btn-ghost"   onclick="openChart()">📊 Graphique APPROS</button>
+  <button class="btn btn-danger"  onclick="resetAll()">Reinitialiser</button>
+  <button class="btn btn-ghost"   onclick="exportCSV()">Exporter CSV</button>
+  <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthese</button>
+  <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
+  <button class="btn btn-ghost"   onclick="openChart()">Graphique APPROS</button>
 </div>
 
-<!-- MODALE GRAPHIQUE -->
 <div class="chart-modal-overlay" id="chartOverlay">
   <div class="chart-modal">
-    <button class="close-btn" onclick="closeChart()">✕</button>
-    <h2>Taux de réalisation APPROS — par journée</h2>
+    <button class="close-btn" onclick="closeChart()">&#x2715;</button>
+    <h2>Taux de realisation APPROS - par journee</h2>
     <canvas id="approsChart" height="320"></canvas>
   </div>
 </div>
 
-<!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-//  ⚙️  CONFIGURATION FIREBASE — remplace par tes propres valeurs
-//  Va sur https://console.firebase.google.com → Ton projet → ⚙️ Paramètres
-//  → Tes applications → Config SDK Web
-// ════════════════════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
   authDomain: "pilotagem00.firebaseapp.com",
@@ -170,16 +164,11 @@ const FIREBASE_CONFIG = {
   appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
 };
 
-// Clé du document Firestore (1 document = 1 état complet)
-// Tu peux utiliser "default" ou un identifiant de session/équipe
 const FIRESTORE_DOC = "suivi/default";
 
-// ════════════════════════════════════════════════════════════════════════════
-//  DONNÉES & CONFIG
-// ════════════════════════════════════════════════════════════════════════════
 const ENGINS_CONFIG = [
-  { id:'p18', defaultLabel:'V16 P18', sections:['APPROS','PIÈCES DÉPOSÉES'] },
-  { id:'p26', defaultLabel:'V16 P26', sections:['APPROS','PIÈCES DÉPOSÉES'] },
+  { id:'p18', defaultLabel:'V16 P18', sections:['APPROS','PIECES DEPOSEES'] },
+  { id:'p26', defaultLabel:'V16 P26', sections:['APPROS','PIECES DEPOSEES'] },
 ];
 const D_FIXED = 4;
 
@@ -190,264 +179,206 @@ let synthCols = [];
 let db = null;
 let saveTimer = null;
 
-// ════════════════════════════════════════════════════════════════════════════
-//  AUTH HELPERS
-// ════════════════════════════════════════════════════════════════════════════
-function showUserBadge(email) {
-  // Insérer le badge si pas déjà présent
-  if (document.getElementById('userBadge')) return;
-  const badge = document.createElement('div');
-  badge.id = 'userBadge';
-  badge.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:11px;color:#7a776f;margin-left:auto;';
-  badge.innerHTML = \`
-    <span style="background:#e8e5df;padding:3px 10px;border-radius:10px;font-weight:600;">👤 \${email}</span>
-    <button onclick="doLogout()" style="padding:4px 10px;font-size:11px;border:1px solid #f0cece;border-radius:6px;background:#fdeaea;color:#c03030;cursor:pointer;font-family:inherit;">Déconnexion</button>
-  \`;
-  // Insérer avant le bouton imprimer
-  const btnPrint = document.querySelector('.btn-print');
-  btnPrint.parentNode.insertBefore(badge, btnPrint);
-  btnPrint.style.marginLeft = '0';
-}
+// AUTH
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+
+auth.onAuthStateChanged(function(user) {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+  document.getElementById('userEmail').textContent = '👤 ' + user.email;
+  document.getElementById('userBadge').style.display = 'flex';
+  db = firebase.firestore();
+  setStatus('sync', 'Chargement...');
+  loadFirebase();
+});
 
 function doLogout() {
-  firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  FIREBASE INIT
-// ════════════════════════════════════════════════════════════════════════════
-function initFirebase() {
-  try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-
-    // ── PROTECTION AUTH : rediriger si non connecté ──
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = 'login.html';
-        return;
-      }
-      // Afficher l'email de l'utilisateur + bouton déconnexion
-      showUserBadge(user.email);
-      // Lancer le chargement Firestore seulement si connecté
-      setStatus('sync', '⏳ Chargement…');
-      loadFirebase();
-    });
-    return; // onAuthStateChanged prend la main
-  } catch(e) {
-    setStatus('err', '❌ Config Firebase manquante');
-    console.error('Firebase init error:', e);
-    // Fallback localStorage
-    loadLocal();
-    finishBoot();
-  }
+  auth.signOut().then(function() { window.location.href = 'login.html'; });
 }
 
 function setStatus(type, msg) {
-  const el = document.getElementById('fbStatus');
+  var el = document.getElementById('fbStatus');
   el.className = type;
   el.textContent = msg;
 }
 
 async function loadFirebase() {
   try {
-    const [col, doc] = FIRESTORE_DOC.split('/');
-    const snap = await db.collection(col).doc(doc).get();
+    var parts = FIRESTORE_DOC.split('/');
+    var snap = await db.collection(parts[0]).doc(parts[1]).get();
     if (snap.exists) {
-      const data = snap.data();
+      var data = snap.data();
       if (data.S)           S           = data.S;
       if (data.headersData) headersData = data.headersData;
       if (data.enginLabels) enginLabels = data.enginLabels;
       if (data.synthCols)   synthCols   = data.synthCols;
       if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
-      setStatus('ok', '✅ Synchronisé');
+      setStatus('ok', 'Synchronise');
     } else {
-      setStatus('ok', '✅ Nouveau document');
+      setStatus('ok', 'Nouveau document');
     }
   } catch(e) {
-    setStatus('err', '❌ Erreur lecture Firebase');
+    setStatus('err', 'Erreur lecture Firebase');
     console.error(e);
-    // Fallback localStorage
     loadLocal();
   }
   finishBoot();
 }
 
 async function saveFirebase() {
-  const payload = {
-    S,
-    headersData,
-    enginLabels,
-    synthCols,
+  var payload = {
+    S: S,
+    headersData: headersData,
+    enginLabels: enginLabels,
+    synthCols: synthCols,
     dateJour: document.getElementById('dateJour').value,
     savedAt: new Date().toISOString()
   };
-
-  // Toujours sauvegarder en localStorage aussi (backup)
   localStorage.setItem('sp_backup', JSON.stringify(payload));
-
-  if (!db) {
-    setStatus('err', '❌ Firebase non connecté');
-    return;
-  }
+  if (!db) { setStatus('err', 'Firebase non connecte'); return; }
   try {
-    setStatus('sync', '💾 Sauvegarde…');
-    const [col, doc] = FIRESTORE_DOC.split('/');
-    await db.collection(col).doc(doc).set(payload);
-    setStatus('ok', '✅ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR'));
+    setStatus('sync', 'Sauvegarde...');
+    var parts = FIRESTORE_DOC.split('/');
+    await db.collection(parts[0]).doc(parts[1]).set(payload);
+    setStatus('ok', 'Sauvegarde ' + new Date().toLocaleTimeString('fr-FR'));
   } catch(e) {
-    setStatus('err', '❌ Erreur sauvegarde');
+    setStatus('err', 'Erreur sauvegarde');
     console.error(e);
   }
 }
 
-// Auto-save 3s après la dernière modification
 function scheduleAutoSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveFirebase(), 3000);
-  setStatus('sync', '✏️ Modifications en cours…');
+  saveTimer = setTimeout(function() { saveFirebase(); }, 3000);
+  setStatus('sync', 'Modifications en cours...');
 }
 
-// Fallback localStorage
 function loadLocal() {
   try {
-    const bk = localStorage.getItem('sp_backup');
+    var bk = localStorage.getItem('sp_backup');
     if (!bk) return;
-    const data = JSON.parse(bk);
+    var data = JSON.parse(bk);
     if (data.S)           S           = data.S;
     if (data.headersData) headersData = data.headersData;
     if (data.enginLabels) enginLabels = data.enginLabels;
     if (data.synthCols)   synthCols   = data.synthCols;
     if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
-  } catch(e) { console.error('loadLocal error:', e); }
+  } catch(e) { console.error(e); }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  INIT DONNÉES
-// ════════════════════════════════════════════════════════════════════════════
 function init() {
-  S = {};
-  enginLabels = {};
-  ENGINS_CONFIG.forEach(e => {
+  S = {}; enginLabels = {};
+  ENGINS_CONFIG.forEach(function(e) {
     enginLabels[e.id] = e.defaultLabel;
     S[e.id] = { loco: Array(D_FIXED).fill('') };
-    e.sections.forEach(s => {
-      S[e.id][s] = Array.from({length: D_FIXED}, () => ({note:'',score:'',dot:null}));
+    e.sections.forEach(function(s) {
+      S[e.id][s] = Array.from({length: D_FIXED}, function() { return {note:'',score:'',dot:null}; });
     });
   });
   headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0','J-1','J-2','J-3'] };
 }
 
 function makeSynthColData() {
-  const col = { id: 'sc_' + Date.now(), date: '', jour: '', enginData: {} };
-  ENGINS_CONFIG.forEach(e => {
+  var col = { id: 'sc_' + Date.now(), date: '', jour: '', enginData: {} };
+  ENGINS_CONFIG.forEach(function(e) {
     col.enginData[e.id] = { loco: '' };
-    e.sections.forEach(s => { col.enginData[e.id][s] = { note:'', dot:null, score:'' }; });
+    e.sections.forEach(function(s) { col.enginData[e.id][s] = { note:'', dot:null, score:'' }; });
   });
   return col;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  DATES
-// ════════════════════════════════════════════════════════════════════════════
 function fmt(date, offset) {
-  const d = new Date(date);
+  var d = new Date(date);
   d.setDate(d.getDate() - offset);
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
 }
 
 function setDatesFromBase() {
-  const v = document.getElementById('dateJour').value;
-  if(!v) return;
-  const base = new Date(v+'T00:00:00');
-  for(let i=0; i<D_FIXED; i++) headersData.dates[i] = fmt(base, i);
+  var v = document.getElementById('dateJour').value;
+  if (!v) return;
+  var base = new Date(v+'T00:00:00');
+  for (var i=0; i<D_FIXED; i++) headersData.dates[i] = fmt(base, i);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  BUILD
-// ════════════════════════════════════════════════════════════════════════════
 function build() { buildHeader(); buildBody(); }
 
 function buildHeader() {
-  const row = document.getElementById('headerRow');
-  while(row.children.length > 1) row.removeChild(row.lastChild);
-
-  for(let i=0; i<D_FIXED; i++) {
-    const th = document.createElement('th');
+  var row = document.getElementById('headerRow');
+  while (row.children.length > 1) row.removeChild(row.lastChild);
+  for (var i=0; i<D_FIXED; i++) {
+    var th = document.createElement('th');
     th.className = 'th-top';
-    const inpDate = makeInput('th-header-input th-date', headersData.dates[i], 'Date', v => { headersData.dates[i]=v; scheduleAutoSave(); });
-    const inpJ    = makeInput('th-header-input th-j',    headersData.jours[i], 'Jour', v => { headersData.jours[i]=v; scheduleAutoSave(); });
-    th.appendChild(inpDate); th.appendChild(inpJ);
+    th.appendChild(makeInput('th-header-input th-date', headersData.dates[i], 'Date', makeUpdater(headersData.dates, i)));
+    th.appendChild(makeInput('th-header-input th-j',    headersData.jours[i], 'Jour', makeJourUpdater(i)));
     row.appendChild(th);
   }
-
-  synthCols.forEach(col => {
-    const th = document.createElement('th');
+  synthCols.forEach(function(col) {
+    var th = document.createElement('th');
     th.className = 'th-top synth-col';
-    const inpDate = makeInput('th-header-input th-date', col.date, 'Date', v => { col.date=v; scheduleAutoSave(); });
-    const inpJ    = makeInput('th-header-input th-j',    col.jour, 'Jour', v => { col.jour=v; scheduleAutoSave(); });
-    const delBtn = document.createElement('button');
+    th.appendChild(makeInput('th-header-input th-date', col.date, 'Date', function(v){ col.date=v; scheduleAutoSave(); }));
+    th.appendChild(makeInput('th-header-input th-j',    col.jour, 'Jour', function(v){ col.jour=v; scheduleAutoSave(); }));
+    var delBtn = document.createElement('button');
     delBtn.className = 'btn-del-col';
-    delBtn.textContent = '✕ Supprimer';
-    delBtn.onclick = () => { synthCols = synthCols.filter(c=>c.id!==col.id); build(); scheduleAutoSave(); };
-    th.appendChild(inpDate); th.appendChild(inpJ); th.appendChild(delBtn);
+    delBtn.textContent = 'X Supprimer';
+    (function(c){ delBtn.onclick = function(){ synthCols = synthCols.filter(function(x){ return x.id!==c.id; }); build(); scheduleAutoSave(); }; })(col);
+    th.appendChild(delBtn);
     row.appendChild(th);
   });
 }
 
-function buildBody() {
-  const tb = document.getElementById('tbody');
-  tb.innerHTML = '';
+function makeUpdater(arr, idx) { return function(v){ arr[idx]=v; scheduleAutoSave(); }; }
+function makeJourUpdater(idx) { return function(v){ headersData.jours[idx]=v; scheduleAutoSave(); }; }
 
-  ENGINS_CONFIG.forEach(e => {
+function buildBody() {
+  var tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  ENGINS_CONFIG.forEach(function(e) {
     // Ligne ENGIN
-    const rEngin = document.createElement('tr');
-    rEngin.className = 'row-engin';
-    const tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN';
-    rEngin.appendChild(tdLbl);
-    for(let d=0; d<D_FIXED; d++) {
-      const td = document.createElement('td'); td.className = 'loco-cell';
+    var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
+    var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
+    for (var d=0; d<D_FIXED; d++) {
+      var td = document.createElement('td'); td.className = 'loco-cell';
       td.appendChild(makeLoco_fixed(e.id, d)); rEngin.appendChild(td);
     }
-    synthCols.forEach(col => {
-      const td = document.createElement('td'); td.className = 'loco-cell'; td.style.background='#d4dff0';
+    synthCols.forEach(function(col) {
+      var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background='#d4dff0';
       td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
     });
     tb.appendChild(rEngin);
 
-    // Ligne libellé
-    const rTitle = document.createElement('tr'); rTitle.className = 'row-label';
-    const tdT = document.createElement('td'); tdT.className = 'label';
+    // Ligne libelle
+    var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
+    var tdT = document.createElement('td'); tdT.className = 'label';
     tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
-    for(let d=0; d<D_FIXED; d++) { const td=document.createElement('td'); td.className='data-cell'; rTitle.appendChild(td); }
-    synthCols.forEach(() => { const td=document.createElement('td'); td.className='data-cell synth-cell'; rTitle.appendChild(td); });
+    for (var d2=0; d2<D_FIXED; d2++) { var td2=document.createElement('td'); td2.className='data-cell'; rTitle.appendChild(td2); }
+    synthCols.forEach(function(){ var td=document.createElement('td'); td.className='data-cell synth-cell'; rTitle.appendChild(td); });
     tb.appendChild(rTitle);
 
     // Sections
-    e.sections.forEach(s => {
-      // Ligne note
-      const rNote = document.createElement('tr'); rNote.className = 'row-label';
-      const tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s;
-      rNote.appendChild(tdSL);
-      for(let d=0; d<D_FIXED; d++) {
-        const td = document.createElement('td'); td.className = 'data-cell';
-        td.appendChild(makeNote_fixed(e.id, s, d)); rNote.appendChild(td);
+    e.sections.forEach(function(s) {
+      var rNote = document.createElement('tr'); rNote.className = 'row-label';
+      var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
+      for (var d3=0; d3<D_FIXED; d3++) {
+        var td3 = document.createElement('td'); td3.className = 'data-cell';
+        td3.appendChild(makeNote_fixed(e.id, s, d3)); rNote.appendChild(td3);
       }
-      synthCols.forEach(col => {
-        const td = document.createElement('td'); td.className = 'data-cell synth-cell';
+      synthCols.forEach(function(col) {
+        var td = document.createElement('td'); td.className = 'data-cell synth-cell';
         td.appendChild(makeNote_synth(col, e.id, s)); rNote.appendChild(td);
       });
       tb.appendChild(rNote);
 
-      // Ligne score
-      const rScore = document.createElement('tr'); rScore.className = 'row-score';
-      const tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
-      for(let d=0; d<D_FIXED; d++) {
-        const td = document.createElement('td');
-        td.appendChild(makeScoreInner_fixed(e.id, s, d)); rScore.appendChild(td);
+      var rScore = document.createElement('tr'); rScore.className = 'row-score';
+      var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
+      for (var d4=0; d4<D_FIXED; d4++) {
+        var td4 = document.createElement('td');
+        td4.appendChild(makeScoreInner_fixed(e.id, s, d4)); rScore.appendChild(td4);
       }
-      synthCols.forEach(col => {
-        const td = document.createElement('td'); td.className = 'synth-cell';
+      synthCols.forEach(function(col) {
+        var td = document.createElement('td'); td.className = 'synth-cell';
         td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
       });
       tb.appendChild(rScore);
@@ -455,198 +386,183 @@ function buildBody() {
   });
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  FACTORIES
-// ════════════════════════════════════════════════════════════════════════════
 function makeInput(cls, val, placeholder, onInput) {
-  const inp = document.createElement('input');
+  var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
-  inp.oninput = e => onInput(e.target.value);
+  inp.oninput = function(e) { onInput(e.target.value); };
   return inp;
 }
 
 function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 
 function makeLoco_fixed(eid, d) {
-  const inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin…'; inp.value=S[eid].loco[d];
-  inp.oninput = () => { S[eid].loco[d]=inp.value; scheduleAutoSave(); };
+  var inp = document.createElement('input');
+  inp.className='loco'; inp.type='text'; inp.placeholder='N engin...'; inp.value=S[eid].loco[d];
+  (function(ei,di){ inp.oninput = function(){ S[ei].loco[di]=inp.value; scheduleAutoSave(); }; })(eid,d);
   return inp;
 }
 function makeLoco_synth(col, eid) {
-  const inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin…'; inp.value=col.enginData[eid].loco;
-  inp.oninput = () => { col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
+  var inp = document.createElement('input');
+  inp.className='loco'; inp.type='text'; inp.placeholder='N engin...'; inp.value=col.enginData[eid].loco;
+  inp.oninput = function(){ col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
   return inp;
 }
-
 function makeNote_fixed(eid, s, d) {
-  const ta = document.createElement('textarea');
-  ta.className='note'; ta.placeholder='Remarque…'; ta.value=S[eid][s][d].note;
-  ta.oninput = () => { S[eid][s][d].note=ta.value; autoResize(ta); scheduleAutoSave(); };
-  requestAnimationFrame(() => autoResize(ta));
+  var ta = document.createElement('textarea');
+  ta.className='note'; ta.placeholder='Remarque...'; ta.value=S[eid][s][d].note;
+  (function(ei,si,di){ ta.oninput = function(){ S[ei][si][di].note=ta.value; autoResize(ta); scheduleAutoSave(); }; })(eid,s,d);
+  requestAnimationFrame(function(){ autoResize(ta); });
   return ta;
 }
 function makeNote_synth(col, eid, s) {
-  const ta = document.createElement('textarea');
-  ta.className='note'; ta.placeholder='Remarque…'; ta.value=col.enginData[eid][s].note;
-  ta.oninput = () => { col.enginData[eid][s].note=ta.value; autoResize(ta); scheduleAutoSave(); };
-  requestAnimationFrame(() => autoResize(ta));
+  var ta = document.createElement('textarea');
+  ta.className='note'; ta.placeholder='Remarque...'; ta.value=col.enginData[eid][s].note;
+  ta.oninput = function(){ col.enginData[eid][s].note=ta.value; autoResize(ta); scheduleAutoSave(); };
+  requestAnimationFrame(function(){ autoResize(ta); });
   return ta;
 }
-
 function makeEnginLabelInput(eid) {
-  const inp = document.createElement('input');
+  var inp = document.createElement('input');
   inp.className='engin-label-input'; inp.type='text'; inp.value=enginLabels[eid]||'';
-  inp.oninput = () => { enginLabels[eid]=inp.value; scheduleAutoSave(); };
+  inp.oninput = function(){ enginLabels[eid]=inp.value; scheduleAutoSave(); };
   return inp;
 }
 
 function makeDot(getVal, setVal, color) {
-  const btn = document.createElement('button');
+  var btn = document.createElement('button');
   btn.className = 'dot-btn ' + (getVal()===color ? color : 'off');
   btn.title = color==='green'?'OK':'NOK';
-  btn.setAttribute('aria-label', color==='green'?'Marquer OK':'Marquer NOK');
-  btn.onclick = () => { setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
+  btn.setAttribute('aria-label', color==='green'?'OK':'NOK');
+  btn.onclick = function(){ setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
   return btn;
 }
 
 function makeScoreInner_fixed(eid, s, d) {
-  const inner = document.createElement('div'); inner.className = 'score-inner';
-  inner.appendChild(makeDot(() => S[eid][s][d].dot, v => { S[eid][s][d].dot=v; }, 'green'));
-  inner.appendChild(makeDot(() => S[eid][s][d].dot, v => { S[eid][s][d].dot=v; }, 'red'));
-  const inp = document.createElement('input');
-  inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[eid][s][d].score;
-  inp.oninput = () => { S[eid][s][d].score=inp.value; scheduleAutoSave(); };
-  inner.appendChild(inp);
+  var inner = document.createElement('div'); inner.className = 'score-inner';
+  (function(ei,si,di){
+    inner.appendChild(makeDot(function(){ return S[ei][si][di].dot; }, function(v){ S[ei][si][di].dot=v; }, 'green'));
+    inner.appendChild(makeDot(function(){ return S[ei][si][di].dot; }, function(v){ S[ei][si][di].dot=v; }, 'red'));
+    var inp = document.createElement('input');
+    inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[ei][si][di].score;
+    inp.oninput = function(){ S[ei][si][di].score=inp.value; scheduleAutoSave(); };
+    inner.appendChild(inp);
+  })(eid,s,d);
   return inner;
 }
 function makeScoreInner_synth(col, eid, s) {
-  const data = col.enginData[eid][s];
-  const inner = document.createElement('div'); inner.className = 'score-inner';
-  inner.appendChild(makeDot(() => data.dot, v => { data.dot=v; }, 'green'));
-  inner.appendChild(makeDot(() => data.dot, v => { data.dot=v; }, 'red'));
-  const inp = document.createElement('input');
+  var data = col.enginData[eid][s];
+  var inner = document.createElement('div'); inner.className = 'score-inner';
+  inner.appendChild(makeDot(function(){ return data.dot; }, function(v){ data.dot=v; }, 'green'));
+  inner.appendChild(makeDot(function(){ return data.dot; }, function(v){ data.dot=v; }, 'red'));
+  var inp = document.createElement('input');
   inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=data.score;
-  inp.oninput = () => { data.score=inp.value; scheduleAutoSave(); };
+  inp.oninput = function(){ data.score=inp.value; scheduleAutoSave(); };
   inner.appendChild(inp);
   return inner;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  ACTIONS
-// ════════════════════════════════════════════════════════════════════════════
 function addSynthCol() { synthCols.push(makeSynthColData()); build(); scheduleAutoSave(); }
 
 function resetAll() {
-  if(!confirm('Réinitialiser toutes les données ?')) return;
+  if (!confirm('Reinitialiser toutes les donnees ?')) return;
   init(); synthCols = []; setDatesFromBase(); build(); scheduleAutoSave();
 }
 
 function exportCSV() {
-  const rows = [['Engin','Section','Jour','Date','N° Engin','Remarque','Score','Statut']];
-  ENGINS_CONFIG.forEach(e => {
-    e.sections.forEach(s => {
-      for(let d=0; d<D_FIXED; d++) {
-        const c = S[e.id][s][d];
+  var rows = [['Engin','Section','Jour','Date','N Engin','Remarque','Score','Statut']];
+  ENGINS_CONFIG.forEach(function(e) {
+    e.sections.forEach(function(s) {
+      for (var d=0; d<D_FIXED; d++) {
+        var c = S[e.id][s][d];
         rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, headersData.dates[d]||'', S[e.id].loco[d]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
       }
     });
   });
-  synthCols.forEach((col,ci) => {
-    ENGINS_CONFIG.forEach(e => {
-      e.sections.forEach(s => {
-        const data = col.enginData[e.id][s];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthèse '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
+  synthCols.forEach(function(col, ci) {
+    ENGINS_CONFIG.forEach(function(e) {
+      e.sections.forEach(function(s) {
+        var data = col.enginData[e.id][s];
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthese '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
       });
     });
   });
-  const csv = '\ufeff' + rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  var csv = '\ufeff' + rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
   a.href=url; a.download='suivi_prod_'+(document.getElementById('dateJour').value||'export')+'.csv';
   a.click(); URL.revokeObjectURL(url);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  GRAPHIQUE APPROS
-// ════════════════════════════════════════════════════════════════════════════
+// GRAPHIQUE
 function parseScore(str) {
   if (!str || !str.trim()) return null;
-  const m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
+  var m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
   if (!m) return null;
-  const num = parseFloat(m[1].replace(',','.')), den = parseFloat(m[2].replace(',','.'));
+  var num = parseFloat(m[1].replace(',','.')), den = parseFloat(m[2].replace(',','.'));
   if (den===0) return null;
-  return { num, den };
+  return { num:num, den:den };
 }
 
 function buildChartData() {
-  const cols = [];
-  for(let d=0; d<D_FIXED; d++) {
-    cols.push({ label: headersData.dates[d]||headersData.jours[d]||('J-'+d), getScore: (eid,sec) => S[eid][sec][d].score });
+  var cols = [];
+  for (var d=0; d<D_FIXED; d++) {
+    (function(di){
+      cols.push({ label: headersData.dates[di]||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][di].score; } });
+    })(d);
   }
-  synthCols.forEach(col => {
-    cols.push({ label: col.date||col.jour||'Synthèse', getScore: (eid,sec) => col.enginData[eid][sec].score });
+  synthCols.forEach(function(col) {
+    cols.push({ label: col.date||col.jour||'Synthese', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
   });
-  const labels=[], values=[];
-  cols.forEach(col => {
-    let totalNum=0, totalDen=0, hasData=false;
-    ENGINS_CONFIG.forEach(e => {
-      const p = parseScore(col.getScore(e.id,'APPROS'));
-      if(p) { totalNum+=p.num; totalDen+=p.den; hasData=true; }
+  var labels=[], values=[];
+  cols.forEach(function(col) {
+    var totalNum=0, totalDen=0, hasData=false;
+    ENGINS_CONFIG.forEach(function(e) {
+      var p = parseScore(col.getScore(e.id,'APPROS'));
+      if (p) { totalNum+=p.num; totalDen+=p.den; hasData=true; }
     });
     labels.push(col.label);
     values.push(hasData && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
   });
-  return { labels, values };
+  return { labels:labels, values:values };
 }
 
 function openChart()  { document.getElementById('chartOverlay').classList.add('open'); drawChart(); }
 function closeChart() { document.getElementById('chartOverlay').classList.remove('open'); }
-document.getElementById('chartOverlay').addEventListener('click', function(e) { if(e.target===this) closeChart(); });
+document.getElementById('chartOverlay').addEventListener('click', function(e) { if (e.target===this) closeChart(); });
 
 function drawChart() {
-  const { labels, values } = buildChartData();
-  const canvas = document.getElementById('approsChart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 800, H = 320;
+  var data = buildChartData();
+  var labels = data.labels, values = data.values;
+  var canvas = document.getElementById('approsChart');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.offsetWidth || 800, H = 320;
   canvas.width = W; canvas.height = H;
-  const PAD = { top:30, right:30, bottom:50, left:55 };
-  const cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
+  var PAD = { top:30, right:30, bottom:50, left:55 };
+  var cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-  const n = labels.length;
-  if(n===0) { ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center'; ctx.fillText('Aucune donnée APPROS (format X/Y requis)',W/2,H/2); return; }
-
-  // Grille
-  for(let pct=0; pct<=100; pct+=10) {
-    const y = PAD.top+cH-(pct/100)*cH;
+  var n = labels.length;
+  if (n===0) { ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center'; ctx.fillText('Aucune donnee APPROS (format X/Y requis)',W/2,H/2); return; }
+  for (var pct=0; pct<=100; pct+=10) {
+    var y = PAD.top+cH-(pct/100)*cH;
     ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+cW,y); ctx.stroke();
     ctx.fillStyle='#888'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='right';
     ctx.fillText(pct+'%', PAD.left-6, y+4);
   }
-  // Labels X
-  const step = cW/Math.max(n-1,1);
+  var step = cW/Math.max(n-1,1);
   ctx.fillStyle='#555'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='center';
-  labels.forEach((lbl,i) => { const x = n===1?PAD.left+cW/2:PAD.left+i*step; ctx.fillText(lbl, x, H-PAD.bottom+18); });
-  // Axes
+  labels.forEach(function(lbl,i){ var x = n===1?PAD.left+cW/2:PAD.left+i*step; ctx.fillText(lbl, x, H-PAD.bottom+18); });
   ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top+cH); ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
-  // Points
-  const pts = values.map((v,i) => {
-    if(v===null) return null;
-    return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v };
-  });
-  // Courbe
+  var pts = values.map(function(v,i){ if(v===null) return null; return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v:v }; });
   ctx.strokeStyle='#f5a623'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
-  ctx.beginPath(); let started=false;
-  pts.forEach(pt => { if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
+  ctx.beginPath(); var started=false;
+  pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
   ctx.stroke();
-  // Points + labels
-  pts.forEach(pt => {
+  pts.forEach(function(pt){
     if(!pt) return;
     ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2); ctx.fillStyle='#f5a623'; ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
@@ -655,19 +571,15 @@ function drawChart() {
   });
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-//  BOOT
-// ════════════════════════════════════════════════════════════════════════════
 function finishBoot() {
-  if(!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
+  if (!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
   build();
-  document.getElementById('dateJour').addEventListener('change', () => { setDatesFromBase(); build(); });
+  document.getElementById('dateJour').addEventListener('change', function(){ setDatesFromBase(); build(); });
 }
 
-const now = new Date();
+var now = new Date();
 document.getElementById('dateJour').value = now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
 init();
-initFirebase();
 </script>
 </body>
 </html>
