@@ -116,12 +116,18 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-auth.onAuthStateChanged(function(user) {
-  if (!user) { window.location.href = 'login.html'; return; }
-  initTable();
-});
+// Afficher le tableau immédiatement, sans attendre l'auth
+initTable();
+
+// L'auth est quand même vérifiée pour l'injection (si connecté, on utilise les credentials)
+// Pas de redirection forcée : cette page peut fonctionner en standalone
 
 async function injecter() {
+  setStatus('sync', '⏳ Connexion Firebase...');
+  // Si pas d'utilisateur connecté, on tente une connexion anonyme
+  if (!auth.currentUser) {
+    try { await auth.signInAnonymously(); } catch(e) { /* ignore, on tente quand même */ }
+  }
   setStatus('sync', '⏳ Lecture Firebase...');
 
   // Lire l'historique existant
