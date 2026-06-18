@@ -134,7 +134,7 @@ canvas.chart-canvas { width: 100% !important; }
 <div class="topbar">
   <div>
     <h1>Tableau de Suivi de Production</h1>
-    <div class="subtitle">Mise à jour quotidienne</div>
+    <div class="subtitle">Mise à jour quotidienne — synchronisation Firebase</div>
   </div>
   <div class="date-box">
     <label for="dateJour">Date de base :</label>
@@ -166,6 +166,7 @@ canvas.chart-canvas { width: 100% !important; }
   <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   <button class="btn btn-ghost"   onclick="openChart()">Graphique APPROS</button>
+  <button class="btn btn-primary" onclick="passerJourSuivant()" style="background:#22a050;border-color:#1a7a3c">&#9654; Jour suivant</button>
 </div>
 
 <!-- Modal Graphique -->
@@ -780,6 +781,50 @@ function drawChart() {
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
+
+// ─── ROTATION JOUR SUIVANT ───────────────────────────────────────────────────
+function passerJourSuivant() {
+  var dateActuelle = document.getElementById("dateJour").value;
+  if (!dateActuelle) { alert("Veuillez definir une date de base."); return; }
+  if (!confirm("Passer au jour suivant ?\nJ-3 sera effacee, les colonnes glissent d'un jour.")) return;
+
+  // Sauvegarder J0 dans historique avant rotation
+  var entree = { date: dateActuelle, savedAt: new Date().toISOString(), engins: {} };
+  ENGINS_CONFIG.forEach(function(e) {
+    entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[0] || "") : "" };
+    e.sections.forEach(function(sec) {
+      var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][0] : { score:"", dot:null };
+      entree.engins[e.id][sec] = { score: cell.score || "", dot: cell.dot || null };
+    });
+  });
+  historique[dateActuelle] = entree;
+
+  // Rotation des donnees : J0->J1, J1->J2, J2->J3, J3 efface
+  ENGINS_CONFIG.forEach(function(e) {
+    // Loco
+    S[e.id].loco[3] = S[e.id].loco[2];
+    S[e.id].loco[2] = S[e.id].loco[1];
+    S[e.id].loco[1] = S[e.id].loco[0];
+    S[e.id].loco[0] = "";
+    // Sections
+    e.sections.forEach(function(sec) {
+      S[e.id][sec][3] = S[e.id][sec][2];
+      S[e.id][sec][2] = S[e.id][sec][1];
+      S[e.id][sec][1] = S[e.id][sec][0];
+      S[e.id][sec][0] = { note: "", score: "", dot: null };
+    });
+  });
+
+  // Rotation des dates : avancer la date de base d'un jour
+  var d = new Date(dateActuelle + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  var newDate = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+  document.getElementById("dateJour").value = newDate;
+  setDatesFromBase();
+
+  build();
+  saveFirebase();
+}
 function finishBoot() {
   if (!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
   build();
