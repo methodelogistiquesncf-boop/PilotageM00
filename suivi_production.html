@@ -664,23 +664,16 @@ function buildChartData_historique() {
 }
 
 function computeChartSeries(cols) {
-  // Une série par engin + une série totale
   var series = {};
-  ENGINS_CONFIG.forEach(function(e) {
-    series[e.id] = { label: enginLabels[e.id]||e.defaultLabel, values: [] };
-  });
-  series['total'] = { label: 'Total', values: [] };
-
+  series["total"] = { label: "Total APPROS", values: [] };
   var labels = cols.map(function(col) { return col.label; });
-
   cols.forEach(function(col) {
     var totalNum=0, totalDen=0, totalHas=false;
     ENGINS_CONFIG.forEach(function(e) {
-      var p = parseScore(col.getScore(e.id,'APPROS'));
-      if (p) { series[e.id].values.push(Math.round((p.num/p.den)*1000)/10); totalNum+=p.num; totalDen+=p.den; totalHas=true; }
-      else    { series[e.id].values.push(null); }
+      var p = parseScore(col.getScore(e.id,"APPROS"));
+      if (p) { totalNum+=p.num; totalDen+=p.den; totalHas=true; }
     });
-    series['total'].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
+    series["total"].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
   });
 
   return { labels:labels, series:series };
@@ -753,8 +746,8 @@ function drawChart() {
       return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v:v };
     });
 
-    ctx.strokeStyle=color; ctx.lineWidth=key==='total'?2.5:1.8;
-    if (key !== 'total') { ctx.setLineDash([5,3]); } else { ctx.setLineDash([]); }
+    ctx.strokeStyle=color; ctx.lineWidth=2.5;
+    ctx.setLineDash([]);
     ctx.lineJoin='round'; ctx.lineCap='round';
     ctx.beginPath(); var started=false;
     pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
@@ -763,10 +756,10 @@ function drawChart() {
 
     pts.forEach(function(pt) {
       if (!pt) return;
-      ctx.beginPath(); ctx.arc(pt.x,pt.y,key==='total'?4.5:3.5,0,Math.PI*2);
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2);
       ctx.fillStyle=color; ctx.fill();
       ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-      if (key==='total') {
+      if (true) {
         ctx.fillStyle='#1a1917'; ctx.font='bold 10px Segoe UI,sans-serif'; ctx.textAlign='center';
         ctx.fillText(pt.v+'%', pt.x, pt.y-9);
       }
