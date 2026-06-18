@@ -221,10 +221,17 @@ const ENGINS_CONFIG = [
 ];
 const D_FIXED = 4;
 
+// ─── PRINCIPE DE ROTATION ─────────────────────────────────────────────────
+// S[eid][section][p] où p = position PHYSIQUE de colonne (0..3), FIXE, ne bouge jamais.
+// colOrder[d] = position physique affichée à l'emplacement visuel d (0=J0,1=J-1,2=J-2,3=J-3).
+// "Jour suivant" ne touche AUCUNE valeur : il tourne colOrder et efface seulement
+// la position physique qui devient la nouvelle J0 (= l'ancienne J-3).
+
 let S = {};
 let headersData = { dates: [], jours: [] };
 let enginLabels = {};
 let synthCols = [];
+let colOrder = [0,1,2,3]; // colOrder[visuel] = position physique
 let historique = {}; // { "2025-06-03": { date, engins: { p18: { loco, APPROS:{score,dot}, 'PIECES DEPOSEES':{score,dot} }, ... } } }
 let db = null;
 let saveTimer = null;
@@ -265,6 +272,7 @@ async function loadFirebase() {
       if (data.enginLabels) enginLabels = data.enginLabels;
       if (data.synthCols)   synthCols   = data.synthCols;
       if (data.historique)  historique  = data.historique;
+      if (data.colOrder)    colOrder    = data.colOrder;
       if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
       setStatus('ok', '✓ Synchronisé');
     } else {
@@ -282,13 +290,14 @@ async function loadFirebase() {
 async function saveFirebase() {
   var dateJour = document.getElementById('dateJour').value;
 
-  // Construire l'entrée historique du jour (J0 = index 0 = jour courant)
+  // Construire l'entrée historique du jour (position physique de J0 = colOrder[0])
   if (dateJour) {
+    var p0 = colOrder[0];
     var entree = { date: dateJour, savedAt: new Date().toISOString(), engins: {} };
     ENGINS_CONFIG.forEach(function(e) {
-      entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[0] || '') : '' };
+      entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[p0] || '') : '' };
       e.sections.forEach(function(sec) {
-        var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][0] : { score:'', dot:null };
+        var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][p0] : { score:'', dot:null };
         entree.engins[e.id][sec] = { score: cell.score || '', dot: cell.dot || null };
       });
     });
@@ -301,6 +310,7 @@ async function saveFirebase() {
     enginLabels: enginLabels,
     synthCols: synthCols,
     historique: historique,
+    colOrder: colOrder,
     dateJour: dateJour,
     savedAt: new Date().toISOString()
   };
@@ -334,6 +344,7 @@ function loadLocal() {
     if (data.enginLabels) enginLabels = data.enginLabels;
     if (data.synthCols)   synthCols   = data.synthCols;
     if (data.historique)  historique  = data.historique;
+    if (data.colOrder)    colOrder    = data.colOrder;
     if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
   } catch(e) { console.error(e); }
 }
@@ -349,6 +360,7 @@ function init() {
     });
   });
   headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0','J-1','J-2','J-3'] };
+  colOrder = [0,1,2,3];
 }
 
 function makeSynthColData() {
@@ -366,6 +378,7 @@ function fmt(date, offset) {
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
 }
 
+// headersData.dates/jours sont indexés par position VISUELLE (0=J0,1=J-1,2=J-2,3=J-3)
 function setDatesFromBase() {
   var v = document.getElementById('dateJour').value;
   if (!v) return;
@@ -379,11 +392,11 @@ function build() { buildHeader(); buildBody(); }
 function buildHeader() {
   var row = document.getElementById('headerRow');
   while (row.children.length > 1) row.removeChild(row.lastChild);
-  for (var i=0; i<D_FIXED; i++) {
+  for (var d=0; d<D_FIXED; d++) {
     var th = document.createElement('th');
     th.className = 'th-top';
-    th.appendChild(makeInput('th-header-input th-date', headersData.dates[i], 'Date', makeUpdater(headersData.dates, i)));
-    th.appendChild(makeInput('th-header-input th-j',    headersData.jours[i], 'Jour', makeJourUpdater(i)));
+    th.appendChild(makeInput('th-header-input th-date', headersData.dates[d], 'Date', makeUpdater(headersData.dates, d)));
+    th.appendChild(makeInput('th-header-input th-j',    headersData.jours[d], 'Jour', makeJourUpdater(d)));
     row.appendChild(th);
   }
   synthCols.forEach(function(col) {
@@ -411,7 +424,7 @@ function buildBody() {
     var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
     for (var d=0; d<D_FIXED; d++) {
       var td = document.createElement('td'); td.className = 'loco-cell';
-      td.appendChild(makeLoco_fixed(e.id, d)); rEngin.appendChild(td);
+      td.appendChild(makeLoco_fixed(e.id, colOrder[d])); rEngin.appendChild(td);
     }
     synthCols.forEach(function(col) {
       var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background='#d4dff0';
@@ -431,7 +444,7 @@ function buildBody() {
       var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
       for (var d3=0; d3<D_FIXED; d3++) {
         var td3 = document.createElement('td'); td3.className = 'data-cell';
-        td3.appendChild(makeNote_fixed(e.id, s, d3)); rNote.appendChild(td3);
+        td3.appendChild(makeNote_fixed(e.id, s, colOrder[d3])); rNote.appendChild(td3);
       }
       synthCols.forEach(function(col) {
         var td = document.createElement('td'); td.className = 'data-cell synth-cell';
@@ -443,7 +456,7 @@ function buildBody() {
       var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
       for (var d4=0; d4<D_FIXED; d4++) {
         var td4 = document.createElement('td');
-        td4.appendChild(makeScoreInner_fixed(e.id, s, d4)); rScore.appendChild(td4);
+        td4.appendChild(makeScoreInner_fixed(e.id, s, colOrder[d4])); rScore.appendChild(td4);
       }
       synthCols.forEach(function(col) {
         var td = document.createElement('td'); td.className = 'synth-cell';
@@ -455,6 +468,8 @@ function buildBody() {
 }
 
 // ─── HELPERS DOM ─────────────────────────────────────────────────────────────
+// NB: dans les fonctions "_fixed", le paramètre reçu est désormais une POSITION
+// PHYSIQUE (déjà résolue via colOrder par l'appelant), pas une position visuelle.
 function makeInput(cls, val, placeholder, onInput) {
   var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
@@ -463,10 +478,10 @@ function makeInput(cls, val, placeholder, onInput) {
 }
 function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 
-function makeLoco_fixed(eid, d) {
+function makeLoco_fixed(eid, p) {
   var inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=S[eid].loco[d];
-  (function(ei,di){ inp.oninput = function(){ S[ei].loco[di]=inp.value; scheduleAutoSave(); }; })(eid,d);
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=S[eid].loco[p];
+  (function(ei,pi){ inp.oninput = function(){ S[ei].loco[pi]=inp.value; scheduleAutoSave(); }; })(eid,p);
   return inp;
 }
 function makeLoco_synth(col, eid) {
@@ -475,10 +490,10 @@ function makeLoco_synth(col, eid) {
   inp.oninput = function(){ col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
   return inp;
 }
-function makeNote_fixed(eid, s, d) {
+function makeNote_fixed(eid, s, p) {
   var ta = document.createElement('textarea');
-  ta.className='note'; ta.placeholder='Remarque...'; ta.value=S[eid][s][d].note;
-  (function(ei,si,di){ ta.oninput = function(){ S[ei][si][di].note=ta.value; autoResize(ta); scheduleAutoSave(); }; })(eid,s,d);
+  ta.className='note'; ta.placeholder='Remarque...'; ta.value=S[eid][s][p].note;
+  (function(ei,si,pi){ ta.oninput = function(){ S[ei][si][pi].note=ta.value; autoResize(ta); scheduleAutoSave(); }; })(eid,s,p);
   requestAnimationFrame(function(){ autoResize(ta); });
   return ta;
 }
@@ -503,16 +518,16 @@ function makeDot(getVal, setVal, color) {
   btn.onclick = function(){ setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
   return btn;
 }
-function makeScoreInner_fixed(eid, s, d) {
+function makeScoreInner_fixed(eid, s, p) {
   var inner = document.createElement('div'); inner.className = 'score-inner';
-  (function(ei,si,di){
-    inner.appendChild(makeDot(function(){ return S[ei][si][di].dot; }, function(v){ S[ei][si][di].dot=v; }, 'green'));
-    inner.appendChild(makeDot(function(){ return S[ei][si][di].dot; }, function(v){ S[ei][si][di].dot=v; }, 'red'));
+  (function(ei,si,pi){
+    inner.appendChild(makeDot(function(){ return S[ei][si][pi].dot; }, function(v){ S[ei][si][pi].dot=v; }, 'green'));
+    inner.appendChild(makeDot(function(){ return S[ei][si][pi].dot; }, function(v){ S[ei][si][pi].dot=v; }, 'red'));
     var inp = document.createElement('input');
-    inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[ei][si][di].score;
-    inp.oninput = function(){ S[ei][si][di].score=inp.value; scheduleAutoSave(); };
+    inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[ei][si][pi].score;
+    inp.oninput = function(){ S[ei][si][pi].score=inp.value; scheduleAutoSave(); };
     inner.appendChild(inp);
-  })(eid,s,d);
+  })(eid,s,p);
   return inner;
 }
 function makeScoreInner_synth(col, eid, s) {
@@ -540,8 +555,9 @@ function exportCSV() {
   ENGINS_CONFIG.forEach(function(e) {
     e.sections.forEach(function(s) {
       for (var d=0; d<D_FIXED; d++) {
-        var c = S[e.id][s][d];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, headersData.dates[d]||'', S[e.id].loco[d]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
+        var p = colOrder[d];
+        var c = S[e.id][s][p];
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, headersData.dates[d]||'', S[e.id].loco[p]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
       }
     });
   });
@@ -641,7 +657,8 @@ function buildChartData_courant() {
   var cols = [];
   for (var d=0; d<D_FIXED; d++) {
     (function(di){
-      cols.push({ label: headersData.dates[di]||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][di].score; } });
+      var p = colOrder[di];
+      cols.push({ label: headersData.dates[di]||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
     })(d);
   }
   synthCols.forEach(function(col) {
@@ -780,42 +797,40 @@ function drawChart() {
   });
 }
 
-// ─── BOOT ─────────────────────────────────────────────────────────────────────
-
 // ─── ROTATION JOUR SUIVANT ───────────────────────────────────────────────────
+// Les VALEURS ne bougent jamais entre positions physiques. Seule la correspondance
+// "position visuelle -> position physique" (colOrder) tourne, ainsi que les dates.
 function passerJourSuivant() {
   var dateActuelle = document.getElementById("dateJour").value;
   if (!dateActuelle) { alert("Veuillez definir une date de base."); return; }
-  if (!confirm("Passer au jour suivant ?\nJ-3 sera effacee, les colonnes glissent d'un jour.")) return;
+  if (!confirm("Passer au jour suivant ?\nLa colonne J-3 sera effacee et deviendra le nouveau J0.")) return;
 
-  // Sauvegarder J0 dans historique avant rotation
+  // Sauvegarder J0 dans historique avant rotation (position physique colOrder[0])
+  var p0 = colOrder[0];
   var entree = { date: dateActuelle, savedAt: new Date().toISOString(), engins: {} };
   ENGINS_CONFIG.forEach(function(e) {
-    entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[0] || "") : "" };
+    entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[p0] || "") : "" };
     e.sections.forEach(function(sec) {
-      var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][0] : { score:"", dot:null };
+      var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][p0] : { score:"", dot:null };
       entree.engins[e.id][sec] = { score: cell.score || "", dot: cell.dot || null };
     });
   });
   historique[dateActuelle] = entree;
 
-  // Rotation des donnees : J0->J1, J1->J2, J2->J3, J3 efface
+  // La position physique qui était J-3 (colOrder[3]) devient la nouvelle J0 : on l'efface
+  var pNew0 = colOrder[3];
   ENGINS_CONFIG.forEach(function(e) {
-    // Loco
-    S[e.id].loco[3] = S[e.id].loco[2];
-    S[e.id].loco[2] = S[e.id].loco[1];
-    S[e.id].loco[1] = S[e.id].loco[0];
-    S[e.id].loco[0] = "";
-    // Sections
+    S[e.id].loco[pNew0] = "";
     e.sections.forEach(function(sec) {
-      S[e.id][sec][3] = S[e.id][sec][2];
-      S[e.id][sec][2] = S[e.id][sec][1];
-      S[e.id][sec][1] = S[e.id][sec][0];
-      S[e.id][sec][0] = { note: "", score: "", dot: null };
+      S[e.id][sec][pNew0] = { note: "", score: "", dot: null };
     });
   });
 
-  // Rotation des dates : avancer la date de base d'un jour
+  // Rotation de la correspondance visuel->physique : l'ancienne J-3 devient J0,
+  // l'ancienne J0 devient J-1, l'ancienne J-1 devient J-2, l'ancienne J-2 devient J-3.
+  colOrder = [colOrder[3], colOrder[0], colOrder[1], colOrder[2]];
+
+  // Avancer la date de base d'un jour -> recalcule les dates affichées (par position visuelle)
   var d = new Date(dateActuelle + "T00:00:00");
   d.setDate(d.getDate() + 1);
   var newDate = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
@@ -825,6 +840,8 @@ function passerJourSuivant() {
   build();
   saveFirebase();
 }
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
 function finishBoot() {
   if (!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
   build();
