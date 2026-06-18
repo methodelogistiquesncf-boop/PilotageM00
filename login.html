@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion — Suivi de Production</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f2f0eb;
+  --surface: #ffffff;
+  --border: #c8c4bc;
+  --text: #1a1917;
+  --muted: #7a776f;
+  --accent: #1a4fa0;
+  --accent-dark: #143d80;
+  --error: #c03030;
+  --error-bg: #fdeaea;
+  --success: #1a7a3c;
+  --success-bg: #d4f0de;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* CARD */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+
+/* LOGO / TITRE */
+.brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.brand-icon {
+  width: 52px; height: 52px;
+  background: var(--accent);
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.brand-icon svg { width: 28px; height: 28px; fill: #fff; }
+.brand h1 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.brand p  { font-size: 12px; color: var(--muted); }
+
+/* TABS */
+.tabs {
+  display: flex;
+  background: #f2f0eb;
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 28px;
+  gap: 3px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+
+/* FORM */
+.form-group { margin-bottom: 16px; }
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus { border-color: var(--accent); }
+input.error { border-color: var(--error); }
+
+/* PASSWORD WRAPPER */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 40px; }
+.pw-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px;
+}
+.pw-toggle:hover { color: var(--text); }
+.pw-toggle svg { width: 16px; height: 16px; display: block; }
+
+/* BOUTON SUBMIT */
+.btn-submit {
+  width: 100%;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-submit:hover  { background: var(--accent-dark); }
+.btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+/* SPINNER */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+}
+.spinner.visible { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* MESSAGES */
+.msg {
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  margin-bottom: 16px;
+  display: none;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+.msg.visible { display: flex; }
+.msg.err  { background: var(--error-bg);   color: var(--error);   border: 1px solid #f5c6c6; }
+.msg.ok   { background: var(--success-bg); color: var(--success); border: 1px solid #a8dbb8; }
+
+/* RESET PASSWORD LINK */
+.forgot {
+  text-align: right;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+.forgot a {
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+.forgot a:hover { color: var(--accent); text-decoration: underline; }
+
+/* DIVIDER */
+.divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 20px 0 16px;
+  position: relative;
+}
+.divider::before, .divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 20px);
+  height: 1px;
+  background: var(--border);
+}
+.divider::before { left: 0; }
+.divider::after  { right: 0; }
+
+/* FOOTER */
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* PANEL RÉINITIALISATION */
+#resetPanel { display: none; }
+#resetPanel.visible { display: block; }
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: 20px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- BRAND -->
+  <div class="brand">
+    <div class="brand-icon">
+      <!-- icône tableau / grille -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/>
+      </svg>
+    </div>
+    <h1>Suivi de Production</h1>
+    <p>Connectez-vous pour accéder au tableau</p>
+  </div>
+
+  <!-- TABS CONNEXION / INSCRIPTION -->
+  <div class="tabs" id="tabsRow">
+    <button class="tab-btn active" onclick="switchTab('login')"  id="tabLogin">Connexion</button>
+    <button class="tab-btn"        onclick="switchTab('signup')" id="tabSignup">Créer un compte</button>
+  </div>
+
+  <!-- MESSAGE GLOBAL -->
+  <div class="msg" id="globalMsg"></div>
+
+  <!-- ── PANEL LOGIN ── -->
+  <div id="loginPanel">
+    <div class="form-group">
+      <label for="loginEmail">Adresse e-mail</label>
+      <input type="email" id="loginEmail" placeholder="prenom.nom@exemple.fr" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="loginPw">Mot de passe</label>
+      <div class="pw-wrap">
+        <input type="password" id="loginPw" placeholder="••••••••" autocomplete="current-password">
+        <button class="pw-toggle" onclick="togglePw('loginPw', this)" type="button" tabindex="-1">
+          <svg id="eyeLogin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="forgot"><a onclick="switchTab('reset')">Mot de passe oublié ?</a></div>
+    <button class="btn-submit" id="btnLogin" onclick="doLogin()">
+      <span class="spinner" id="spinLogin"></span>
+      <span id="lblLogin">Se connecter</span>
+    </button>
+  </div>
+
+  <!-- ── PANEL INSCRIPTION ── -->
+  <div id="signupPanel" style="display:none">
+    <div class="form-group">
+      <label for="signupEmail">Adresse e-mail</label>
+      <input type="email" id="signupEmail" placeholder="prenom.nom@exemple.fr" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="signupPw">Mot de passe</label>
+      <div class="pw-wrap">
+        <input type="password" id="signupPw" placeholder="8 caractères minimum" autocomplete="new-password">
+        <button class="pw-toggle" onclick="togglePw('signupPw', this)" type="button" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="signupPw2">Confirmer le mot de passe</label>
+      <div class="pw-wrap">
+        <input type="password" id="signupPw2" placeholder="••••••••" autocomplete="new-password">
+        <button class="pw-toggle" onclick="togglePw('signupPw2', this)" type="button" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="btn-submit" id="btnSignup" onclick="doSignup()">
+      <span class="spinner" id="spinSignup"></span>
+      <span id="lblSignup">Créer mon compte</span>
+    </button>
+  </div>
+
+  <!-- ── PANEL RESET ── -->
+  <div id="resetPanel">
+    <button class="back-link" onclick="switchTab('login')">
+      ← Retour à la connexion
+    </button>
+    <div class="form-group">
+      <label for="resetEmail">Adresse e-mail</label>
+      <input type="email" id="resetEmail" placeholder="prenom.nom@exemple.fr">
+    </div>
+    <button class="btn-submit" id="btnReset" onclick="doReset()">
+      <span class="spinner" id="spinReset"></span>
+      <span id="lblReset">Envoyer le lien de réinitialisation</span>
+    </button>
+  </div>
+
+  <div class="footer">Tableau de bord interne — accès restreint</div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  ⚙️  MÊME CONFIG QUE suivi_production.html
+// ════════════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "REMPLACE_PAR_TON_API_KEY",
+  authDomain:        "REMPLACE_PAR_TON_AUTH_DOMAIN",
+  projectId:         "REMPLACE_PAR_TON_PROJECT_ID",
+  storageBucket:     "REMPLACE_PAR_TON_STORAGE_BUCKET",
+  messagingSenderId: "REMPLACE_PAR_TON_SENDER_ID",
+  appId:             "REMPLACE_PAR_TON_APP_ID"
+};
+
+// Page vers laquelle rediriger après connexion réussie
+const APP_PAGE = 'suivi_production.html';
+
+// ════════════════════════════════════════════════════════════════════════════
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+
+// Si déjà connecté → rediriger directement
+auth.onAuthStateChanged(user => {
+  if (user) window.location.href = APP_PAGE;
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  clearMsg();
+  document.getElementById('loginPanel').style.display  = tab==='login'  ? 'block' : 'none';
+  document.getElementById('signupPanel').style.display = tab==='signup' ? 'block' : 'none';
+  document.getElementById('resetPanel').classList.toggle('visible', tab==='reset');
+  document.getElementById('tabsRow').style.display     = tab==='reset'  ? 'none'  : 'flex';
+  document.getElementById('tabLogin').classList.toggle('active',  tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CONNEXION
+// ════════════════════════════════════════════════════════════════════════════
+async function doLogin() {
+  clearMsg();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPw').value;
+  if (!email || !pw) { showMsg('err', 'Veuillez remplir tous les champs.'); return; }
+  setLoading('Login', true);
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+    showMsg('ok', '✅ Connexion réussie — redirection…');
+    setTimeout(() => window.location.href = APP_PAGE, 800);
+  } catch(e) {
+    showMsg('err', firebaseError(e.code));
+  } finally {
+    setLoading('Login', false);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INSCRIPTION
+// ════════════════════════════════════════════════════════════════════════════
+async function doSignup() {
+  clearMsg();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pw    = document.getElementById('signupPw').value;
+  const pw2   = document.getElementById('signupPw2').value;
+  if (!email || !pw || !pw2) { showMsg('err', 'Veuillez remplir tous les champs.'); return; }
+  if (pw !== pw2) { showMsg('err', 'Les mots de passe ne correspondent pas.'); return; }
+  if (pw.length < 8) { showMsg('err', 'Le mot de passe doit contenir au moins 8 caractères.'); return; }
+  setLoading('Signup', true);
+  try {
+    await auth.createUserWithEmailAndPassword(email, pw);
+    showMsg('ok', '✅ Compte créé — redirection…');
+    setTimeout(() => window.location.href = APP_PAGE, 800);
+  } catch(e) {
+    showMsg('err', firebaseError(e.code));
+  } finally {
+    setLoading('Signup', false);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RESET MOT DE PASSE
+// ════════════════════════════════════════════════════════════════════════════
+async function doReset() {
+  clearMsg();
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!email) { showMsg('err', 'Veuillez saisir votre adresse e-mail.'); return; }
+  setLoading('Reset', true);
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showMsg('ok', '📧 E-mail envoyé ! Vérifiez votre boîte de réception (et les spams).');
+    document.getElementById('resetEmail').value = '';
+  } catch(e) {
+    showMsg('err', firebaseError(e.code));
+  } finally {
+    setLoading('Reset', false);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+function setLoading(id, on) {
+  document.getElementById('btn'+id).disabled  = on;
+  document.getElementById('spin'+id).classList.toggle('visible', on);
+  document.getElementById('lbl'+id).style.display = on ? 'none' : 'inline';
+}
+
+function showMsg(type, text) {
+  const el = document.getElementById('globalMsg');
+  el.className = 'msg visible ' + type;
+  el.textContent = text;
+}
+function clearMsg() {
+  const el = document.getElementById('globalMsg');
+  el.className = 'msg';
+  el.textContent = '';
+}
+
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+}
+
+function firebaseError(code) {
+  const map = {
+    'auth/user-not-found':       'Aucun compte associé à cet e-mail.',
+    'auth/wrong-password':       'Mot de passe incorrect.',
+    'auth/invalid-email':        'Adresse e-mail invalide.',
+    'auth/email-already-in-use': 'Cette adresse e-mail est déjà utilisée.',
+    'auth/weak-password':        'Mot de passe trop faible (8 caractères minimum).',
+    'auth/too-many-requests':    'Trop de tentatives. Réessayez dans quelques minutes.',
+    'auth/network-request-failed': 'Erreur réseau. Vérifiez votre connexion.',
+    'auth/invalid-credential':   'E-mail ou mot de passe incorrect.',
+  };
+  return map[code] || 'Erreur : ' + code;
+}
+
+// Soumission au clavier (Enter)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const lp = document.getElementById('loginPanel');
+  const sp = document.getElementById('signupPanel');
+  const rp = document.getElementById('resetPanel');
+  if (lp.style.display !== 'none') doLogin();
+  else if (sp.style.display !== 'none') doSignup();
+  else if (rp.classList.contains('visible')) doReset();
+});
+</script>
+</body>
+</html>
