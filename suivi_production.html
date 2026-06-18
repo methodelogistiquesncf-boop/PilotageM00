@@ -35,8 +35,12 @@ table { border-collapse: collapse; background: var(--surface); border: 2px solid
 th, td { border: 1px solid #888; padding: 0; vertical-align: top; }
 
 .th-top { background: #e0ddd6; text-align: center; font-size: 12px; font-weight: 600; padding: 4px 6px; }
+/* Affichage de la date dans l'entête de colonne */
+.th-date-display { font-size: 14px; font-weight: 700; color: var(--text); display: block; margin-bottom: 2px; cursor: pointer; }
+.th-date-display:hover { color: var(--accent); text-decoration: underline; }
+.th-date-picker { display: none; width: 100%; border: 1px solid var(--border); border-radius: 4px; background: #f0f4ff; font-size: 12px; font-family: inherit; outline: none; padding: 2px 4px; margin-bottom: 2px; }
+.th-date-picker.visible { display: block; }
 .th-header-input { display: block; width: 100%; border: none; background: transparent; text-align: center; font-family: inherit; outline: none; }
-input.th-date { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 input.th-j { font-size: 11px; color: var(--muted); font-weight: 600; }
 input.th-header-input:focus { background: #f0f4ff; }
 
@@ -123,9 +127,10 @@ canvas.chart-canvas { width: 100% !important; }
 @media print {
   body { padding: 0; background: #fff; }
   .topbar, .bottombar { display: none; }
-  input.th-header-input { color: #000 !important; }
+  .th-date-display { color: #000 !important; }
   input.engin-label-input { color: var(--accent) !important; }
   .btn-del-col { display: none; }
+  .th-date-picker { display: none !important; }
 }
 </style>
 </head>
@@ -221,18 +226,12 @@ const ENGINS_CONFIG = [
 ];
 const D_FIXED = 4;
 
-// ─── PRINCIPE DE ROTATION ─────────────────────────────────────────────────
-// S[eid][section][p] où p = position PHYSIQUE de colonne (0..3), FIXE, ne bouge jamais.
-// colOrder[d] = position physique affichée à l'emplacement visuel d (0=J0,1=J-1,2=J-2,3=J-3).
-// "Jour suivant" ne touche AUCUNE valeur : il tourne colOrder et efface seulement
-// la position physique qui devient la nouvelle J0 (= l'ancienne J-3).
-
 let S = {};
 let headersData = { dates: [], jours: [] };
 let enginLabels = {};
 let synthCols = [];
-let colOrder = [0,1,2,3]; // colOrder[visuel] = position physique
-let historique = {}; // { "2025-06-03": { date, engins: { p18: { loco, APPROS:{score,dot}, 'PIECES DEPOSEES':{score,dot} }, ... } } }
+let colOrder = [0,1,2,3];
+let historique = {};
 let db = null;
 let saveTimer = null;
 let currentChartTab = 'courant';
@@ -290,7 +289,6 @@ async function loadFirebase() {
 async function saveFirebase() {
   var dateJour = document.getElementById('dateJour').value;
 
-  // Construire l'entrée historique du jour (position physique de J0 = colOrder[0])
   if (dateJour) {
     var p0 = colOrder[0];
     var entree = { date: dateJour, savedAt: new Date().toISOString(), engins: {} };
@@ -372,18 +370,12 @@ function makeSynthColData() {
   return col;
 }
 
-function fmt(date, offset) {
-  var d = new Date(date);
-  d.setDate(d.getDate() - offset);
-  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
-}
-
-// headersData.dates/jours sont indexés par position VISUELLE (0=J0,1=J-1,2=J-2,3=J-3)
-function setDatesFromBase() {
-  var v = document.getElementById('dateJour').value;
-  if (!v) return;
-  var base = new Date(v+'T00:00:00');
-  for (var i=0; i<D_FIXED; i++) headersData.dates[i] = fmt(base, i);
+// Convertit une valeur ISO YYYY-MM-DD en DD/MM pour l'affichage
+function isoToDisplay(iso) {
+  if (!iso) return '';
+  var parts = iso.split('-');
+  if (parts.length === 3) return parts[2] + '/' + parts[1];
+  return iso;
 }
 
 // ─── BUILD TABLE ─────────────────────────────────────────────────────────────
@@ -392,18 +384,78 @@ function build() { buildHeader(); buildBody(); }
 function buildHeader() {
   var row = document.getElementById('headerRow');
   while (row.children.length > 1) row.removeChild(row.lastChild);
+
   for (var d=0; d<D_FIXED; d++) {
     var th = document.createElement('th');
     th.className = 'th-top';
-    th.appendChild(makeInput('th-header-input th-date', headersData.dates[d], 'Date', makeUpdater(headersData.dates, d)));
-    th.appendChild(makeInput('th-header-input th-j',    headersData.jours[d], 'Jour', makeJourUpdater(d)));
+
+    // Affichage cliquable de la date (DD/MM)
+    var display = document.createElement('span');
+    display.className = 'th-date-display';
+    display.textContent = isoToDisplay(headersData.dates[d]) || '—/—';
+
+    // Picker masqué
+    var picker = document.createElement('input');
+    picker.type = 'date';
+    picker.className = 'th-date-picker';
+    picker.value = headersData.dates[d] || '';
+
+    // Clic sur l'affichage → ouvrir le picker
+    (function(sp, pk, idx) {
+      sp.onclick = function() {
+        pk.classList.add('visible');
+        pk.focus();
+        try { pk.showPicker && pk.showPicker(); } catch(e) {}
+      };
+      pk.onchange = function() {
+        headersData.dates[idx] = pk.value;
+        sp.textContent = isoToDisplay(pk.value) || '—/—';
+        pk.classList.remove('visible');
+        scheduleAutoSave();
+      };
+      pk.onblur = function() {
+        pk.classList.remove('visible');
+      };
+    })(display, picker, d);
+
+    th.appendChild(display);
+    th.appendChild(picker);
+    th.appendChild(makeInput('th-header-input th-j', headersData.jours[d], 'Jour', makeJourUpdater(d)));
     row.appendChild(th);
   }
+
   synthCols.forEach(function(col) {
     var th = document.createElement('th');
     th.className = 'th-top synth-col';
-    th.appendChild(makeInput('th-header-input th-date', col.date, 'Date', function(v){ col.date=v; scheduleAutoSave(); }));
-    th.appendChild(makeInput('th-header-input th-j',    col.jour, 'Jour', function(v){ col.jour=v; scheduleAutoSave(); }));
+
+    var display = document.createElement('span');
+    display.className = 'th-date-display';
+    display.textContent = isoToDisplay(col.date) || col.date || '—/—';
+
+    var picker = document.createElement('input');
+    picker.type = 'date';
+    picker.className = 'th-date-picker';
+    picker.value = col.date || '';
+
+    (function(sp, pk, c) {
+      sp.onclick = function() {
+        pk.classList.add('visible');
+        pk.focus();
+        try { pk.showPicker && pk.showPicker(); } catch(e) {}
+      };
+      pk.onchange = function() {
+        c.date = pk.value;
+        sp.textContent = isoToDisplay(pk.value) || '—/—';
+        pk.classList.remove('visible');
+        scheduleAutoSave();
+      };
+      pk.onblur = function() { pk.classList.remove('visible'); };
+    })(display, picker, col);
+
+    th.appendChild(display);
+    th.appendChild(picker);
+    th.appendChild(makeInput('th-header-input th-j', col.jour, 'Jour', function(v){ col.jour=v; scheduleAutoSave(); }));
+
     var delBtn = document.createElement('button');
     delBtn.className = 'btn-del-col';
     delBtn.textContent = '✕ Supprimer';
@@ -468,8 +520,6 @@ function buildBody() {
 }
 
 // ─── HELPERS DOM ─────────────────────────────────────────────────────────────
-// NB: dans les fonctions "_fixed", le paramètre reçu est désormais une POSITION
-// PHYSIQUE (déjà résolue via colOrder par l'appelant), pas une position visuelle.
 function makeInput(cls, val, placeholder, onInput) {
   var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
@@ -546,7 +596,7 @@ function addSynthCol() { synthCols.push(makeSynthColData()); build(); scheduleAu
 
 function resetAll() {
   if (!confirm('Réinitialiser toutes les données du tableau ?\n(L\'historique est conservé)')) return;
-  init(); synthCols = []; setDatesFromBase(); build(); scheduleAutoSave();
+  init(); synthCols = []; build(); scheduleAutoSave();
 }
 
 // ─── EXPORT CSV ──────────────────────────────────────────────────────────────
@@ -557,7 +607,7 @@ function exportCSV() {
       for (var d=0; d<D_FIXED; d++) {
         var p = colOrder[d];
         var c = S[e.id][s][p];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, headersData.dates[d]||'', S[e.id].loco[p]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, isoToDisplay(headersData.dates[d])||'', S[e.id].loco[p]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
       }
     });
   });
@@ -565,7 +615,7 @@ function exportCSV() {
     ENGINS_CONFIG.forEach(function(e) {
       e.sections.forEach(function(s) {
         var data = col.enginData[e.id][s];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthèse '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthèse '+(ci+1), isoToDisplay(col.date)||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
       });
     });
   });
@@ -605,7 +655,6 @@ function renderHistTable() {
     return;
   }
 
-  // Construire les colonnes section dynamiquement
   var sections = [];
   ENGINS_CONFIG.forEach(function(e) {
     e.sections.forEach(function(s) { sections.push({ eid: e.id, label: (enginLabels[e.id]||e.defaultLabel)+' — '+s, sec: s }); });
@@ -658,11 +707,11 @@ function buildChartData_courant() {
   for (var d=0; d<D_FIXED; d++) {
     (function(di){
       var p = colOrder[di];
-      cols.push({ label: headersData.dates[di]||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
+      cols.push({ label: isoToDisplay(headersData.dates[di])||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
     })(d);
   }
   synthCols.forEach(function(col) {
-    cols.push({ label: col.date||col.jour||'Synthèse', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
+    cols.push({ label: isoToDisplay(col.date)||col.jour||'Synthèse', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
   });
   return computeChartSeries(cols);
 }
@@ -693,7 +742,6 @@ function computeChartSeries(cols) {
     });
     series["total"].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
   });
-
   return { labels:labels, series:series };
 }
 
@@ -731,7 +779,6 @@ function drawChart() {
     ctx.fillText('Aucune donnée disponible', W/2, H/2); return;
   }
 
-  // Grille
   for (var pct=0; pct<=100; pct+=10) {
     var y = PAD.top+cH-(pct/100)*cH;
     ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=1;
@@ -740,12 +787,10 @@ function drawChart() {
     ctx.fillText(pct+'%', PAD.left-6, y+4);
   }
 
-  // Axes
   ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top+cH); ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
 
-  // Labels X
   var step = n > 1 ? cW/(n-1) : 0;
   ctx.fillStyle='#555'; ctx.font='10px Segoe UI,sans-serif'; ctx.textAlign='center';
   labels.forEach(function(lbl,i) {
@@ -755,7 +800,6 @@ function drawChart() {
     else { ctx.fillText(lbl, x, H-PAD.bottom+18); ctx.restore(); }
   });
 
-  // Séries
   seriesKeys.forEach(function(key, ki) {
     var serie = data.series[key];
     var color = SERIES_COLORS[ki % SERIES_COLORS.length];
@@ -770,21 +814,17 @@ function drawChart() {
     ctx.beginPath(); var started=false;
     pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
     ctx.stroke();
-    ctx.setLineDash([]);
 
     pts.forEach(function(pt) {
       if (!pt) return;
       ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2);
       ctx.fillStyle=color; ctx.fill();
       ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-      if (true) {
-        ctx.fillStyle='#1a1917'; ctx.font='bold 10px Segoe UI,sans-serif'; ctx.textAlign='center';
-        ctx.fillText(pt.v+'%', pt.x, pt.y-9);
-      }
+      ctx.fillStyle='#1a1917'; ctx.font='bold 10px Segoe UI,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(pt.v+'%', pt.x, pt.y-9);
     });
   });
 
-  // Légende
   var legX = PAD.left, legY = PAD.top - 20;
   seriesKeys.forEach(function(key, ki) {
     var serie = data.series[key];
@@ -798,14 +838,11 @@ function drawChart() {
 }
 
 // ─── ROTATION JOUR SUIVANT ───────────────────────────────────────────────────
-// Les VALEURS ne bougent jamais entre positions physiques. Seule la correspondance
-// "position visuelle -> position physique" (colOrder) tourne, ainsi que les dates.
 function passerJourSuivant() {
   var dateActuelle = document.getElementById("dateJour").value;
-  if (!dateActuelle) { alert("Veuillez definir une date de base."); return; }
-  if (!confirm("Passer au jour suivant ?\nLa colonne J-3 sera effacee et deviendra le nouveau J0.")) return;
+  if (!dateActuelle) { alert("Veuillez définir une date de base."); return; }
+  if (!confirm("Passer au jour suivant ?\nLa colonne J-3 sera effacée et deviendra le nouveau J0.")) return;
 
-  // Sauvegarder J0 dans historique avant rotation (position physique colOrder[0])
   var p0 = colOrder[0];
   var entree = { date: dateActuelle, savedAt: new Date().toISOString(), engins: {} };
   ENGINS_CONFIG.forEach(function(e) {
@@ -817,7 +854,6 @@ function passerJourSuivant() {
   });
   historique[dateActuelle] = entree;
 
-  // La position physique qui était J-3 (colOrder[3]) devient la nouvelle J0 : on l'efface
   var pNew0 = colOrder[3];
   ENGINS_CONFIG.forEach(function(e) {
     S[e.id].loco[pNew0] = "";
@@ -826,16 +862,21 @@ function passerJourSuivant() {
     });
   });
 
-  // Rotation de la correspondance visuel->physique : l'ancienne J-3 devient J0,
-  // l'ancienne J0 devient J-1, l'ancienne J-1 devient J-2, l'ancienne J-2 devient J-3.
   colOrder = [colOrder[3], colOrder[0], colOrder[1], colOrder[2]];
 
-  // Avancer la date de base d'un jour -> recalcule les dates affichées (par position visuelle)
+  // Faire tourner également les dates de colonnes
+  var oldDates = headersData.dates.slice();
+  var oldJours = headersData.jours.slice();
+  headersData.dates = [oldDates[3], oldDates[0], oldDates[1], oldDates[2]];
+  headersData.jours = [oldJours[3], oldJours[0], oldJours[1], oldJours[2]];
+  // Effacer la nouvelle J0 (ancienne J-3)
+  headersData.dates[0] = '';
+
+  // Avancer la date du jour d'un jour
   var d = new Date(dateActuelle + "T00:00:00");
   d.setDate(d.getDate() + 1);
   var newDate = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
   document.getElementById("dateJour").value = newDate;
-  setDatesFromBase();
 
   build();
   saveFirebase();
@@ -843,9 +884,9 @@ function passerJourSuivant() {
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 function finishBoot() {
-  if (!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
+  // La date du jour est décorrélée des colonnes — pas de recalcul automatique
+  // document.getElementById('dateJour').addEventListener(...) supprimé intentionnellement
   build();
-  document.getElementById('dateJour').addEventListener('change', function(){ setDatesFromBase(); build(); });
 }
 
 var now = new Date();
