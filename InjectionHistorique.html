@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Injection Historique Firebase</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; background: #f2f0eb; padding: 24px; font-size: 13px; color: #1a1917; }
+h1 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.sub { color: #7a776f; font-size: 12px; margin-bottom: 20px; }
+.card { background: #fff; border: 1px solid #c8c4bc; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th { background: #e0ddd6; border: 1px solid #aaa; padding: 6px 10px; text-align: left; font-weight: 700; }
+td { border: 1px solid #ccc; padding: 4px 8px; }
+td input { border: 1px solid #ccc; border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 70px; font-family: inherit; }
+td input:focus { outline: 2px solid #1a4fa0; }
+.btn { padding: 9px 22px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; }
+.btn-primary { background: #1a4fa0; color: #fff; }
+.btn-primary:hover { background: #143d80; }
+.btn-danger { background: #fdeaea; color: #c03030; border: 1px solid #f0cece; }
+#status { margin-top: 14px; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; display: none; }
+#status.ok  { background: #d4f0de; color: #1a7a3c; display: block; }
+#status.err { background: #fdeaea; color: #c03030; display: block; }
+#status.sync { background: #fff3cd; color: #856404; display: block; }
+.warn { background: #fff3cd; border: 1px solid #ffe082; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #856404; }
+</style>
+</head>
+<body>
+
+<h1>🔥 Injection Historique Firebase</h1>
+<div class="sub">Injecte les données APPROS passées dans <strong>suivi/default → historique</strong></div>
+
+<div class="warn">
+  ⚠️ Cette page <strong>fusionne</strong> les données avec l'historique existant dans Firebase (elle n'efface pas les autres données). Les scores sont au format <strong>X/Y</strong> (ex: 11/12). Laisse vide si pas de données ce jour-là.
+</div>
+
+<div class="card">
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Date (2025)</th>
+        <th>P18 APPROS score</th>
+        <th>P18 statut</th>
+        <th>P26 APPROS score</th>
+        <th>P26 statut</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<button class="btn btn-primary" onclick="injecter()">🚀 Injecter dans Firebase</button>
+&nbsp;
+<button class="btn btn-danger" onclick="if(confirm('Reset ?')) initTable()">Réinitialiser</button>
+
+<div id="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
+  authDomain: "pilotagem00.firebaseapp.com",
+  projectId: "pilotagem00",
+  storageBucket: "pilotagem00.firebasestorage.app",
+  messagingSenderId: "455481915450",
+  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
+};
+
+// Données lues sur le graphique (ratio → score approximatif)
+// Format: { date, p18: {score, dot}, p26: {score, dot} }
+// dot: 'green' si >=0.9, 'red' si <0.9, null si vide
+const INITIAL_DATA = [
+  { date:'2025-06-03', p18:{score:'10/10', dot:'green'}, p26:{score:'',     dot:null}   },
+  { date:'2025-06-04', p18:{score:'11/12', dot:'green'}, p26:{score:'3/4',  dot:'red'}   },
+  { date:'2025-06-05', p18:{score:'5/10',  dot:'red'},   p26:{score:'5/10', dot:'red'}   },
+  { date:'2025-06-08', p18:{score:'11/12', dot:'green'}, p26:{score:'5/6',  dot:'red'}   },
+  { date:'2025-06-09', p18:{score:'10/11', dot:'green'}, p26:{score:'13/16',dot:'red'}   },
+  { date:'2025-06-10', p18:{score:'10/10', dot:'green'}, p26:{score:'5/10', dot:'red'}   },
+  { date:'2025-06-11', p18:{score:'19/20', dot:'green'}, p26:{score:'13/16',dot:'red'}   },
+  { date:'2025-06-12', p18:{score:'14/15', dot:'green'}, p26:{score:'5/6',  dot:'red'}   },
+  { date:'2025-06-15', p18:{score:'10/10', dot:'green'}, p26:{score:'17/20',dot:'red'}   },
+  { date:'2025-06-16', p18:{score:'14/15', dot:'green'}, p26:{score:'',     dot:null}    },
+  { date:'2025-06-17', p18:{score:'10/11', dot:'green'}, p26:{score:'5/6',  dot:'red'}   },
+  { date:'2025-06-18', p18:{score:'8/9',   dot:'red'},   p26:{score:'13/16',dot:'red'}   },
+  { date:'2025-06-19', p18:{score:'10/10', dot:'green'}, p26:{score:'',     dot:null}    },
+  { date:'2025-06-22', p18:{score:'10/10', dot:'green'}, p26:{score:'10/10',dot:'green'} },
+  { date:'2025-06-23', p18:{score:'',      dot:null},    p26:{score:'19/20',dot:'green'} },
+];
+
+function dotSelect(id, val) {
+  return '<select id="'+id+'" style="font-size:11px;border:1px solid #ccc;border-radius:4px;padding:2px 4px">'
+    + '<option value=""'+(val===null||val===''?' selected':'')+''>—</option>'
+    + '<option value="green"'+(val==='green'?' selected':'')+'">✅ OK</option>'
+    + '<option value="red"'+(val==='red'?' selected':'')+'">❌ NOK</option>'
+    + '</select>';
+}
+
+function initTable() {
+  var tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  INITIAL_DATA.forEach(function(row, i) {
+    var dateAff = row.date.split('-').reverse().join('/');
+    tb.innerHTML += '<tr>'
+      + '<td><strong>'+dateAff+'</strong></td>'
+      + '<td><input id="p18s_'+i+'" value="'+row.p18.score+'" placeholder="ex: 11/12"></td>'
+      + '<td>'+dotSelect('p18d_'+i, row.p18.dot)+'</td>'
+      + '<td><input id="p26s_'+i+'" value="'+row.p26.score+'" placeholder="ex: 3/4"></td>'
+      + '<td>'+dotSelect('p26d_'+i, row.p26.dot)+'</td>'
+      + '</tr>';
+  });
+}
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+auth.onAuthStateChanged(function(user) {
+  if (!user) { window.location.href = 'login.html'; return; }
+  initTable();
+});
+
+async function injecter() {
+  setStatus('sync', '⏳ Lecture Firebase...');
+
+  // Lire l'historique existant
+  var snap = await db.collection('suivi').doc('default').get();
+  var existing = {};
+  if (snap.exists && snap.data().historique) existing = snap.data().historique;
+
+  // Construire les nouvelles entrées depuis le tableau
+  INITIAL_DATA.forEach(function(row, i) {
+    var p18score = document.getElementById('p18s_'+i).value.trim();
+    var p18dot   = document.getElementById('p18d_'+i).value || null;
+    var p26score = document.getElementById('p26s_'+i).value.trim();
+    var p26dot   = document.getElementById('p26d_'+i).value || null;
+
+    // Ne pas injecter une ligne totalement vide
+    if (!p18score && !p26score && !p18dot && !p26dot) return;
+
+    existing[row.date] = {
+      date: row.date,
+      savedAt: row.date + 'T12:00:00.000Z',
+      engins: {
+        p18: {
+          loco: '',
+          'APPROS':          { score: p18score, dot: p18dot },
+          'PIECES DEPOSEES': { score: '',       dot: null   }
+        },
+        p26: {
+          loco: '',
+          'APPROS':          { score: p26score, dot: p26dot },
+          'PIECES DEPOSEES': { score: '',       dot: null   }
+        }
+      }
+    };
+  });
+
+  setStatus('sync', '⏳ Injection en cours...');
+
+  try {
+    await db.collection('suivi').doc('default').update({ historique: existing });
+    setStatus('ok', '✅ ' + Object.keys(existing).length + ' entrées injectées avec succès dans Firebase !');
+  } catch(e) {
+    // Si le doc n'existe pas encore, on le crée
+    try {
+      await db.collection('suivi').doc('default').set({ historique: existing }, { merge: true });
+      setStatus('ok', '✅ Injecté (création doc) — ' + Object.keys(existing).length + ' entrées.');
+    } catch(e2) {
+      setStatus('err', '❌ Erreur : ' + e2.message);
+    }
+  }
+}
+
+function setStatus(type, msg) {
+  var el = document.getElementById('status');
+  el.className = type;
+  el.textContent = msg;
+}
+</script>
+</body>
+</html>
