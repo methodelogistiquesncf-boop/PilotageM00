@@ -152,6 +152,7 @@ canvas#approsChart { width: 100% !important; }
 
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
@@ -190,14 +191,49 @@ let db = null;
 let saveTimer = null;
 
 // ════════════════════════════════════════════════════════════════════════════
+//  AUTH HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+function showUserBadge(email) {
+  // Insérer le badge si pas déjà présent
+  if (document.getElementById('userBadge')) return;
+  const badge = document.createElement('div');
+  badge.id = 'userBadge';
+  badge.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:11px;color:#7a776f;margin-left:auto;';
+  badge.innerHTML = \`
+    <span style="background:#e8e5df;padding:3px 10px;border-radius:10px;font-weight:600;">👤 \${email}</span>
+    <button onclick="doLogout()" style="padding:4px 10px;font-size:11px;border:1px solid #f0cece;border-radius:6px;background:#fdeaea;color:#c03030;cursor:pointer;font-family:inherit;">Déconnexion</button>
+  \`;
+  // Insérer avant le bouton imprimer
+  const btnPrint = document.querySelector('.btn-print');
+  btnPrint.parentNode.insertBefore(badge, btnPrint);
+  btnPrint.style.marginLeft = '0';
+}
+
+function doLogout() {
+  firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  FIREBASE INIT
 // ════════════════════════════════════════════════════════════════════════════
 function initFirebase() {
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    setStatus('sync', '⏳ Chargement…');
-    loadFirebase();
+
+    // ── PROTECTION AUTH : rediriger si non connecté ──
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      // Afficher l'email de l'utilisateur + bouton déconnexion
+      showUserBadge(user.email);
+      // Lancer le chargement Firestore seulement si connecté
+      setStatus('sync', '⏳ Chargement…');
+      loadFirebase();
+    });
+    return; // onAuthStateChanged prend la main
   } catch(e) {
     setStatus('err', '❌ Config Firebase manquante');
     console.error('Firebase init error:', e);
