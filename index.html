@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi de Production</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f2f0eb; --surface: #ffffff; --surface2: #e8e5df;
+  --border: #c8c4bc; --text: #1a1917; --muted: #7a776f; --accent: #1a4fa0;
+}
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; padding: 18px; }
+h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+/* TOP BAR */
+.topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.date-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; }
+.date-box label { font-size: 12px; color: var(--muted); }
+.date-box input { border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; }
+.btn-print { margin-left: auto; padding: 6px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.btn-print:hover { background: var(--surface2); }
+
+/* STATUS FIREBASE */
+#fbStatus { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+#fbStatus.ok   { background: #d4f0de; color: #1a7a3c; }
+#fbStatus.err  { background: #fdeaea; color: #c03030; }
+#fbStatus.sync { background: #fff3cd; color: #856404; }
+
+/* WRAPPER SCROLLABLE */
+.wrap { overflow-x: auto; }
+
+/* TABLE */
+table { border-collapse: collapse; background: var(--surface); border: 2px solid #555; }
+th, td { border: 1px solid #888; padding: 0; vertical-align: top; }
+
+.th-top { background: #e0ddd6; text-align: center; font-size: 12px; font-weight: 600; padding: 4px 6px; }
+.th-header-input { display: block; width: 100%; border: none; background: transparent; text-align: center; font-family: inherit; outline: none; }
+input.th-date { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+input.th-j { font-size: 11px; color: var(--muted); font-weight: 600; }
+input.th-header-input:focus { background: #f0f4ff; }
+
+.th-top.synth-col { background: #d4dff0; position: relative; }
+.th-top.synth-col::after { content: 'SYNTHÈSE'; display: block; font-size: 9px; letter-spacing: .08em; color: var(--accent); margin-top: 2px; }
+.btn-del-col { display: block; margin: 3px auto 0; padding: 1px 6px; font-size: 10px; border: 1px solid #f0cece; border-radius: 3px; background: #fdeaea; color: #c03030; cursor: pointer; }
+.btn-del-col:hover { background: #fbd5d5; }
+
+.th-label { background: #e0ddd6; font-size: 12px; font-weight: 700; text-align: left; padding: 6px 8px; width: 110px; }
+
+.row-engin td { background: #dbd8d0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px; }
+.row-engin .loco-cell { background: #dbd8d0; }
+
+.row-label td.label { background: #eae7e0; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 5px 7px; vertical-align: middle; color: #444; width: 110px; }
+td.data-cell { padding: 3px 4px; min-width: 150px; }
+td.data-cell.synth-cell { background: #f4f7fd; min-width: 150px; }
+td.data-cell.synth-cell:focus-within { background: #eaf0fb; }
+
+input.engin-label-input { width: 100%; font-size: 11px; color: var(--accent); font-weight: 700; border: none; background: transparent; outline: none; font-family: inherit; padding: 0; }
+input.engin-label-input:focus { background: #f0f4ff; }
+
+textarea.note { width: 100%; min-height: 24px; font-size: 12px; font-family: inherit; border: none; background: transparent; resize: none; outline: none; color: #1a4fa0; line-height: 1.4; padding: 2px 3px; overflow: hidden; }
+textarea.note:focus { background: #f0f4ff; border-radius: 3px; }
+
+.row-score td { background: #f8f7f4; border-top: 2px dashed #aaa; padding: 4px 6px; }
+.row-score td.label { background: #eae7e0; }
+.row-score td.synth-cell { background: #eef2fb; }
+.score-inner { display: flex; align-items: center; gap: 6px; }
+
+.dot-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #bbb; background: #ddd; cursor: pointer; font-size: 0; transition: transform .1s, border-color .1s; flex-shrink: 0; }
+.dot-btn:hover { transform: scale(1.15); }
+.dot-btn.green { background: #22a050; border-color: #1a7a3c; }
+.dot-btn.red   { background: #d03030; border-color: #a02020; }
+.dot-btn.off   { background: #ccc; border-color: #aaa; }
+
+input.score { width: 52px; font-size: 12px; text-align: center; font-weight: 600; color: #1a4fa0; border: 1px solid #ccc; border-radius: 4px; padding: 2px 4px; background: var(--surface); }
+input.score:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+input.loco { font-size: 12px; font-weight: 700; color: #1a4fa0; border: none; background: transparent; outline: none; width: 100%; padding: 2px 4px; }
+input.loco:focus { background: #f0f4ff; border-radius: 3px; }
+
+/* BOTTOM BAR */
+.bottombar { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.btn { padding: 7px 16px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-family: inherit; }
+.btn-ghost { background: var(--surface); color: var(--muted); }
+.btn-ghost:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.btn-primary:hover { background: #143d80; }
+.btn-danger { background: var(--surface); color: #c03030; border-color: #f0cece; }
+.btn-danger:hover { background: #fdeaea; }
+
+/* MODALE GRAPHIQUE */
+.chart-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+.chart-modal-overlay.open { display: flex; }
+.chart-modal { background: #fff; border-radius: 10px; padding: 24px; width: min(900px, 95vw); box-shadow: 0 8px 40px rgba(0,0,0,.3); position: relative; }
+.chart-modal h2 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+.chart-modal .close-btn { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+.chart-modal .close-btn:hover { color: var(--text); }
+canvas#approsChart { width: 100% !important; }
+
+@media print {
+  body { padding: 0; background: #fff; }
+  .topbar, .bottombar { display: none; }
+  input.th-header-input { color: #000 !important; }
+  input.engin-label-input { color: var(--accent) !important; }
+  .btn-del-col { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Tableau de Suivi de Production</h1>
+    <div class="subtitle">Mise à jour quotidienne — synchronisation Firebase</div>
+  </div>
+  <div class="date-box">
+    <label for="dateJour">Date de base :</label>
+    <input type="date" id="dateJour">
+  </div>
+  <span id="fbStatus" class="sync">⏳ Connexion…</span>
+  <button class="btn-print btn" onclick="window.print()">🖨 Imprimer</button>
+</div>
+
+<div class="wrap">
+  <table id="mainTable">
+    <thead id="thead">
+      <tr id="headerRow">
+        <th class="th-top th-label" style="width:110px"></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="bottombar">
+  <button class="btn btn-danger"  onclick="resetAll()">↺ Réinitialiser</button>
+  <button class="btn btn-ghost"   onclick="exportCSV()">⬇ Exporter CSV</button>
+  <button class="btn btn-primary" onclick="addSynthCol()">➕ Ajouter colonne synthèse</button>
+  <button class="btn btn-primary" onclick="saveFirebase()">☁️ Sauvegarder</button>
+  <button class="btn btn-ghost"   onclick="openChart()">📊 Graphique APPROS</button>
+</div>
+
+<!-- MODALE GRAPHIQUE -->
+<div class="chart-modal-overlay" id="chartOverlay">
+  <div class="chart-modal">
+    <button class="close-btn" onclick="closeChart()">✕</button>
+    <h2>Taux de réalisation APPROS — par journée</h2>
+    <canvas id="approsChart" height="320"></canvas>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  ⚙️  CONFIGURATION FIREBASE — remplace par tes propres valeurs
+//  Va sur https://console.firebase.google.com → Ton projet → ⚙️ Paramètres
+//  → Tes applications → Config SDK Web
+// ════════════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "REMPLACE_PAR_TON_API_KEY",
+  authDomain:        "REMPLACE_PAR_TON_AUTH_DOMAIN",
+  projectId:         "REMPLACE_PAR_TON_PROJECT_ID",
+  storageBucket:     "REMPLACE_PAR_TON_STORAGE_BUCKET",
+  messagingSenderId: "REMPLACE_PAR_TON_SENDER_ID",
+  appId:             "REMPLACE_PAR_TON_APP_ID"
+};
+
+// Clé du document Firestore (1 document = 1 état complet)
+// Tu peux utiliser "default" ou un identifiant de session/équipe
+const FIRESTORE_DOC = "suivi/default";
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DONNÉES & CONFIG
+// ════════════════════════════════════════════════════════════════════════════
+const ENGINS_CONFIG = [
+  { id:'p18', defaultLabel:'V16 P18', sections:['APPROS','PIÈCES DÉPOSÉES'] },
+  { id:'p26', defaultLabel:'V16 P26', sections:['APPROS','PIÈCES DÉPOSÉES'] },
+];
+const D_FIXED = 4;
+
+let S = {};
+let headersData = { dates: [], jours: [] };
+let enginLabels = {};
+let synthCols = [];
+let db = null;
+let saveTimer = null;
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ════════════════════════════════════════════════════════════════════════════
+function initFirebase() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    setStatus('sync', '⏳ Chargement…');
+    loadFirebase();
+  } catch(e) {
+    setStatus('err', '❌ Config Firebase manquante');
+    console.error('Firebase init error:', e);
+    // Fallback localStorage
+    loadLocal();
+    finishBoot();
+  }
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('fbStatus');
+  el.className = type;
+  el.textContent = msg;
+}
+
+async function loadFirebase() {
+  try {
+    const [col, doc] = FIRESTORE_DOC.split('/');
+    const snap = await db.collection(col).doc(doc).get();
+    if (snap.exists) {
+      const data = snap.data();
+      if (data.S)           S           = data.S;
+      if (data.headersData) headersData = data.headersData;
+      if (data.enginLabels) enginLabels = data.enginLabels;
+      if (data.synthCols)   synthCols   = data.synthCols;
+      if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
+      setStatus('ok', '✅ Synchronisé');
+    } else {
+      setStatus('ok', '✅ Nouveau document');
+    }
+  } catch(e) {
+    setStatus('err', '❌ Erreur lecture Firebase');
+    console.error(e);
+    // Fallback localStorage
+    loadLocal();
+  }
+  finishBoot();
+}
+
+async function saveFirebase() {
+  const payload = {
+    S,
+    headersData,
+    enginLabels,
+    synthCols,
+    dateJour: document.getElementById('dateJour').value,
+    savedAt: new Date().toISOString()
+  };
+
+  // Toujours sauvegarder en localStorage aussi (backup)
+  localStorage.setItem('sp_backup', JSON.stringify(payload));
+
+  if (!db) {
+    setStatus('err', '❌ Firebase non connecté');
+    return;
+  }
+  try {
+    setStatus('sync', '💾 Sauvegarde…');
+    const [col, doc] = FIRESTORE_DOC.split('/');
+    await db.collection(col).doc(doc).set(payload);
+    setStatus('ok', '✅ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR'));
+  } catch(e) {
+    setStatus('err', '❌ Erreur sauvegarde');
+    console.error(e);
+  }
+}
+
+// Auto-save 3s après la dernière modification
+function scheduleAutoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveFirebase(), 3000);
+  setStatus('sync', '✏️ Modifications en cours…');
+}
+
+// Fallback localStorage
+function loadLocal() {
+  try {
+    const bk = localStorage.getItem('sp_backup');
+    if (!bk) return;
+    const data = JSON.parse(bk);
+    if (data.S)           S           = data.S;
+    if (data.headersData) headersData = data.headersData;
+    if (data.enginLabels) enginLabels = data.enginLabels;
+    if (data.synthCols)   synthCols   = data.synthCols;
+    if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
+  } catch(e) { console.error('loadLocal error:', e); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INIT DONNÉES
+// ════════════════════════════════════════════════════════════════════════════
+function init() {
+  S = {};
+  enginLabels = {};
+  ENGINS_CONFIG.forEach(e => {
+    enginLabels[e.id] = e.defaultLabel;
+    S[e.id] = { loco: Array(D_FIXED).fill('') };
+    e.sections.forEach(s => {
+      S[e.id][s] = Array.from({length: D_FIXED}, () => ({note:'',score:'',dot:null}));
+    });
+  });
+  headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0','J-1','J-2','J-3'] };
+}
+
+function makeSynthColData() {
+  const col = { id: 'sc_' + Date.now(), date: '', jour: '', enginData: {} };
+  ENGINS_CONFIG.forEach(e => {
+    col.enginData[e.id] = { loco: '' };
+    e.sections.forEach(s => { col.enginData[e.id][s] = { note:'', dot:null, score:'' }; });
+  });
+  return col;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DATES
+// ════════════════════════════════════════════════════════════════════════════
+function fmt(date, offset) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - offset);
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
+}
+
+function setDatesFromBase() {
+  const v = document.getElementById('dateJour').value;
+  if(!v) return;
+  const base = new Date(v+'T00:00:00');
+  for(let i=0; i<D_FIXED; i++) headersData.dates[i] = fmt(base, i);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BUILD
+// ════════════════════════════════════════════════════════════════════════════
+function build() { buildHeader(); buildBody(); }
+
+function buildHeader() {
+  const row = document.getElementById('headerRow');
+  while(row.children.length > 1) row.removeChild(row.lastChild);
+
+  for(let i=0; i<D_FIXED; i++) {
+    const th = document.createElement('th');
+    th.className = 'th-top';
+    const inpDate = makeInput('th-header-input th-date', headersData.dates[i], 'Date', v => { headersData.dates[i]=v; scheduleAutoSave(); });
+    const inpJ    = makeInput('th-header-input th-j',    headersData.jours[i], 'Jour', v => { headersData.jours[i]=v; scheduleAutoSave(); });
+    th.appendChild(inpDate); th.appendChild(inpJ);
+    row.appendChild(th);
+  }
+
+  synthCols.forEach(col => {
+    const th = document.createElement('th');
+    th.className = 'th-top synth-col';
+    const inpDate = makeInput('th-header-input th-date', col.date, 'Date', v => { col.date=v; scheduleAutoSave(); });
+    const inpJ    = makeInput('th-header-input th-j',    col.jour, 'Jour', v => { col.jour=v; scheduleAutoSave(); });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del-col';
+    delBtn.textContent = '✕ Supprimer';
+    delBtn.onclick = () => { synthCols = synthCols.filter(c=>c.id!==col.id); build(); scheduleAutoSave(); };
+    th.appendChild(inpDate); th.appendChild(inpJ); th.appendChild(delBtn);
+    row.appendChild(th);
+  });
+}
+
+function buildBody() {
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+
+  ENGINS_CONFIG.forEach(e => {
+    // Ligne ENGIN
+    const rEngin = document.createElement('tr');
+    rEngin.className = 'row-engin';
+    const tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN';
+    rEngin.appendChild(tdLbl);
+    for(let d=0; d<D_FIXED; d++) {
+      const td = document.createElement('td'); td.className = 'loco-cell';
+      td.appendChild(makeLoco_fixed(e.id, d)); rEngin.appendChild(td);
+    }
+    synthCols.forEach(col => {
+      const td = document.createElement('td'); td.className = 'loco-cell'; td.style.background='#d4dff0';
+      td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
+    });
+    tb.appendChild(rEngin);
+
+    // Ligne libellé
+    const rTitle = document.createElement('tr'); rTitle.className = 'row-label';
+    const tdT = document.createElement('td'); tdT.className = 'label';
+    tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
+    for(let d=0; d<D_FIXED; d++) { const td=document.createElement('td'); td.className='data-cell'; rTitle.appendChild(td); }
+    synthCols.forEach(() => { const td=document.createElement('td'); td.className='data-cell synth-cell'; rTitle.appendChild(td); });
+    tb.appendChild(rTitle);
+
+    // Sections
+    e.sections.forEach(s => {
+      // Ligne note
+      const rNote = document.createElement('tr'); rNote.className = 'row-label';
+      const tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s;
+      rNote.appendChild(tdSL);
+      for(let d=0; d<D_FIXED; d++) {
+        const td = document.createElement('td'); td.className = 'data-cell';
+        td.appendChild(makeNote_fixed(e.id, s, d)); rNote.appendChild(td);
+      }
+      synthCols.forEach(col => {
+        const td = document.createElement('td'); td.className = 'data-cell synth-cell';
+        td.appendChild(makeNote_synth(col, e.id, s)); rNote.appendChild(td);
+      });
+      tb.appendChild(rNote);
+
+      // Ligne score
+      const rScore = document.createElement('tr'); rScore.className = 'row-score';
+      const tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
+      for(let d=0; d<D_FIXED; d++) {
+        const td = document.createElement('td');
+        td.appendChild(makeScoreInner_fixed(e.id, s, d)); rScore.appendChild(td);
+      }
+      synthCols.forEach(col => {
+        const td = document.createElement('td'); td.className = 'synth-cell';
+        td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
+      });
+      tb.appendChild(rScore);
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FACTORIES
+// ════════════════════════════════════════════════════════════════════════════
+function makeInput(cls, val, placeholder, onInput) {
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
+  inp.oninput = e => onInput(e.target.value);
+  return inp;
+}
+
+function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+function makeLoco_fixed(eid, d) {
+  const inp = document.createElement('input');
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin…'; inp.value=S[eid].loco[d];
+  inp.oninput = () => { S[eid].loco[d]=inp.value; scheduleAutoSave(); };
+  return inp;
+}
+function makeLoco_synth(col, eid) {
+  const inp = document.createElement('input');
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin…'; inp.value=col.enginData[eid].loco;
+  inp.oninput = () => { col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
+  return inp;
+}
+
+function makeNote_fixed(eid, s, d) {
+  const ta = document.createElement('textarea');
+  ta.className='note'; ta.placeholder='Remarque…'; ta.value=S[eid][s][d].note;
+  ta.oninput = () => { S[eid][s][d].note=ta.value; autoResize(ta); scheduleAutoSave(); };
+  requestAnimationFrame(() => autoResize(ta));
+  return ta;
+}
+function makeNote_synth(col, eid, s) {
+  const ta = document.createElement('textarea');
+  ta.className='note'; ta.placeholder='Remarque…'; ta.value=col.enginData[eid][s].note;
+  ta.oninput = () => { col.enginData[eid][s].note=ta.value; autoResize(ta); scheduleAutoSave(); };
+  requestAnimationFrame(() => autoResize(ta));
+  return ta;
+}
+
+function makeEnginLabelInput(eid) {
+  const inp = document.createElement('input');
+  inp.className='engin-label-input'; inp.type='text'; inp.value=enginLabels[eid]||'';
+  inp.oninput = () => { enginLabels[eid]=inp.value; scheduleAutoSave(); };
+  return inp;
+}
+
+function makeDot(getVal, setVal, color) {
+  const btn = document.createElement('button');
+  btn.className = 'dot-btn ' + (getVal()===color ? color : 'off');
+  btn.title = color==='green'?'OK':'NOK';
+  btn.setAttribute('aria-label', color==='green'?'Marquer OK':'Marquer NOK');
+  btn.onclick = () => { setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
+  return btn;
+}
+
+function makeScoreInner_fixed(eid, s, d) {
+  const inner = document.createElement('div'); inner.className = 'score-inner';
+  inner.appendChild(makeDot(() => S[eid][s][d].dot, v => { S[eid][s][d].dot=v; }, 'green'));
+  inner.appendChild(makeDot(() => S[eid][s][d].dot, v => { S[eid][s][d].dot=v; }, 'red'));
+  const inp = document.createElement('input');
+  inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[eid][s][d].score;
+  inp.oninput = () => { S[eid][s][d].score=inp.value; scheduleAutoSave(); };
+  inner.appendChild(inp);
+  return inner;
+}
+function makeScoreInner_synth(col, eid, s) {
+  const data = col.enginData[eid][s];
+  const inner = document.createElement('div'); inner.className = 'score-inner';
+  inner.appendChild(makeDot(() => data.dot, v => { data.dot=v; }, 'green'));
+  inner.appendChild(makeDot(() => data.dot, v => { data.dot=v; }, 'red'));
+  const inp = document.createElement('input');
+  inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=data.score;
+  inp.oninput = () => { data.score=inp.value; scheduleAutoSave(); };
+  inner.appendChild(inp);
+  return inner;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════════════════════════════════════════
+function addSynthCol() { synthCols.push(makeSynthColData()); build(); scheduleAutoSave(); }
+
+function resetAll() {
+  if(!confirm('Réinitialiser toutes les données ?')) return;
+  init(); synthCols = []; setDatesFromBase(); build(); scheduleAutoSave();
+}
+
+function exportCSV() {
+  const rows = [['Engin','Section','Jour','Date','N° Engin','Remarque','Score','Statut']];
+  ENGINS_CONFIG.forEach(e => {
+    e.sections.forEach(s => {
+      for(let d=0; d<D_FIXED; d++) {
+        const c = S[e.id][s][d];
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, headersData.dates[d]||'', S[e.id].loco[d]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
+      }
+    });
+  });
+  synthCols.forEach((col,ci) => {
+    ENGINS_CONFIG.forEach(e => {
+      e.sections.forEach(s => {
+        const data = col.enginData[e.id][s];
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthèse '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
+      });
+    });
+  });
+  const csv = '\ufeff' + rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='suivi_prod_'+(document.getElementById('dateJour').value||'export')+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GRAPHIQUE APPROS
+// ════════════════════════════════════════════════════════════════════════════
+function parseScore(str) {
+  if (!str || !str.trim()) return null;
+  const m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
+  if (!m) return null;
+  const num = parseFloat(m[1].replace(',','.')), den = parseFloat(m[2].replace(',','.'));
+  if (den===0) return null;
+  return { num, den };
+}
+
+function buildChartData() {
+  const cols = [];
+  for(let d=0; d<D_FIXED; d++) {
+    cols.push({ label: headersData.dates[d]||headersData.jours[d]||('J-'+d), getScore: (eid,sec) => S[eid][sec][d].score });
+  }
+  synthCols.forEach(col => {
+    cols.push({ label: col.date||col.jour||'Synthèse', getScore: (eid,sec) => col.enginData[eid][sec].score });
+  });
+  const labels=[], values=[];
+  cols.forEach(col => {
+    let totalNum=0, totalDen=0, hasData=false;
+    ENGINS_CONFIG.forEach(e => {
+      const p = parseScore(col.getScore(e.id,'APPROS'));
+      if(p) { totalNum+=p.num; totalDen+=p.den; hasData=true; }
+    });
+    labels.push(col.label);
+    values.push(hasData && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
+  });
+  return { labels, values };
+}
+
+function openChart()  { document.getElementById('chartOverlay').classList.add('open'); drawChart(); }
+function closeChart() { document.getElementById('chartOverlay').classList.remove('open'); }
+document.getElementById('chartOverlay').addEventListener('click', function(e) { if(e.target===this) closeChart(); });
+
+function drawChart() {
+  const { labels, values } = buildChartData();
+  const canvas = document.getElementById('approsChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 800, H = 320;
+  canvas.width = W; canvas.height = H;
+  const PAD = { top:30, right:30, bottom:50, left:55 };
+  const cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  const n = labels.length;
+  if(n===0) { ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center'; ctx.fillText('Aucune donnée APPROS (format X/Y requis)',W/2,H/2); return; }
+
+  // Grille
+  for(let pct=0; pct<=100; pct+=10) {
+    const y = PAD.top+cH-(pct/100)*cH;
+    ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+cW,y); ctx.stroke();
+    ctx.fillStyle='#888'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(pct+'%', PAD.left-6, y+4);
+  }
+  // Labels X
+  const step = cW/Math.max(n-1,1);
+  ctx.fillStyle='#555'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='center';
+  labels.forEach((lbl,i) => { const x = n===1?PAD.left+cW/2:PAD.left+i*step; ctx.fillText(lbl, x, H-PAD.bottom+18); });
+  // Axes
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top+cH); ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
+  // Points
+  const pts = values.map((v,i) => {
+    if(v===null) return null;
+    return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v };
+  });
+  // Courbe
+  ctx.strokeStyle='#f5a623'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath(); let started=false;
+  pts.forEach(pt => { if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
+  ctx.stroke();
+  // Points + labels
+  pts.forEach(pt => {
+    if(!pt) return;
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2); ctx.fillStyle='#f5a623'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#1a1917'; ctx.font='bold 11px Segoe UI,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(pt.v+'%', pt.x, pt.y-10);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════════════════════
+function finishBoot() {
+  if(!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
+  build();
+  document.getElementById('dateJour').addEventListener('change', () => { setDatesFromBase(); build(); });
+}
+
+const now = new Date();
+document.getElementById('dateJour').value = now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
+init();
+initFirebase();
+</script>
+</body>
+</html>
