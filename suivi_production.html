@@ -87,13 +87,38 @@ input.loco:focus { background: #f0f4ff; border-radius: 3px; }
 .btn-danger { background: var(--surface); color: #c03030; border-color: #f0cece; }
 .btn-danger:hover { background: #fdeaea; }
 
-.chart-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
-.chart-modal-overlay.open { display: flex; }
-.chart-modal { background: #fff; border-radius: 10px; padding: 24px; width: min(900px, 95vw); box-shadow: 0 8px 40px rgba(0,0,0,.3); position: relative; }
-.chart-modal h2 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
-.chart-modal .close-btn { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); }
-.chart-modal .close-btn:hover { color: var(--text); }
-canvas#approsChart { width: 100% !important; }
+/* Modal commun */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: #fff; border-radius: 10px; padding: 24px; width: min(960px, 95vw); max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,.3); position: relative; }
+.modal-box h2 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+.modal-box .close-btn { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+.modal-box .close-btn:hover { color: var(--text); }
+
+/* Tabs graphique */
+.chart-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.chart-tab { padding: 5px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; font-family: inherit; color: var(--muted); }
+.chart-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+canvas.chart-canvas { width: 100% !important; }
+
+/* Modal historique */
+.hist-toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+.hist-toolbar label { font-size: 12px; color: var(--muted); }
+.hist-toolbar input[type=date] { font-size: 12px; border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; font-family: inherit; }
+.hist-table-wrap { overflow-x: auto; }
+.hist-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.hist-table th { background: #e0ddd6; border: 1px solid #aaa; padding: 5px 8px; text-align: left; font-weight: 700; white-space: nowrap; }
+.hist-table td { border: 1px solid #ccc; padding: 4px 8px; vertical-align: middle; }
+.hist-table tr:hover td { background: #f4f7fd; }
+.hist-table td.dot-cell { text-align: center; }
+.hist-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.hist-dot.green { background: #22a050; }
+.hist-dot.red   { background: #d03030; }
+.hist-dot.none  { background: #ccc; }
+.hist-del-btn { padding: 2px 7px; font-size: 11px; border: 1px solid #f0cece; border-radius: 3px; background: #fdeaea; color: #c03030; cursor: pointer; font-family: inherit; }
+.hist-del-btn:hover { background: #fbd5d5; }
+.hist-empty { color: var(--muted); font-size: 12px; padding: 20px; text-align: center; }
 
 @media print {
   body { padding: 0; background: #fff; }
@@ -109,16 +134,16 @@ canvas#approsChart { width: 100% !important; }
 <div class="topbar">
   <div>
     <h1>Tableau de Suivi de Production</h1>
-    <div class="subtitle">Mise a jour quotidienne</div>
+    <div class="subtitle">Mise à jour quotidienne — synchronisation Firebase</div>
   </div>
   <div class="date-box">
     <label for="dateJour">Date de base :</label>
     <input type="date" id="dateJour">
   </div>
-  <span id="fbStatus" class="sync">&#9203; Connexion...</span>
+  <span id="fbStatus" class="sync">⏳ Connexion...</span>
   <div id="userBadge" style="display:none">
     <span id="userEmail"></span>
-    <button id="btnLogout" onclick="doLogout()">Deconnexion</button>
+    <button id="btnLogout" onclick="doLogout()">Déconnexion</button>
   </div>
   <button class="btn-print btn" onclick="window.print()">Imprimer</button>
 </div>
@@ -135,18 +160,41 @@ canvas#approsChart { width: 100% !important; }
 </div>
 
 <div class="bottombar">
-  <button class="btn btn-danger"  onclick="resetAll()">Reinitialiser</button>
+  <button class="btn btn-danger"  onclick="resetAll()">Réinitialiser</button>
   <button class="btn btn-ghost"   onclick="exportCSV()">Exporter CSV</button>
-  <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthese</button>
+  <button class="btn btn-ghost"   onclick="openHistorique()">📋 Historique</button>
+  <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   <button class="btn btn-ghost"   onclick="openChart()">Graphique APPROS</button>
 </div>
 
-<div class="chart-modal-overlay" id="chartOverlay">
-  <div class="chart-modal">
+<!-- Modal Graphique -->
+<div class="modal-overlay" id="chartOverlay">
+  <div class="modal-box">
     <button class="close-btn" onclick="closeChart()">&#x2715;</button>
-    <h2>Taux de realisation APPROS - par journee</h2>
-    <canvas id="approsChart" height="320"></canvas>
+    <h2>Taux de réalisation APPROS</h2>
+    <div class="chart-tabs">
+      <button class="chart-tab active" id="tabCourant" onclick="switchTab('courant')">Vue courante (4 jours)</button>
+      <button class="chart-tab" id="tabHistorique" onclick="switchTab('historique')">Historique complet</button>
+    </div>
+    <canvas class="chart-canvas" id="approsChart" height="320"></canvas>
+  </div>
+</div>
+
+<!-- Modal Historique -->
+<div class="modal-overlay" id="histOverlay">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeHistorique()">&#x2715;</button>
+    <h2>Historique des sauvegardes</h2>
+    <div class="hist-toolbar">
+      <label>Du :</label>
+      <input type="date" id="histFrom">
+      <label>Au :</label>
+      <input type="date" id="histTo">
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="renderHistTable()">Filtrer</button>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="clearHistFilter()">Tout afficher</button>
+    </div>
+    <div class="hist-table-wrap" id="histTableWrap"></div>
   </div>
 </div>
 
@@ -176,18 +224,17 @@ let S = {};
 let headersData = { dates: [], jours: [] };
 let enginLabels = {};
 let synthCols = [];
+let historique = {}; // { "2025-06-03": { date, engins: { p18: { loco, APPROS:{score,dot}, 'PIECES DEPOSEES':{score,dot} }, ... } } }
 let db = null;
 let saveTimer = null;
+let currentChartTab = 'courant';
 
-// AUTH
+// ─── AUTH ───────────────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 
 auth.onAuthStateChanged(function(user) {
-  if (!user) {
-    window.location.href = 'login.html';
-    return;
-  }
+  if (!user) { window.location.href = 'login.html'; return; }
   document.getElementById('userEmail').textContent = '👤 ' + user.email;
   document.getElementById('userBadge').style.display = 'flex';
   db = firebase.firestore();
@@ -205,6 +252,7 @@ function setStatus(type, msg) {
   el.textContent = msg;
 }
 
+// ─── FIREBASE LOAD ───────────────────────────────────────────────────────────
 async function loadFirebase() {
   try {
     var parts = FIRESTORE_DOC.split('/');
@@ -215,8 +263,9 @@ async function loadFirebase() {
       if (data.headersData) headersData = data.headersData;
       if (data.enginLabels) enginLabels = data.enginLabels;
       if (data.synthCols)   synthCols   = data.synthCols;
+      if (data.historique)  historique  = data.historique;
       if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
-      setStatus('ok', 'Synchronise');
+      setStatus('ok', '✓ Synchronisé');
     } else {
       setStatus('ok', 'Nouveau document');
     }
@@ -228,22 +277,40 @@ async function loadFirebase() {
   finishBoot();
 }
 
+// ─── FIREBASE SAVE ───────────────────────────────────────────────────────────
 async function saveFirebase() {
+  var dateJour = document.getElementById('dateJour').value;
+
+  // Construire l'entrée historique du jour (J0 = index 0 = jour courant)
+  if (dateJour) {
+    var entree = { date: dateJour, savedAt: new Date().toISOString(), engins: {} };
+    ENGINS_CONFIG.forEach(function(e) {
+      entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[0] || '') : '' };
+      e.sections.forEach(function(sec) {
+        var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][0] : { score:'', dot:null };
+        entree.engins[e.id][sec] = { score: cell.score || '', dot: cell.dot || null };
+      });
+    });
+    historique[dateJour] = entree;
+  }
+
   var payload = {
     S: S,
     headersData: headersData,
     enginLabels: enginLabels,
     synthCols: synthCols,
-    dateJour: document.getElementById('dateJour').value,
+    historique: historique,
+    dateJour: dateJour,
     savedAt: new Date().toISOString()
   };
   localStorage.setItem('sp_backup', JSON.stringify(payload));
-  if (!db) { setStatus('err', 'Firebase non connecte'); return; }
+
+  if (!db) { setStatus('err', 'Firebase non connecté'); return; }
   try {
     setStatus('sync', 'Sauvegarde...');
     var parts = FIRESTORE_DOC.split('/');
     await db.collection(parts[0]).doc(parts[1]).set(payload);
-    setStatus('ok', 'Sauvegarde ' + new Date().toLocaleTimeString('fr-FR'));
+    setStatus('ok', '✓ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR'));
   } catch(e) {
     setStatus('err', 'Erreur sauvegarde');
     console.error(e);
@@ -265,10 +332,12 @@ function loadLocal() {
     if (data.headersData) headersData = data.headersData;
     if (data.enginLabels) enginLabels = data.enginLabels;
     if (data.synthCols)   synthCols   = data.synthCols;
+    if (data.historique)  historique  = data.historique;
     if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
   } catch(e) { console.error(e); }
 }
 
+// ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
   S = {}; enginLabels = {};
   ENGINS_CONFIG.forEach(function(e) {
@@ -303,6 +372,7 @@ function setDatesFromBase() {
   for (var i=0; i<D_FIXED; i++) headersData.dates[i] = fmt(base, i);
 }
 
+// ─── BUILD TABLE ─────────────────────────────────────────────────────────────
 function build() { buildHeader(); buildBody(); }
 
 function buildHeader() {
@@ -322,7 +392,7 @@ function buildHeader() {
     th.appendChild(makeInput('th-header-input th-j',    col.jour, 'Jour', function(v){ col.jour=v; scheduleAutoSave(); }));
     var delBtn = document.createElement('button');
     delBtn.className = 'btn-del-col';
-    delBtn.textContent = 'X Supprimer';
+    delBtn.textContent = '✕ Supprimer';
     (function(c){ delBtn.onclick = function(){ synthCols = synthCols.filter(function(x){ return x.id!==c.id; }); build(); scheduleAutoSave(); }; })(col);
     th.appendChild(delBtn);
     row.appendChild(th);
@@ -336,7 +406,6 @@ function buildBody() {
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
   ENGINS_CONFIG.forEach(function(e) {
-    // Ligne ENGIN
     var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
     var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
     for (var d=0; d<D_FIXED; d++) {
@@ -349,7 +418,6 @@ function buildBody() {
     });
     tb.appendChild(rEngin);
 
-    // Ligne libelle
     var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
     var tdT = document.createElement('td'); tdT.className = 'label';
     tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
@@ -357,7 +425,6 @@ function buildBody() {
     synthCols.forEach(function(){ var td=document.createElement('td'); td.className='data-cell synth-cell'; rTitle.appendChild(td); });
     tb.appendChild(rTitle);
 
-    // Sections
     e.sections.forEach(function(s) {
       var rNote = document.createElement('tr'); rNote.className = 'row-label';
       var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
@@ -386,24 +453,24 @@ function buildBody() {
   });
 }
 
+// ─── HELPERS DOM ─────────────────────────────────────────────────────────────
 function makeInput(cls, val, placeholder, onInput) {
   var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
   inp.oninput = function(e) { onInput(e.target.value); };
   return inp;
 }
-
 function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 
 function makeLoco_fixed(eid, d) {
   var inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N engin...'; inp.value=S[eid].loco[d];
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=S[eid].loco[d];
   (function(ei,di){ inp.oninput = function(){ S[ei].loco[di]=inp.value; scheduleAutoSave(); }; })(eid,d);
   return inp;
 }
 function makeLoco_synth(col, eid) {
   var inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N engin...'; inp.value=col.enginData[eid].loco;
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=col.enginData[eid].loco;
   inp.oninput = function(){ col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
   return inp;
 }
@@ -427,7 +494,6 @@ function makeEnginLabelInput(eid) {
   inp.oninput = function(){ enginLabels[eid]=inp.value; scheduleAutoSave(); };
   return inp;
 }
-
 function makeDot(getVal, setVal, color) {
   var btn = document.createElement('button');
   btn.className = 'dot-btn ' + (getVal()===color ? color : 'off');
@@ -436,7 +502,6 @@ function makeDot(getVal, setVal, color) {
   btn.onclick = function(){ setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
   return btn;
 }
-
 function makeScoreInner_fixed(eid, s, d) {
   var inner = document.createElement('div'); inner.className = 'score-inner';
   (function(ei,si,di){
@@ -464,12 +529,13 @@ function makeScoreInner_synth(col, eid, s) {
 function addSynthCol() { synthCols.push(makeSynthColData()); build(); scheduleAutoSave(); }
 
 function resetAll() {
-  if (!confirm('Reinitialiser toutes les donnees ?')) return;
+  if (!confirm('Réinitialiser toutes les données du tableau ?\n(L\'historique est conservé)')) return;
   init(); synthCols = []; setDatesFromBase(); build(); scheduleAutoSave();
 }
 
+// ─── EXPORT CSV ──────────────────────────────────────────────────────────────
 function exportCSV() {
-  var rows = [['Engin','Section','Jour','Date','N Engin','Remarque','Score','Statut']];
+  var rows = [['Engin','Section','Jour','Date','N° Engin','Remarque','Score','Statut']];
   ENGINS_CONFIG.forEach(function(e) {
     e.sections.forEach(function(s) {
       for (var d=0; d<D_FIXED; d++) {
@@ -482,7 +548,7 @@ function exportCSV() {
     ENGINS_CONFIG.forEach(function(e) {
       e.sections.forEach(function(s) {
         var data = col.enginData[e.id][s];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthese '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, col.jour||'Synthèse '+(ci+1), col.date||'', col.enginData[e.id].loco||'', data.note||'', data.score||'', data.dot==='green'?'OK':data.dot==='red'?'NOK':'']);
       });
     });
   });
@@ -494,7 +560,73 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-// GRAPHIQUE
+// ─── HISTORIQUE MODAL ────────────────────────────────────────────────────────
+function openHistorique() {
+  document.getElementById('histOverlay').classList.add('open');
+  renderHistTable();
+}
+function closeHistorique() { document.getElementById('histOverlay').classList.remove('open'); }
+document.getElementById('histOverlay').addEventListener('click', function(e){ if(e.target===this) closeHistorique(); });
+
+function clearHistFilter() {
+  document.getElementById('histFrom').value = '';
+  document.getElementById('histTo').value = '';
+  renderHistTable();
+}
+
+function renderHistTable() {
+  var from = document.getElementById('histFrom').value;
+  var to   = document.getElementById('histTo').value;
+  var wrap = document.getElementById('histTableWrap');
+
+  var entries = Object.values(historique).sort(function(a,b){ return a.date.localeCompare(b.date); });
+  if (from) entries = entries.filter(function(e){ return e.date >= from; });
+  if (to)   entries = entries.filter(function(e){ return e.date <= to; });
+
+  if (entries.length === 0) {
+    wrap.innerHTML = '<div class="hist-empty">Aucune entrée dans l\'historique pour cette période.</div>';
+    return;
+  }
+
+  // Construire les colonnes section dynamiquement
+  var sections = [];
+  ENGINS_CONFIG.forEach(function(e) {
+    e.sections.forEach(function(s) { sections.push({ eid: e.id, label: (enginLabels[e.id]||e.defaultLabel)+' — '+s, sec: s }); });
+  });
+
+  var html = '<table class="hist-table"><thead><tr>';
+  html += '<th>Date</th><th>Heure save</th>';
+  sections.forEach(function(col) { html += '<th>'+col.label+'</th>'; });
+  html += '<th></th></tr></thead><tbody>';
+
+  entries.forEach(function(entry) {
+    var heure = entry.savedAt ? new Date(entry.savedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    var dateAff = entry.date ? entry.date.split('-').reverse().join('/') : '—';
+    html += '<tr>';
+    html += '<td><strong>'+dateAff+'</strong></td><td>'+heure+'</td>';
+    sections.forEach(function(col) {
+      var eg = entry.engins && entry.engins[col.eid];
+      var sc = eg && eg[col.sec];
+      var score = sc ? (sc.score||'—') : '—';
+      var dot   = sc ? (sc.dot||'none') : 'none';
+      html += '<td class="dot-cell"><span class="hist-dot '+dot+'"></span> '+score+'</td>';
+    });
+    html += '<td><button class="hist-del-btn" onclick="deleteHistEntry(\''+entry.date+'\')">Supprimer</button></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function deleteHistEntry(date) {
+  if (!confirm('Supprimer l\'entrée du '+date.split('-').reverse().join('/')+' de l\'historique ?')) return;
+  delete historique[date];
+  renderHistTable();
+  scheduleAutoSave();
+}
+
+// ─── GRAPHIQUE ───────────────────────────────────────────────────────────────
 function parseScore(str) {
   if (!str || !str.trim()) return null;
   var m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
@@ -504,7 +636,7 @@ function parseScore(str) {
   return { num:num, den:den };
 }
 
-function buildChartData() {
+function buildChartData_courant() {
   var cols = [];
   for (var d=0; d<D_FIXED; d++) {
     (function(di){
@@ -512,38 +644,83 @@ function buildChartData() {
     })(d);
   }
   synthCols.forEach(function(col) {
-    cols.push({ label: col.date||col.jour||'Synthese', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
+    cols.push({ label: col.date||col.jour||'Synthèse', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
   });
-  var labels=[], values=[];
+  return computeChartSeries(cols);
+}
+
+function buildChartData_historique() {
+  var entries = Object.values(historique).sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var cols = entries.map(function(entry) {
+    return {
+      label: entry.date ? entry.date.slice(5).split('-').reverse().join('/') : '?',
+      getScore: function(eid, sec) {
+        var eg = entry.engins && entry.engins[eid];
+        return eg && eg[sec] ? eg[sec].score : '';
+      }
+    };
+  });
+  return computeChartSeries(cols);
+}
+
+function computeChartSeries(cols) {
+  // Une série par engin + une série totale
+  var series = {};
+  ENGINS_CONFIG.forEach(function(e) {
+    series[e.id] = { label: enginLabels[e.id]||e.defaultLabel, values: [] };
+  });
+  series['total'] = { label: 'Total', values: [] };
+
+  var labels = cols.map(function(col) { return col.label; });
+
   cols.forEach(function(col) {
-    var totalNum=0, totalDen=0, hasData=false;
+    var totalNum=0, totalDen=0, totalHas=false;
     ENGINS_CONFIG.forEach(function(e) {
       var p = parseScore(col.getScore(e.id,'APPROS'));
-      if (p) { totalNum+=p.num; totalDen+=p.den; hasData=true; }
+      if (p) { series[e.id].values.push(Math.round((p.num/p.den)*1000)/10); totalNum+=p.num; totalDen+=p.den; totalHas=true; }
+      else    { series[e.id].values.push(null); }
     });
-    labels.push(col.label);
-    values.push(hasData && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
+    series['total'].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
   });
-  return { labels:labels, values:values };
+
+  return { labels:labels, series:series };
+}
+
+function switchTab(tab) {
+  currentChartTab = tab;
+  document.getElementById('tabCourant').classList.toggle('active', tab==='courant');
+  document.getElementById('tabHistorique').classList.toggle('active', tab==='historique');
+  drawChart();
 }
 
 function openChart()  { document.getElementById('chartOverlay').classList.add('open'); drawChart(); }
 function closeChart() { document.getElementById('chartOverlay').classList.remove('open'); }
-document.getElementById('chartOverlay').addEventListener('click', function(e) { if (e.target===this) closeChart(); });
+document.getElementById('chartOverlay').addEventListener('click', function(e){ if(e.target===this) closeChart(); });
+
+var SERIES_COLORS = ['#1a4fa0','#f5a623','#22a050','#d03030','#9b59b6'];
 
 function drawChart() {
-  var data = buildChartData();
-  var labels = data.labels, values = data.values;
+  var data = currentChartTab === 'historique' ? buildChartData_historique() : buildChartData_courant();
+  var labels = data.labels;
+  var seriesKeys = Object.keys(data.series);
+
   var canvas = document.getElementById('approsChart');
   var ctx = canvas.getContext('2d');
-  var W = canvas.offsetWidth || 800, H = 320;
+  var W = canvas.offsetWidth || 860, H = 340;
   canvas.width = W; canvas.height = H;
-  var PAD = { top:30, right:30, bottom:50, left:55 };
+
+  var PAD = { top:40, right:30, bottom:55, left:55 };
   var cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
   var n = labels.length;
-  if (n===0) { ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center'; ctx.fillText('Aucune donnee APPROS (format X/Y requis)',W/2,H/2); return; }
+  if (n===0) {
+    ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Aucune donnée disponible', W/2, H/2); return;
+  }
+
+  // Grille
   for (var pct=0; pct<=100; pct+=10) {
     var y = PAD.top+cH-(pct/100)*cH;
     ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=1;
@@ -551,26 +728,65 @@ function drawChart() {
     ctx.fillStyle='#888'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='right';
     ctx.fillText(pct+'%', PAD.left-6, y+4);
   }
-  var step = cW/Math.max(n-1,1);
-  ctx.fillStyle='#555'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='center';
-  labels.forEach(function(lbl,i){ var x = n===1?PAD.left+cW/2:PAD.left+i*step; ctx.fillText(lbl, x, H-PAD.bottom+18); });
+
+  // Axes
   ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top+cH); ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
-  var pts = values.map(function(v,i){ if(v===null) return null; return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v:v }; });
-  ctx.strokeStyle='#f5a623'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
-  ctx.beginPath(); var started=false;
-  pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
-  ctx.stroke();
-  pts.forEach(function(pt){
-    if(!pt) return;
-    ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2); ctx.fillStyle='#f5a623'; ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.fillStyle='#1a1917'; ctx.font='bold 11px Segoe UI,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(pt.v+'%', pt.x, pt.y-10);
+
+  // Labels X
+  var step = n > 1 ? cW/(n-1) : 0;
+  ctx.fillStyle='#555'; ctx.font='10px Segoe UI,sans-serif'; ctx.textAlign='center';
+  labels.forEach(function(lbl,i) {
+    var x = n===1 ? PAD.left+cW/2 : PAD.left+i*step;
+    ctx.save();
+    if (n > 15) { ctx.translate(x, H-PAD.bottom+10); ctx.rotate(-Math.PI/4); ctx.textAlign='right'; ctx.fillText(lbl,0,0); ctx.restore(); }
+    else { ctx.fillText(lbl, x, H-PAD.bottom+18); ctx.restore(); }
+  });
+
+  // Séries
+  seriesKeys.forEach(function(key, ki) {
+    var serie = data.series[key];
+    var color = SERIES_COLORS[ki % SERIES_COLORS.length];
+    var pts = serie.values.map(function(v,i) {
+      if (v===null) return null;
+      return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v:v };
+    });
+
+    ctx.strokeStyle=color; ctx.lineWidth=key==='total'?2.5:1.8;
+    if (key !== 'total') { ctx.setLineDash([5,3]); } else { ctx.setLineDash([]); }
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); var started=false;
+    pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    pts.forEach(function(pt) {
+      if (!pt) return;
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,key==='total'?4.5:3.5,0,Math.PI*2);
+      ctx.fillStyle=color; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+      if (key==='total') {
+        ctx.fillStyle='#1a1917'; ctx.font='bold 10px Segoe UI,sans-serif'; ctx.textAlign='center';
+        ctx.fillText(pt.v+'%', pt.x, pt.y-9);
+      }
+    });
+  });
+
+  // Légende
+  var legX = PAD.left, legY = PAD.top - 20;
+  seriesKeys.forEach(function(key, ki) {
+    var serie = data.series[key];
+    var color = SERIES_COLORS[ki % SERIES_COLORS.length];
+    ctx.fillStyle=color; ctx.fillRect(legX,legY-8,14,3);
+    ctx.beginPath(); ctx.arc(legX+7,legY-6.5,3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#333'; ctx.font='10px Segoe UI,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(serie.label, legX+18, legY-3);
+    legX += ctx.measureText(serie.label).width + 40;
   });
 }
 
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
 function finishBoot() {
   if (!localStorage.getItem('sp_backup') && !S.p18) setDatesFromBase();
   build();
