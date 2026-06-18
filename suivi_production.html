@@ -170,7 +170,7 @@ canvas.chart-canvas { width: 100% !important; }
   <button class="btn btn-ghost"   onclick="openHistorique()">📋 Historique</button>
   <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
-  <button class="btn btn-ghost"   onclick="openChart()">Graphique APPROS</button>
+  <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
   <button class="btn btn-primary" onclick="passerJourSuivant()" style="background:#22a050;border-color:#1a7a3c">&#9654; Jour suivant</button>
 </div>
 
@@ -178,7 +178,11 @@ canvas.chart-canvas { width: 100% !important; }
 <div class="modal-overlay" id="chartOverlay">
   <div class="modal-box">
     <button class="close-btn" onclick="closeChart()">&#x2715;</button>
-    <h2>Taux de réalisation APPROS</h2>
+    <h2 id="chartTitle">Taux de réalisation APPROS</h2>
+    <div class="chart-tabs" id="sectionTabs">
+      <button class="chart-tab active" id="secAPPROS" onclick="switchSection('APPROS')">APPROS</button>
+      <button class="chart-tab" id="secPIECES_DEPOSEES" onclick="switchSection('PIECES DEPOSEES')">PIECES DEPOSEES</button>
+    </div>
     <div class="chart-tabs">
       <button class="chart-tab active" id="tabCourant" onclick="switchTab('courant')">Vue courante (4 jours)</button>
       <button class="chart-tab" id="tabHistorique" onclick="switchTab('historique')">Historique complet</button>
@@ -235,6 +239,7 @@ let historique = {};
 let db = null;
 let saveTimer = null;
 let currentChartTab = 'courant';
+let currentChartSection = 'APPROS';
 
 // ─── AUTH ───────────────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -713,7 +718,7 @@ function buildChartData_courant() {
   synthCols.forEach(function(col) {
     cols.push({ label: isoToDisplay(col.date)||col.jour||'Synthèse', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
   });
-  return computeChartSeries(cols);
+  return computeChartSeries(cols, currentChartSection);
 }
 
 function buildChartData_historique() {
@@ -727,22 +732,32 @@ function buildChartData_historique() {
       }
     };
   });
-  return computeChartSeries(cols);
+  return computeChartSeries(cols, currentChartSection);
 }
 
-function computeChartSeries(cols) {
+function computeChartSeries(cols, section) {
   var series = {};
-  series["total"] = { label: "Total APPROS", values: [] };
+  series["total"] = { label: "Total " + section, values: [] };
   var labels = cols.map(function(col) { return col.label; });
   cols.forEach(function(col) {
     var totalNum=0, totalDen=0, totalHas=false;
     ENGINS_CONFIG.forEach(function(e) {
-      var p = parseScore(col.getScore(e.id,"APPROS"));
+      var p = parseScore(col.getScore(e.id, section));
       if (p) { totalNum+=p.num; totalDen+=p.den; totalHas=true; }
     });
     series["total"].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
   });
   return { labels:labels, series:series };
+}
+
+function switchSection(section) {
+  currentChartSection = section;
+  var sectionTabs = document.getElementById('sectionTabs');
+  Array.prototype.forEach.call(sectionTabs.children, function(btn) {
+    btn.classList.toggle('active', btn.id === 'sec' + section.replace(/\s+/g, '_'));
+  });
+  document.getElementById('chartTitle').textContent = 'Taux de réalisation ' + section;
+  drawChart();
 }
 
 function switchTab(tab) {
