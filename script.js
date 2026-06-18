@@ -26,7 +26,7 @@ let saveTimer = null;
 let currentChartTab = 'courant';
 let currentChartSection = 'APPROS';
 
-// ─── AUTH ───────────────────────────────────────────────────────────────────
+// ─── AUTH ────────────────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 
@@ -45,10 +45,8 @@ function doLogout() {
 
 function setStatus(type, msg) {
   var el = document.getElementById('fbStatus');
-  if(el) {
-    el.className = type;
-    el.textContent = msg;
-  }
+  el.className = type;
+  el.textContent = msg;
 }
 
 // ─── FIREBASE LOAD ───────────────────────────────────────────────────────────
@@ -68,7 +66,6 @@ async function loadFirebase() {
       setStatus('ok', '✓ Synchronisé');
     } else {
       setStatus('ok', 'Nouveau document');
-      init();
     }
   } catch(e) {
     setStatus('err', 'Erreur lecture Firebase');
@@ -140,6 +137,7 @@ function loadLocal() {
   } catch(e) { console.error(e); }
 }
 
+// ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
   S = {}; enginLabels = {};
   ENGINS_CONFIG.forEach(function(e) {
@@ -169,19 +167,21 @@ function isoToDisplay(iso) {
   return iso;
 }
 
+// ─── BUILD TABLE ─────────────────────────────────────────────────────────────
 function build() { buildHeader(); buildBody(); }
 
 function buildHeader() {
   var row = document.getElementById('headerRow');
-  if(!row) return;
   while (row.children.length > 1) row.removeChild(row.lastChild);
 
   for (var d=0; d<D_FIXED; d++) {
     var th = document.createElement('th');
     th.className = 'th-top';
+
     var display = document.createElement('span');
     display.className = 'th-date-display';
     display.textContent = isoToDisplay(headersData.dates[d]) || '—/—';
+
     var picker = document.createElement('input');
     picker.type = 'date';
     picker.className = 'th-date-picker';
@@ -199,7 +199,9 @@ function buildHeader() {
         pk.classList.remove('visible');
         scheduleAutoSave();
       };
-      pk.onblur = function() { pk.classList.remove('visible'); };
+      pk.onblur = function() {
+        pk.classList.remove('visible');
+      };
     })(display, picker, d);
 
     th.appendChild(display);
@@ -211,9 +213,11 @@ function buildHeader() {
   synthCols.forEach(function(col) {
     var th = document.createElement('th');
     th.className = 'th-top synth-col';
+
     var display = document.createElement('span');
     display.className = 'th-date-display';
     display.textContent = isoToDisplay(col.date) || col.date || '—/—';
+
     var picker = document.createElement('input');
     picker.type = 'date';
     picker.className = 'th-date-picker';
@@ -237,6 +241,7 @@ function buildHeader() {
     th.appendChild(display);
     th.appendChild(picker);
     th.appendChild(makeInput('th-header-input th-j', col.jour, 'Jour', function(v){ col.jour=v; scheduleAutoSave(); }));
+
     var delBtn = document.createElement('button');
     delBtn.className = 'btn-del-col';
     delBtn.textContent = '✕ Supprimer';
@@ -246,18 +251,11 @@ function buildHeader() {
   });
 }
 
-function makeInput(cls, val, placeholder, onInput) {
-  var inp = document.createElement('input');
-  inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
-  inp.oninput = function(e) { onInput(e.target.value); };
-  return inp;
-}
-
+function makeUpdater(arr, idx) { return function(v){ arr[idx]=v; scheduleAutoSave(); }; }
 function makeJourUpdater(idx) { return function(v){ headersData.jours[idx]=v; scheduleAutoSave(); }; }
 
 function buildBody() {
   var tb = document.getElementById('tbody');
-  if(!tb) return;
   tb.innerHTML = '';
   ENGINS_CONFIG.forEach(function(e) {
     var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
@@ -307,72 +305,74 @@ function buildBody() {
   });
 }
 
+// ─── HELPERS DOM ─────────────────────────────────────────────────────────────
+function makeInput(cls, val, placeholder, onInput) {
+  var inp = document.createElement('input');
+  inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
+  inp.oninput = function(e) { onInput(e.target.value); };
+  return inp;
+}
 function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 
 function makeLoco_fixed(eid, p) {
   var inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=S[eid].loco[p] || '';
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=S[eid].loco[p];
   (function(ei,pi){ inp.oninput = function(){ S[ei].loco[pi]=inp.value; scheduleAutoSave(); }; })(eid,p);
   return inp;
 }
-
 function makeLoco_synth(col, eid) {
   var inp = document.createElement('input');
-  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=col.enginData[eid].loco || '';
+  inp.className='loco'; inp.type='text'; inp.placeholder='N° engin...'; inp.value=col.enginData[eid].loco;
   inp.oninput = function(){ col.enginData[eid].loco=inp.value; scheduleAutoSave(); };
   return inp;
 }
-
 function makeNote_fixed(eid, s, p) {
   var ta = document.createElement('textarea');
-  ta.className='note'; ta.placeholder='Remarque...'; ta.value=S[eid][s][p].note || '';
+  ta.className='note'; ta.placeholder='Remarque...'; ta.value=S[eid][s][p].note;
   (function(ei,si,pi){ ta.oninput = function(){ S[ei][si][pi].note=ta.value; autoResize(ta); scheduleAutoSave(); }; })(eid,s,p);
   requestAnimationFrame(function(){ autoResize(ta); });
   return ta;
 }
-
 function makeNote_synth(col, eid, s) {
   var ta = document.createElement('textarea');
-  ta.className='note'; ta.placeholder='Remarque...'; ta.value=col.enginData[eid][s].note || '';
+  ta.className='note'; ta.placeholder='Remarque...'; ta.value=col.enginData[eid][s].note;
   ta.oninput = function(){ col.enginData[eid][s].note=ta.value; autoResize(ta); scheduleAutoSave(); };
   requestAnimationFrame(function(){ autoResize(ta); });
   return ta;
 }
-
 function makeEnginLabelInput(eid) {
   var inp = document.createElement('input');
   inp.className='engin-label-input'; inp.type='text'; inp.value=enginLabels[eid]||'';
   inp.oninput = function(){ enginLabels[eid]=inp.value; scheduleAutoSave(); };
   return inp;
 }
-
 function makeDot(getVal, setVal, color) {
   var btn = document.createElement('button');
   btn.className = 'dot-btn ' + (getVal()===color ? color : 'off');
+  btn.title = color==='green'?'OK':'NOK';
+  btn.setAttribute('aria-label', color==='green'?'OK':'NOK');
   btn.onclick = function(){ setVal(getVal()===color ? null : color); build(); scheduleAutoSave(); };
   return btn;
 }
-
 function makeScoreInner_fixed(eid, s, p) {
   var inner = document.createElement('div'); inner.className = 'score-inner';
   (function(ei,si,pi){
     inner.appendChild(makeDot(function(){ return S[ei][si][pi].dot; }, function(v){ S[ei][si][pi].dot=v; }, 'green'));
     inner.appendChild(makeDot(function(){ return S[ei][si][pi].dot; }, function(v){ S[ei][si][pi].dot=v; }, 'red'));
     var inp = document.createElement('input');
-    inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[ei][si][pi].score || '';
+    inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=S[ei][si][pi].score;
     inp.oninput = function(){ S[ei][si][pi].score=inp.value; scheduleAutoSave(); };
     inner.appendChild(inp);
   })(eid,s,p);
   return inner;
 }
-
 function makeScoreInner_synth(col, eid, s) {
   var data = col.enginData[eid][s];
   var inner = document.createElement('div'); inner.className = 'score-inner';
   inner.appendChild(makeDot(function(){ return data.dot; }, function(v){ data.dot=v; }, 'green'));
   inner.appendChild(makeDot(function(){ return data.dot; }, function(v){ data.dot=v; }, 'red'));
   var inp = document.createElement('input');
-  inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=data.score || '';
+  inp.className='score'; inp.type='text'; inp.placeholder='0/0'; inp.value=data.score;
   inp.oninput = function(){ data.score=inp.value; scheduleAutoSave(); };
   inner.appendChild(inp);
   return inner;
@@ -381,10 +381,11 @@ function makeScoreInner_synth(col, eid, s) {
 function addSynthCol() { synthCols.push(makeSynthColData()); build(); scheduleAutoSave(); }
 
 function resetAll() {
-  if (!confirm('Réinitialiser toutes les données du tableau ?')) return;
+  if (!confirm('Réinitialiser toutes les données du tableau ?\n(L\'historique est conservé)')) return;
   init(); synthCols = []; build(); scheduleAutoSave();
 }
 
+// ─── EXPORT CSV ──────────────────────────────────────────────────────────────
 function exportCSV() {
   var rows = [['Engin','Section','Jour','Date','N° Engin','Remarque','Score','Statut']];
   ENGINS_CONFIG.forEach(function(e) {
@@ -412,81 +413,273 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+// ─── HISTORIQUE MODAL ────────────────────────────────────────────────────────
 function openHistorique() {
   document.getElementById('histOverlay').classList.add('open');
   renderHistTable();
 }
 function closeHistorique() { document.getElementById('histOverlay').classList.remove('open'); }
+document.getElementById('histOverlay').addEventListener('click', function(e){ if(e.target===this) closeHistorique(); });
+
+function clearHistFilter() {
+  document.getElementById('histFrom').value = '';
+  document.getElementById('histTo').value = '';
+  renderHistTable();
+}
 
 function renderHistTable() {
   var from = document.getElementById('histFrom').value;
   var to   = document.getElementById('histTo').value;
   var wrap = document.getElementById('histTableWrap');
+
   var entries = Object.values(historique).sort(function(a,b){ return a.date.localeCompare(b.date); });
   if (from) entries = entries.filter(function(e){ return e.date >= from; });
   if (to)   entries = entries.filter(function(e){ return e.date <= to; });
 
   if (entries.length === 0) {
-    wrap.innerHTML = '<div class="hist-empty">Aucune entrée.</div>';
+    wrap.innerHTML = '<div class="hist-empty">Aucune entrée dans l\'historique pour cette période.</div>';
     return;
   }
-  var html = '<table class="hist-table"><thead><tr><th>Date</th><th>Score</th><th></th></tr></thead><tbody>';
-  entries.forEach(function(entry) {
-    html += '<tr><td>'+entry.date+'</td><td>Score détaillé ici...</td><td><button onclick="deleteHistEntry(\''+entry.date+'\')">X</button></td></tr>';
+
+  var sections = [];
+  ENGINS_CONFIG.forEach(function(e) {
+    e.sections.forEach(function(s) { sections.push({ eid: e.id, label: (enginLabels[e.id]||e.defaultLabel)+' — '+s, sec: s }); });
   });
+
+  var html = '<table class="hist-table"><thead><tr>';
+  html += '<th>Date</th><th>Heure save</th>';
+  sections.forEach(function(col) { html += '<th>'+col.label+'</th>'; });
+  html += '<th></th></tr></thead><tbody>';
+
+  entries.forEach(function(entry) {
+    var heure = entry.savedAt ? new Date(entry.savedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    var dateAff = entry.date ? entry.date.split('-').reverse().join('/') : '—';
+    html += '<tr>';
+    html += '<td><strong>'+dateAff+'</strong></td><td>'+heure+'</td>';
+    sections.forEach(function(col) {
+      var eg = entry.engins && entry.engins[col.eid];
+      var sc = eg && eg[col.sec];
+      var score = sc ? (sc.score||'—') : '—';
+      var dot   = sc ? (sc.dot||'none') : 'none';
+      html += '<td class="dot-cell"><span class="hist-dot '+dot+'"></span> '+score+'</td>';
+    });
+    html += '<td><button class="hist-del-btn" onclick="deleteHistEntry(\''+entry.date+'\')">Supprimer</button></td>';
+    html += '</tr>';
+  });
+
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
 
 function deleteHistEntry(date) {
-  if (!confirm('Supprimer ?')) return;
+  if (!confirm('Supprimer l\'entrée du '+date.split('-').reverse().join('/')+' de l\'historique ?')) return;
   delete historique[date];
   renderHistTable();
   scheduleAutoSave();
 }
 
+// ─── GRAPHIQUE ───────────────────────────────────────────────────────────────
 function parseScore(str) {
-  if (!str) return null;
+  if (!str || !str.trim()) return null;
   var m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
   if (!m) return null;
   var num = parseFloat(m[1].replace(',','.')), den = parseFloat(m[2].replace(',','.'));
-  return den === 0 ? null : { num:num, den:den };
+  if (den===0) return null;
+  return { num:num, den:den };
 }
+
+function buildChartData_courant() {
+  var cols = [];
+  for (var d=0; d<D_FIXED; d++) {
+    (function(di){
+      var p = colOrder[di];
+      cols.push({ label: isoToDisplay(headersData.dates[di])||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
+    })(d);
+  }
+  synthCols.forEach(function(col) {
+    cols.push({ label: isoToDisplay(col.date)||col.jour||'Synthèse', getScore: function(eid,sec){ return col.enginData[eid][sec].score; } });
+  });
+  return computeChartSeries(cols, currentChartSection);
+}
+
+function buildChartData_historique() {
+  var entries = Object.values(historique).sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var cols = entries.map(function(entry) {
+    return {
+      label: entry.date ? entry.date.slice(5).split('-').reverse().join('/') : '?',
+      getScore: function(eid, sec) {
+        var eg = entry.engins && entry.engins[eid];
+        return eg && eg[sec] ? eg[sec].score : '';
+      }
+    };
+  });
+  return computeChartSeries(cols, currentChartSection);
+}
+
+function computeChartSeries(cols, section) {
+  var series = {};
+  series["total"] = { label: "Total " + section, values: [] };
+  var labels = cols.map(function(col) { return col.label; });
+  cols.forEach(function(col) {
+    var totalNum=0, totalDen=0, totalHas=false;
+    ENGINS_CONFIG.forEach(function(e) {
+      var p = parseScore(col.getScore(e.id, section));
+      if (p) { totalNum+=p.num; totalDen+=p.den; totalHas=true; }
+    });
+    series["total"].values.push(totalHas && totalDen>0 ? Math.round((totalNum/totalDen)*1000)/10 : null);
+  });
+  return { labels:labels, series:series };
+}
+
+function switchSection(section) {
+  currentChartSection = section;
+  var sectionTabs = document.getElementById('sectionTabs');
+  Array.prototype.forEach.call(sectionTabs.children, function(btn) {
+    btn.classList.toggle('active', btn.id === 'sec' + section.replace(/\s+/g, '_'));
+  });
+  document.getElementById('chartTitle').textContent = 'Taux de réalisation ' + section;
+  drawChart();
+}
+
+function switchTab(tab) {
+  currentChartTab = tab;
+  document.getElementById('tabCourant').classList.toggle('active', tab==='courant');
+  document.getElementById('tabHistorique').classList.toggle('active', tab==='historique');
+  drawChart();
+}
+
+function openChart()  { document.getElementById('chartOverlay').classList.add('open'); drawChart(); }
+function closeChart() { document.getElementById('chartOverlay').classList.remove('open'); }
+document.getElementById('chartOverlay').addEventListener('click', function(e){ if(e.target===this) closeChart(); });
+
+var SERIES_COLORS = ['#1a4fa0','#f5a623','#22a050','#d03030','#9b59b6'];
 
 function drawChart() {
-    // Logique simplifiée du dessin du graphique (Chart.js ou Canvas manuel)
-    var canvas = document.getElementById('approsChart');
-    if(!canvas) return;
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillText("Graphique en cours de génération...", 10, 50);
+  var data = currentChartTab === 'historique' ? buildChartData_historique() : buildChartData_courant();
+  var labels = data.labels;
+  var seriesKeys = Object.keys(data.series);
+
+  var canvas = document.getElementById('approsChart');
+  var ctx = canvas.getContext('2d');
+  var W = canvas.offsetWidth || 860, H = 340;
+  canvas.width = W; canvas.height = H;
+
+  var PAD = { top:40, right:30, bottom:55, left:55 };
+  var cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+  var n = labels.length;
+  if (n===0) {
+    ctx.fillStyle='#888'; ctx.font='13px Segoe UI,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Aucune donnée disponible', W/2, H/2); return;
+  }
+
+  for (var pct=0; pct<=100; pct+=10) {
+    var y = PAD.top+cH-(pct/100)*cH;
+    ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+cW,y); ctx.stroke();
+    ctx.fillStyle='#888'; ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(pct+'%', PAD.left-6, y+4);
+  }
+
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD.left,PAD.top+cH); ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
+
+  var step = n > 1 ? cW/(n-1) : 0;
+  ctx.fillStyle='#555'; ctx.font='10px Segoe UI,sans-serif'; ctx.textAlign='center';
+  labels.forEach(function(lbl,i) {
+    var x = n===1 ? PAD.left+cW/2 : PAD.left+i*step;
+    ctx.save();
+    if (n > 15) { ctx.translate(x, H-PAD.bottom+10); ctx.rotate(-Math.PI/4); ctx.textAlign='right'; ctx.fillText(lbl,0,0); ctx.restore(); }
+    else { ctx.fillText(lbl, x, H-PAD.bottom+18); ctx.restore(); }
+  });
+
+  seriesKeys.forEach(function(key, ki) {
+    var serie = data.series[key];
+    var color = SERIES_COLORS[ki % SERIES_COLORS.length];
+    var pts = serie.values.map(function(v,i) {
+      if (v===null) return null;
+      return { x: n===1?PAD.left+cW/2:PAD.left+i*step, y: PAD.top+cH-(v/100)*cH, v:v };
+    });
+
+    ctx.strokeStyle=color; ctx.lineWidth=2.5;
+    ctx.setLineDash([]);
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); var started=false;
+    pts.forEach(function(pt){ if(!pt){started=false;return;} if(!started){ctx.moveTo(pt.x,pt.y);started=true;}else ctx.lineTo(pt.x,pt.y); });
+    ctx.stroke();
+
+    pts.forEach(function(pt) {
+      if (!pt) return;
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,Math.PI*2);
+      ctx.fillStyle=color; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#1a1917'; ctx.font='bold 10px Segoe UI,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(pt.v+'%', pt.x, pt.y-9);
+    });
+  });
+
+  var legX = PAD.left, legY = PAD.top - 20;
+  seriesKeys.forEach(function(key, ki) {
+    var serie = data.series[key];
+    var color = SERIES_COLORS[ki % SERIES_COLORS.length];
+    ctx.fillStyle=color; ctx.fillRect(legX,legY-8,14,3);
+    ctx.beginPath(); ctx.arc(legX+7,legY-6.5,3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#333'; ctx.font='10px Segoe UI,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(serie.label, legX+18, legY-3);
+    legX += ctx.measureText(serie.label).width + 40;
+  });
 }
 
-function openChart() { document.getElementById('chartOverlay').classList.add('open'); drawChart(); }
-function closeChart() { document.getElementById('chartOverlay').classList.remove('open'); }
-
-function switchSection(sec) { currentChartSection = sec; drawChart(); }
-function switchTab(tab) { currentChartTab = tab; drawChart(); }
-
+// ─── ROTATION JOUR SUIVANT ───────────────────────────────────────────────────
 function passerJourSuivant() {
   var dateActuelle = document.getElementById("dateJour").value;
-  if (!dateActuelle) return;
-  if (!confirm("Passer au jour suivant ?")) return;
+  if (!dateActuelle) { alert("Veuillez définir une date de base."); return; }
+  if (!confirm("Passer au jour suivant ?\nLa colonne J-3 sera effacée et deviendra le nouveau J0.")) return;
+
+  var p0 = colOrder[0];
+  var entree = { date: dateActuelle, savedAt: new Date().toISOString(), engins: {} };
+  ENGINS_CONFIG.forEach(function(e) {
+    entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[p0] || "") : "" };
+    e.sections.forEach(function(sec) {
+      var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][p0] : { score:"", dot:null };
+      entree.engins[e.id][sec] = { score: cell.score || "", dot: cell.dot || null };
+    });
+  });
+  historique[dateActuelle] = entree;
+
+  var pNew0 = colOrder[3];
+  ENGINS_CONFIG.forEach(function(e) {
+    S[e.id].loco[pNew0] = "";
+    e.sections.forEach(function(sec) {
+      S[e.id][sec][pNew0] = { note: "", score: "", dot: null };
+    });
+  });
 
   colOrder = [colOrder[3], colOrder[0], colOrder[1], colOrder[2]];
+
+  var oldDates = headersData.dates.slice();
+  var oldJours = headersData.jours.slice();
+  headersData.dates = [oldDates[3], oldDates[0], oldDates[1], oldDates[2]];
+  headersData.jours = [oldJours[3], oldJours[0], oldJours[1], oldJours[2]];
+  headersData.dates[0] = '';
+
   var d = new Date(dateActuelle + "T00:00:00");
   d.setDate(d.getDate() + 1);
-  document.getElementById("dateJour").value = d.toISOString().split('T')[0];
+  var newDate = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+  document.getElementById("dateJour").value = newDate;
 
   build();
   saveFirebase();
 }
 
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
 function finishBoot() {
   build();
 }
 
-// Initialisation par défaut
 var now = new Date();
-var inputDate = document.getElementById('dateJour');
-if(inputDate) inputDate.value = now.toISOString().split('T')[0];
+document.getElementById('dateJour').value = now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
+init();
