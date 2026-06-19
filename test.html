@@ -171,7 +171,7 @@ canvas.chart-canvas { width: 100% !important; }
   <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
-  <button class="btn btn-ghost"   onclick="inverserOrdreColonnes()">⇄ Inverser l'ordre</button>
+  <button class="btn btn-ghost"   onclick="inverserOrdreColonnes()">⇄ Trier par date</button>
   <button class="btn btn-primary" onclick="passerJourSuivant()" style="background:#22a050;border-color:#1a7a3c">&#9654; Jour suivant</button>
 </div>
 
@@ -898,17 +898,28 @@ function passerJourSuivant() {
   saveFirebase();
 }
 
-// ─── INVERSER L'ORDRE DES COLONNES ──────────────────────────────────────────
-// Inverse l'affichage des 4 colonnes fixes (J0 <-> J-3, J-1 <-> J-2)
-// sans déplacer les données : colOrder mappe position affichée -> index
-// physique dans S[eid][s][p], donc on inverse simplement ce mapping ainsi
-// que les dates/libellés "J" affichés dans l'entête, dans le même sens.
+// ─── TRIER LES COLONNES PAR DATE (J0 = date la plus ancienne) ──────────────
+// Réordonne les 4 colonnes fixes selon leur date : la plus ancienne devient
+// J0, puis J-1, J-2, J-3 en allant vers les dates les plus loin dans le futur.
+// colOrder mappe position affichée -> index physique dans S[eid][s][p], donc
+// on ne déplace aucune donnée : on recalcule seulement quel p va à quelle
+// position, et on aligne dates/libellés "J" dans le même ordre.
 function inverserOrdreColonnes() {
-  if (!confirm("Inverser l'ordre des colonnes (J0 ↔ J-3, J-1 ↔ J-2) ?")) return;
+  if (!confirm("Réorganiser les colonnes par date (la plus ancienne en J0) ?")) return;
 
-  colOrder = colOrder.slice().reverse();
-  headersData.dates = headersData.dates.slice().reverse();
-  headersData.jours = headersData.jours.slice().reverse();
+  // Index physiques [0,1,2,3] triés par date croissante (la plus ancienne d'abord)
+  var idxTries = [0,1,2,3].slice().sort(function(a, b) {
+    return headersData.dates[a].localeCompare(headersData.dates[b]);
+  });
+
+  // Nouveau colOrder : pour chaque position affichée, quel p physique afficher
+  var newColOrder = idxTries.map(function(i) { return colOrder[i]; });
+  var newDates = idxTries.map(function(i) { return headersData.dates[i]; });
+  var newJours = ['J0', 'J-1', 'J-2', 'J-3'];
+
+  colOrder = newColOrder;
+  headersData.dates = newDates;
+  headersData.jours = newJours;
 
   build();
   scheduleAutoSave();
