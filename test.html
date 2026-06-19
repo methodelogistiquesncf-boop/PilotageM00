@@ -171,6 +171,7 @@ canvas.chart-canvas { width: 100% !important; }
   <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
+  <button class="btn btn-ghost"   onclick="inverserOrdreColonnes()">⇄ Inverser l'ordre</button>
   <button class="btn btn-primary" onclick="passerJourSuivant()" style="background:#22a050;border-color:#1a7a3c">&#9654; Jour suivant</button>
 </div>
 
@@ -895,6 +896,22 @@ function passerJourSuivant() {
 
   build();
   saveFirebase();
+}
+
+// ─── INVERSER L'ORDRE DES COLONNES ──────────────────────────────────────────
+// Inverse l'affichage des 4 colonnes fixes (J0 <-> J-3, J-1 <-> J-2)
+// sans déplacer les données : colOrder mappe position affichée -> index
+// physique dans S[eid][s][p], donc on inverse simplement ce mapping ainsi
+// que les dates/libellés "J" affichés dans l'entête, dans le même sens.
+function inverserOrdreColonnes() {
+  if (!confirm("Inverser l'ordre des colonnes (J0 ↔ J-3, J-1 ↔ J-2) ?")) return;
+
+  colOrder = colOrder.slice().reverse();
+  headersData.dates = headersData.dates.slice().reverse();
+  headersData.jours = headersData.jours.slice().reverse();
+
+  build();
+  scheduleAutoSave();
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
