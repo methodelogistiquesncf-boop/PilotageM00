@@ -172,7 +172,6 @@ canvas.chart-canvas { width: 100% !important; }
   <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
   <button class="btn btn-ghost"   onclick="inverserOrdreColonnes()">⇄ Trier par date</button>
-  <button class="btn btn-primary" onclick="passerJourSuivant()" style="background:#22a050;border-color:#1a7a3c">&#9654; Jour suivant</button>
 </div>
 
 <!-- Modal Graphique -->
@@ -232,7 +231,7 @@ const ENGINS_CONFIG = [
 const D_FIXED = 4;
 
 let S = {};
-let headersData = { dates: [], jours: [] };
+let headersData = { dates: [] };
 let enginLabels = {};
 let synthCols = [];
 let colOrder = [0,1,2,3];
@@ -363,7 +362,7 @@ function init() {
       S[e.id][s] = Array.from({length: D_FIXED}, function() { return {note:'',score:'',dot:null}; });
     });
   });
-  headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0','J-1','J-2','J-3'] };
+  headersData = { dates: Array(D_FIXED).fill('') };
   colOrder = [0,1,2,3];
 }
 
@@ -394,27 +393,28 @@ function buildHeader() {
   for (var d=0; d<D_FIXED; d++) {
     var th = document.createElement('th');
     th.className = 'th-top';
+    var p = colOrder[d];
 
     // Affichage cliquable de la date (DD/MM)
     var display = document.createElement('span');
     display.className = 'th-date-display';
-    display.textContent = isoToDisplay(headersData.dates[d]) || '—/—';
+    display.textContent = isoToDisplay(headersData.dates[p]) || '—/—';
 
     // Picker masqué
     var picker = document.createElement('input');
     picker.type = 'date';
     picker.className = 'th-date-picker';
-    picker.value = headersData.dates[d] || '';
+    picker.value = headersData.dates[p] || '';
 
     // Clic sur l'affichage → ouvrir le picker
-    (function(sp, pk, idx) {
+    (function(sp, pk, pIdx) {
       sp.onclick = function() {
         pk.classList.add('visible');
         pk.focus();
         try { pk.showPicker && pk.showPicker(); } catch(e) {}
       };
       pk.onchange = function() {
-        headersData.dates[idx] = pk.value;
+        headersData.dates[pIdx] = pk.value;
         sp.textContent = isoToDisplay(pk.value) || '—/—';
         pk.classList.remove('visible');
         scheduleAutoSave();
@@ -422,11 +422,18 @@ function buildHeader() {
       pk.onblur = function() {
         pk.classList.remove('visible');
       };
-    })(display, picker, d);
+    })(display, picker, p);
 
     th.appendChild(display);
     th.appendChild(picker);
-    th.appendChild(makeInput('th-header-input th-j', headersData.jours[d], 'Jour', makeJourUpdater(d)));
+    var jLabel = document.createElement('span');
+    jLabel.className = 'th-j';
+    jLabel.style.display = 'block';
+    jLabel.style.fontSize = '11px';
+    jLabel.style.color = 'var(--muted)';
+    jLabel.style.fontWeight = '600';
+    jLabel.textContent = d === 0 ? 'J0' : 'J-' + d;
+    th.appendChild(jLabel);
     row.appendChild(th);
   }
 
@@ -472,7 +479,6 @@ function buildHeader() {
 }
 
 function makeUpdater(arr, idx) { return function(v){ arr[idx]=v; scheduleAutoSave(); }; }
-function makeJourUpdater(idx) { return function(v){ headersData.jours[idx]=v; scheduleAutoSave(); }; }
 
 function buildBody() {
   var tb = document.getElementById('tbody');
@@ -613,7 +619,7 @@ function exportCSV() {
       for (var d=0; d<D_FIXED; d++) {
         var p = colOrder[d];
         var c = S[e.id][s][p];
-        rows.push([enginLabels[e.id]||e.defaultLabel, s, headersData.jours[d]||'J-'+d, isoToDisplay(headersData.dates[d])||'', S[e.id].loco[p]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
+        rows.push([enginLabels[e.id]||e.defaultLabel, s, (d===0?'J0':'J-'+d), isoToDisplay(headersData.dates[p])||'', S[e.id].loco[p]||'', c.note||'', c.score||'', c.dot==='green'?'OK':c.dot==='red'?'NOK':'']);
       }
     });
   });
@@ -713,7 +719,7 @@ function buildChartData_courant() {
   for (var d=0; d<D_FIXED; d++) {
     (function(di){
       var p = colOrder[di];
-      cols.push({ label: isoToDisplay(headersData.dates[di])||headersData.jours[di]||('J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
+      cols.push({ label: isoToDisplay(headersData.dates[p])||(di===0?'J0':'J-'+di), getScore: function(eid,sec){ return S[eid][sec][p].score; } });
     })(d);
   }
   synthCols.forEach(function(col) {
@@ -853,76 +859,30 @@ function drawChart() {
   });
 }
 
-// ─── ROTATION JOUR SUIVANT ───────────────────────────────────────────────────
-function passerJourSuivant() {
-  var dateActuelle = document.getElementById("dateJour").value;
-  if (!dateActuelle) { alert("Veuillez définir une date de base."); return; }
-  if (!confirm("Passer au jour suivant ?\nLa colonne J-3 sera effacée et deviendra le nouveau J0.")) return;
-
-  var p0 = colOrder[0];
-  var entree = { date: dateActuelle, savedAt: new Date().toISOString(), engins: {} };
-  ENGINS_CONFIG.forEach(function(e) {
-    entree.engins[e.id] = { loco: S[e.id] ? (S[e.id].loco[p0] || "") : "" };
-    e.sections.forEach(function(sec) {
-      var cell = S[e.id] && S[e.id][sec] ? S[e.id][sec][p0] : { score:"", dot:null };
-      entree.engins[e.id][sec] = { score: cell.score || "", dot: cell.dot || null };
-    });
-  });
-  historique[dateActuelle] = entree;
-
-  var pNew0 = colOrder[3];
-  ENGINS_CONFIG.forEach(function(e) {
-    S[e.id].loco[pNew0] = "";
-    e.sections.forEach(function(sec) {
-      S[e.id][sec][pNew0] = { note: "", score: "", dot: null };
-    });
-  });
-
-  colOrder = [colOrder[3], colOrder[0], colOrder[1], colOrder[2]];
-
-  // Faire tourner également les dates de colonnes
-  var oldDates = headersData.dates.slice();
-  var oldJours = headersData.jours.slice();
-  headersData.dates = [oldDates[3], oldDates[0], oldDates[1], oldDates[2]];
-  headersData.jours = [oldJours[3], oldJours[0], oldJours[1], oldJours[2]];
-  // Effacer la nouvelle J0 (ancienne J-3)
-  headersData.dates[0] = '';
-
-  // Avancer la date du jour d'un jour
-  var d = new Date(dateActuelle + "T00:00:00");
-  d.setDate(d.getDate() + 1);
-  var newDate = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
-  document.getElementById("dateJour").value = newDate;
-
-  build();
-  saveFirebase();
-}
-
 // ─── TRIER LES COLONNES PAR DATE (J0 = date la plus ancienne) ──────────────
-// Réordonne les 4 colonnes fixes selon leur date : la plus ancienne devient
-// J0, puis J-1, J-2, J-3 en allant vers les dates les plus loin dans le futur.
-// colOrder mappe position affichée -> index physique dans S[eid][s][p], donc
-// on ne déplace aucune donnée : on recalcule seulement quel p va à quelle
-// position, et on aligne dates/libellés "J" dans le même ordre.
+// Réordonne l'AFFICHAGE des 4 colonnes fixes selon leur date : la plus
+// ancienne devient J0, puis J-1, J-2, J-3 en allant vers le futur.
+// IMPORTANT : headersData.dates[p] est indexé physiquement par p, exactement
+// comme S[eid][s][p] (loco/notes/scores). On ne déplace donc JAMAIS ce
+// tableau : on modifie uniquement colOrder, qui dit pour chaque position
+// affichée (0..3) quel p physique montrer. Le libellé "J0/J-1/J-2/J-3" est
+// toujours recalculé depuis la position affichée (voir buildHeader), donc il
+// suit automatiquement le tri sans qu'on ait besoin de le stocker.
 function inverserOrdreColonnes() {
-  if (!confirm("Réorganiser les colonnes par date (la plus ancienne en J0) ?")) return;
+  if (!confirm("Réorganiser l'affichage des colonnes par date (la plus ancienne en J0) ?")) return;
 
-  // Index physiques [0,1,2,3] triés par date croissante (la plus ancienne d'abord)
-  var idxTries = [0,1,2,3].slice().sort(function(a, b) {
-    return headersData.dates[a].localeCompare(headersData.dates[b]);
+  // colOrder[d] = p physique actuellement affiché en position d.
+  // On trie ces p physiques par leur date (croissante = la plus ancienne d'abord).
+  var newColOrder = colOrder.slice().sort(function(pA, pB) {
+    return headersData.dates[pA].localeCompare(headersData.dates[pB]);
   });
-
-  // Nouveau colOrder : pour chaque position affichée, quel p physique afficher
-  var newColOrder = idxTries.map(function(i) { return colOrder[i]; });
-  var newDates = idxTries.map(function(i) { return headersData.dates[i]; });
-  var newJours = ['J0', 'J-1', 'J-2', 'J-3'];
 
   colOrder = newColOrder;
-  headersData.dates = newDates;
-  headersData.jours = newJours;
+  // headersData.dates n'est PAS touché : il reste attaché à p.
 
   build();
   scheduleAutoSave();
+}
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
