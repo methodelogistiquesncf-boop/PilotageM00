@@ -21,7 +21,8 @@ let enginLabels = {};
 let synthCols = [];
 let colOrder = [0,1,2,3];
 let historique = {};
-let rassemblement = [];   // [{ id, date, jour, rows:[{id,engin,kit,symbole,designation,qte,commentaire}] }]
+let rassemblement = [];   // [{ id, date, jour, rows:[{id,engin,kit,symbole,designation,qte,commentaire,recu,dateRecu}] }]
+let showRecus = false;
 let db = null;
 let saveTimer = null;
 let currentChartTab = 'courant';
@@ -653,7 +654,7 @@ function todayISO() {
 }
 
 function makeRassemRow() {
-  return { id: 'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), engin:'', kit:'', symbole:'', designation:'', qte:'', commentaire:'' };
+  return { id: 'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), engin:'', kit:'', symbole:'', designation:'', qte:'', commentaire:'', recu:false, dateRecu:'' };
 }
 
 function makeRassemSection(dateISO) {
@@ -691,8 +692,30 @@ function deleteRassemSection(sectionId) {
   scheduleAutoSave();
 }
 
+function toggleRecu(sectionId, rowId) {
+  var sec = rassemblement.find(function(s){ return s.id === sectionId; });
+  if (!sec) return;
+  var row = sec.rows.find(function(r){ return r.id === rowId; });
+  if (!row) return;
+  row.recu = !row.recu;
+  row.dateRecu = row.recu ? todayISO() : '';
+  buildRassemblement();
+  scheduleAutoSave();
+}
+
+function toggleShowRecus() {
+  showRecus = !showRecus;
+  var btn = document.getElementById('btnToggleRecus');
+  btn.textContent = showRecus ? '👁 Masquer les reçus' : '👁 Afficher les reçus';
+  btn.classList.toggle('btn-primary', showRecus);
+  btn.classList.toggle('btn-ghost', !showRecus);
+  buildRassemblement();
+}
+
 function updateRassemCount() {
-  var total = rassemblement.reduce(function(sum, sec){ return sum + sec.rows.length; }, 0);
+  var total = rassemblement.reduce(function(sum, sec){
+    return sum + sec.rows.filter(function(r){ return !r.recu; }).length;
+  }, 0);
   var badge = document.getElementById('manquantsCount');
   if (total > 0) { badge.style.display = 'inline-block'; badge.textContent = total; }
   else { badge.style.display = 'none'; }
@@ -761,9 +784,11 @@ function buildRassemSectionEl(sec) {
   jourInput.value = sec.jour || '';
   jourInput.oninput = function() { sec.jour = jourInput.value; scheduleAutoSave(); };
 
+  var activeCount = sec.rows.filter(function(r){ return !r.recu; }).length;
+  var recuCount = sec.rows.length - activeCount;
   var count = document.createElement('span');
   count.className = 'rassem-count';
-  count.textContent = sec.rows.length + (sec.rows.length === 1 ? ' article' : ' articles');
+  count.textContent = activeCount + (activeCount === 1 ? ' article' : ' articles') + (recuCount > 0 ? ' · ' + recuCount + ' reçu' + (recuCount>1?'s':'') : '');
 
   var actions = document.createElement('div');
   actions.className = 'rassem-section-actions';
@@ -784,20 +809,24 @@ function buildRassemSectionEl(sec) {
   var table = document.createElement('table');
   table.className = 'manquants-table';
   var thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th></th></tr>';
+  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th>Reçu</th><th></th></tr>';
   table.appendChild(thead);
 
+  var visibleRows = showRecus ? sec.rows : sec.rows.filter(function(r){ return !r.recu; });
+
   var tbody = document.createElement('tbody');
-  if (sec.rows.length === 0) {
+  if (visibleRows.length === 0) {
     var trEmpty = document.createElement('tr');
     var tdEmpty = document.createElement('td');
-    tdEmpty.colSpan = 7;
+    tdEmpty.colSpan = 8;
     tdEmpty.className = 'manquants-empty';
-    tdEmpty.textContent = 'Aucun article manquant pour cette date.';
+    tdEmpty.textContent = sec.rows.length === 0
+      ? 'Aucun article manquant pour cette date.'
+      : 'Tous les articles de cette date ont été reçus.';
     trEmpty.appendChild(tdEmpty);
     tbody.appendChild(trEmpty);
   } else {
-    sec.rows.forEach(function(row) {
+    visibleRows.forEach(function(row) {
       tbody.appendChild(buildRassemRowEl(sec, row));
     });
   }
@@ -818,12 +847,14 @@ function buildRassemSectionEl(sec) {
 
 function buildRassemRowEl(sec, row) {
   var tr = document.createElement('tr');
+  if (row.recu) tr.className = 'row-recu';
 
   function fieldCell(field, type) {
     var td = document.createElement('td');
     var inp = document.createElement('input');
     inp.type = type || 'text';
     inp.value = row[field] || '';
+    inp.disabled = !!row.recu;
     inp.oninput = function() { row[field] = inp.value; scheduleAutoSave(); };
     td.appendChild(inp);
     return td;
@@ -838,6 +869,7 @@ function buildRassemRowEl(sec, row) {
   inpDesc.type = 'text';
   inpDesc.placeholder = 'Désignation...';
   inpDesc.value = row.designation || '';
+  inpDesc.disabled = !!row.recu;
   inpDesc.oninput = function() { row.designation = inpDesc.value; scheduleAutoSave(); };
   tdDesc.appendChild(inpDesc);
   tr.appendChild(tdDesc);
@@ -850,9 +882,28 @@ function buildRassemRowEl(sec, row) {
   inpComment.type = 'text';
   inpComment.placeholder = 'Commentaire...';
   inpComment.value = row.commentaire || '';
+  inpComment.disabled = !!row.recu;
   inpComment.oninput = function() { row.commentaire = inpComment.value; scheduleAutoSave(); };
   tdComment.appendChild(inpComment);
   tr.appendChild(tdComment);
+
+  // ── Cellule Reçu : case à cocher + date de réception ──
+  var tdRecu = document.createElement('td');
+  tdRecu.className = 'recu-cell';
+  var checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'recu-checkbox';
+  checkbox.checked = !!row.recu;
+  checkbox.title = row.recu ? 'Marquer comme non reçu' : 'Marquer comme reçu';
+  checkbox.onchange = function() { toggleRecu(sec.id, row.id); };
+  tdRecu.appendChild(checkbox);
+  if (row.recu && row.dateRecu) {
+    var recuDate = document.createElement('span');
+    recuDate.className = 'recu-date';
+    recuDate.textContent = 'le ' + row.dateRecu.split('-').reverse().join('/');
+    tdRecu.appendChild(recuDate);
+  }
+  tr.appendChild(tdRecu);
 
   var tdDel = document.createElement('td');
   tdDel.style.textAlign = 'center';
@@ -868,7 +919,7 @@ function buildRassemRowEl(sec, row) {
 }
 
 function exportManquantsCSV() {
-  var rows = [['Date','Repère','Engin','Kit','Symbole','Désignation','Qté','Commentaire']];
+  var rows = [['Date manquant','Repère','Engin','Kit','Symbole','Désignation','Qté','Commentaire','Statut','Date reçu']];
   var ordered = rassemblement.slice().sort(function(a,b) {
     if (!a.date && !b.date) return 0;
     if (!a.date) return 1;
@@ -878,7 +929,8 @@ function exportManquantsCSV() {
   ordered.forEach(function(sec) {
     var dateAff = sec.date ? sec.date.split('-').reverse().join('/') : '';
     sec.rows.forEach(function(row) {
-      rows.push([dateAff, sec.jour||'', row.engin||'', row.kit||'', row.symbole||'', row.designation||'', row.qte||'', row.commentaire||'']);
+      var dateRecuAff = row.dateRecu ? row.dateRecu.split('-').reverse().join('/') : '';
+      rows.push([dateAff, sec.jour||'', row.engin||'', row.kit||'', row.symbole||'', row.designation||'', row.qte||'', row.commentaire||'', row.recu?'Reçu':'Manquant', dateRecuAff]);
     });
   });
   var csv = '\ufeff' + rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
