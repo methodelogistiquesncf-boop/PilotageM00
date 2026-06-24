@@ -23,6 +23,22 @@ h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
 #userEmail { background: #e8e5df; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
 #btnLogout { padding: 4px 10px; font-size: 11px; border: 1px solid #f0cece; border-radius: 6px; background: #fdeaea; color: #c03030; cursor: pointer; font-family: inherit; }
 
+/* ─── ONGLETS PRINCIPAUX ──────────────────────────────────────────────── */
+.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+.main-tab {
+  padding: 9px 20px; font-size: 13px; font-weight: 600; color: var(--muted);
+  background: transparent; border: none; border-bottom: 3px solid transparent;
+  cursor: pointer; font-family: inherit; margin-bottom: -2px; transition: color .15s, border-color .15s;
+}
+.main-tab:hover { color: var(--text); }
+.main-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.main-tab .badge-count {
+  display: inline-block; min-width: 18px; padding: 1px 5px; margin-left: 6px;
+  font-size: 10px; font-weight: 700; border-radius: 9px; background: #d03030; color: #fff;
+}
+.view-panel { display: none; }
+.view-panel.active { display: block; }
+
 .wrap { overflow-x: auto; }
 table { border-collapse: collapse; background: var(--surface); border: 2px solid #555; }
 th, td { border: 1px solid #888; padding: 0; vertical-align: top; }
@@ -113,11 +129,48 @@ canvas.chart-canvas { width: 100% !important; }
 .hist-del-btn:hover { background: #fbd5d5; }
 .hist-empty { color: var(--muted); font-size: 12px; padding: 20px; text-align: center; }
 
+/* ─── ARTICLES MANQUANTS ──────────────────────────────────────────────── */
+.manquants-wrap { overflow-x: auto; }
+table.manquants-table { border-collapse: collapse; background: var(--surface); border: 2px solid #555; width: 100%; table-layout: fixed; }
+table.manquants-table th {
+  background: #e0ddd6; text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .03em; padding: 7px 8px; border: 1px solid #888; color: #444;
+}
+table.manquants-table td { border: 1px solid #888; padding: 0; vertical-align: middle; }
+table.manquants-table th:nth-child(1), table.manquants-table td:nth-child(1) { width: 11%; }
+table.manquants-table th:nth-child(2), table.manquants-table td:nth-child(2) { width: 12%; }
+table.manquants-table th:nth-child(3), table.manquants-table td:nth-child(3) { width: 11%; }
+table.manquants-table th:nth-child(4), table.manquants-table td:nth-child(4) { width: 11%; }
+table.manquants-table th:nth-child(5), table.manquants-table td:nth-child(5) { width: 22%; }
+table.manquants-table th:nth-child(6), table.manquants-table td:nth-child(6) { width: 7%; }
+table.manquants-table th:nth-child(7), table.manquants-table td:nth-child(7) { width: 19%; }
+table.manquants-table th:nth-child(8), table.manquants-table td:nth-child(8) { width: 7%; text-align: center; }
+
+table.manquants-table input[type="text"],
+table.manquants-table input[type="number"],
+table.manquants-table input[type="date"] {
+  width: 100%; box-sizing: border-box; border: none; background: transparent;
+  height: 34px; font-size: 12px; font-family: inherit; color: var(--text); padding: 0 7px; outline: none;
+}
+table.manquants-table input:focus { background: #f0f4ff; }
+table.manquants-table tr:hover td { background: #fafafa; }
+table.manquants-table tr:hover td input:focus { background: #f0f4ff; }
+
+.manquants-del-btn {
+  border: none; background: transparent; cursor: pointer; color: #b7b3a9;
+  font-size: 15px; padding: 4px; line-height: 1; border-radius: 4px;
+}
+.manquants-del-btn:hover { color: #c03030; background: #fdeaea; }
+
+.manquants-toolbar { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+.manquants-empty { color: var(--muted); font-size: 12px; padding: 24px; text-align: center; }
+
 @media print {
   body { padding: 0; background: #fff; }
-  .topbar, .bottombar { display: none; }
+  .topbar, .bottombar, .main-tabs, .manquants-toolbar, .manquants-del-btn { display: none !important; }
   .th-date-display { color: #000 !important; }
   input.engin-label-input { color: var(--accent) !important; }
   .btn-del-col { display: none; }
   .th-date-picker { display: none !important; }
+  .view-panel { display: block !important; }
 }
