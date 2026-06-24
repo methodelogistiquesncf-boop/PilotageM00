@@ -167,8 +167,8 @@ table.manquants-table td { border: 1px solid #ccc; padding: 0; vertical-align: m
 table.manquants-table th:nth-child(1), table.manquants-table td:nth-child(1) { width: 12%; }
 table.manquants-table th:nth-child(2), table.manquants-table td:nth-child(2) { width: 12%; }
 table.manquants-table th:nth-child(3), table.manquants-table td:nth-child(3) { width: 12%; }
-table.manquants-table th:nth-child(4), table.manquants-table td:nth-child(4) { width: 7%; }
-table.manquants-table th:nth-child(5), table.manquants-table td:nth-child(5) { width: 26%; }
+table.manquants-table th:nth-child(4), table.manquants-table td:nth-child(4) { width: 26%; }
+table.manquants-table th:nth-child(5), table.manquants-table td:nth-child(5) { width: 7%; }
 table.manquants-table th:nth-child(6), table.manquants-table td:nth-child(6) { width: 24%; }
 table.manquants-table th:nth-child(7), table.manquants-table td:nth-child(7) { width: 7%; text-align: center; }
 
