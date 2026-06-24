@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="suivi.css">
 </head>
 <body>
-
 <div class="topbar">
   <div>
     <h1>Pilotage M00</h1>
@@ -25,24 +24,60 @@
   <button class="btn-print btn" onclick="window.print()">Imprimer</button>
 </div>
 
-<div class="wrap">
-  <table id="mainTable">
-    <thead id="thead">
-      <tr id="headerRow">
-        <th class="th-top th-label" style="width:110px"></th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+<!-- Onglets principaux -->
+<div class="main-tabs" id="mainTabs">
+  <button class="main-tab active" id="tabViewSuivi" onclick="switchMainTab('suivi')">Suivi</button>
+  <button class="main-tab" id="tabViewManquants" onclick="switchMainTab('manquants')">
+    Articles manquants <span class="badge-count" id="manquantsCount" style="display:none">0</span>
+  </button>
 </div>
 
-<div class="bottombar">
-  <button class="btn btn-danger"  onclick="resetAll()">Réinitialiser</button>
-  <button class="btn btn-ghost"   onclick="exportCSV()">Exporter CSV</button>
-  <button class="btn btn-ghost"   onclick="openHistorique()">📋 Historique</button>
-  <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
-  <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
-  <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
+<!-- Vue : Suivi -->
+<div class="view-panel active" id="panelSuivi">
+  <div class="wrap">
+    <table id="mainTable">
+      <thead id="thead">
+        <tr id="headerRow">
+          <th class="th-top th-label" style="width:110px"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="bottombar">
+    <button class="btn btn-danger"  onclick="resetAll()">Réinitialiser</button>
+    <button class="btn btn-ghost"   onclick="exportCSV()">Exporter CSV</button>
+    <button class="btn btn-ghost"   onclick="openHistorique()">📋 Historique</button>
+    <button class="btn btn-primary" onclick="addSynthCol()">+ Ajouter colonne synthèse</button>
+    <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
+    <button class="btn btn-ghost"   onclick="openChart()">Graphiques</button>
+  </div>
+</div>
+
+<!-- Vue : Articles manquants -->
+<div class="view-panel" id="panelManquants">
+  <div class="manquants-wrap">
+    <table class="manquants-table" id="manquantsTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Engin</th>
+          <th>Kit</th>
+          <th>Symbole</th>
+          <th>Désignation</th>
+          <th>Qté</th>
+          <th>Commentaire</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="manquantsBody"></tbody>
+    </table>
+  </div>
+  <div class="manquants-toolbar">
+    <button class="btn btn-primary" onclick="addManquantRow()">+ Ajouter une ligne</button>
+    <button class="btn btn-ghost" onclick="exportManquantsCSV()">Exporter CSV</button>
+    <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
+  </div>
 </div>
 
 <!-- Modal Graphique -->
@@ -61,7 +96,6 @@
     <canvas class="chart-canvas" id="approsChart" height="320"></canvas>
   </div>
 </div>
-
 <!-- Modal Historique -->
 <div class="modal-overlay" id="histOverlay">
   <div class="modal-box">
@@ -78,11 +112,9 @@
     <div class="hist-table-wrap" id="histTableWrap"></div>
   </div>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="suivi.js"></script>
-
 </body>
 </html>
