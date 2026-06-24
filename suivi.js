@@ -21,6 +21,7 @@ let enginLabels = {};
 let synthCols = [];
 let colOrder = [0,1,2,3];
 let historique = {};
+let rassemblement = [];   // [{ id, date, jour, rows:[{id,engin,kit,symbole,designation,qte,commentaire}] }]
 let db = null;
 let saveTimer = null;
 let currentChartTab = 'courant';
@@ -49,6 +50,15 @@ function setStatus(type, msg) {
   el.textContent = msg;
 }
 
+// ─── ONGLETS PRINCIPAUX ───────────────────────────────────────────────────
+function switchMainTab(tab) {
+  var isSuivi = tab === 'suivi';
+  document.getElementById('tabViewSuivi').classList.toggle('active', isSuivi);
+  document.getElementById('tabViewManquants').classList.toggle('active', !isSuivi);
+  document.getElementById('panelSuivi').classList.toggle('active', isSuivi);
+  document.getElementById('panelManquants').classList.toggle('active', !isSuivi);
+}
+
 // ─── FIREBASE LOAD ───────────────────────────────────────────────────────────
 async function loadFirebase() {
   try {
@@ -56,13 +66,14 @@ async function loadFirebase() {
     var snap = await db.collection(parts[0]).doc(parts[1]).get();
     if (snap.exists) {
       var data = snap.data();
-      if (data.S)           S           = data.S;
-      if (data.headersData) headersData = data.headersData;
-      if (data.enginLabels) enginLabels = data.enginLabels;
-      if (data.synthCols)   synthCols   = data.synthCols;
-      if (data.historique)  historique  = data.historique;
-      if (data.colOrder)    colOrder    = data.colOrder;
-      if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
+      if (data.S)            S            = data.S;
+      if (data.headersData)  headersData  = data.headersData;
+      if (data.enginLabels)  enginLabels  = data.enginLabels;
+      if (data.synthCols)    synthCols    = data.synthCols;
+      if (data.historique)   historique   = data.historique;
+      if (data.colOrder)     colOrder     = data.colOrder;
+      if (data.rassemblement) rassemblement = data.rassemblement;
+      if (data.dateJour)     document.getElementById('dateJour').value = data.dateJour;
       setStatus('ok', '✓ Synchronisé');
     } else {
       setStatus('ok', 'Nouveau document');
@@ -99,6 +110,7 @@ async function saveFirebase() {
     synthCols: synthCols,
     historique: historique,
     colOrder: colOrder,
+    rassemblement: rassemblement,
     dateJour: dateJour,
     savedAt: new Date().toISOString()
   };
@@ -127,13 +139,14 @@ function loadLocal() {
     var bk = localStorage.getItem('sp_backup');
     if (!bk) return;
     var data = JSON.parse(bk);
-    if (data.S)           S           = data.S;
-    if (data.headersData) headersData = data.headersData;
-    if (data.enginLabels) enginLabels = data.enginLabels;
-    if (data.synthCols)   synthCols   = data.synthCols;
-    if (data.historique)  historique  = data.historique;
-    if (data.colOrder)    colOrder    = data.colOrder;
-    if (data.dateJour)    document.getElementById('dateJour').value = data.dateJour;
+    if (data.S)            S            = data.S;
+    if (data.headersData)  headersData  = data.headersData;
+    if (data.enginLabels)  enginLabels  = data.enginLabels;
+    if (data.synthCols)    synthCols    = data.synthCols;
+    if (data.historique)   historique   = data.historique;
+    if (data.colOrder)     colOrder     = data.colOrder;
+    if (data.rassemblement) rassemblement = data.rassemblement;
+    if (data.dateJour)     document.getElementById('dateJour').value = data.dateJour;
   } catch(e) { console.error(e); }
 }
 
@@ -167,7 +180,7 @@ function isoToDisplay(iso) {
   return iso;
 }
 
-// ─── BUILD TABLE ─────────────────────────────────────────────────────────────
+// ─── BUILD TABLE (Supermarché) ───────────────────────────────────────────────
 function build() { buildHeader(); buildBody(); }
 
 function buildHeader() {
@@ -305,7 +318,7 @@ function buildBody() {
   });
 }
 
-// ─── HELPERS DOM ─────────────────────────────────────────────────────────────
+// ─── HELPERS DOM (Supermarché) ───────────────────────────────────────────────
 function makeInput(cls, val, placeholder, onInput) {
   var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
@@ -385,7 +398,7 @@ function resetAll() {
   init(); synthCols = []; build(); scheduleAutoSave();
 }
 
-// ─── EXPORT CSV ──────────────────────────────────────────────────────────────
+// ─── EXPORT CSV (Supermarché) ─────────────────────────────────────────────────
 function exportCSV() {
   var rows = [['Engin','Section','Jour','Date','N° Engin','Remarque','Score','Statut']];
   ENGINS_CONFIG.forEach(function(e) {
@@ -413,7 +426,7 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-// ─── HISTORIQUE MODAL ────────────────────────────────────────────────────────
+// ─── HISTORIQUE MODAL (Supermarché) ───────────────────────────────────────────
 function openHistorique() {
   document.getElementById('histOverlay').classList.add('open');
   renderHistTable();
@@ -478,7 +491,7 @@ function deleteHistEntry(date) {
   scheduleAutoSave();
 }
 
-// ─── GRAPHIQUE ───────────────────────────────────────────────────────────────
+// ─── GRAPHIQUE (Supermarché) ──────────────────────────────────────────────────
 function parseScore(str) {
   if (!str || !str.trim()) return null;
   var m = str.trim().match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
@@ -633,9 +646,244 @@ function drawChart() {
   });
 }
 
+// ─── RASSEMBLEMENT : sections groupées par date ──────────────────────────────
+function todayISO() {
+  var now = new Date();
+  return now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
+}
+
+function makeRassemRow() {
+  return { id: 'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), engin:'', kit:'', symbole:'', designation:'', qte:'', commentaire:'' };
+}
+
+function makeRassemSection(dateISO) {
+  return { id: 'rs_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), date: dateISO || '', jour: '', rows: [] };
+}
+
+function addRassemSection() {
+  var sec = makeRassemSection(todayISO());
+  sec.rows.push(makeRassemRow());
+  rassemblement.push(sec);
+  buildRassemblement();
+  scheduleAutoSave();
+}
+
+function addRassemRow(sectionId) {
+  var sec = rassemblement.find(function(s){ return s.id === sectionId; });
+  if (!sec) return;
+  sec.rows.push(makeRassemRow());
+  buildRassemblement();
+  scheduleAutoSave();
+}
+
+function deleteRassemRow(sectionId, rowId) {
+  var sec = rassemblement.find(function(s){ return s.id === sectionId; });
+  if (!sec) return;
+  sec.rows = sec.rows.filter(function(r){ return r.id !== rowId; });
+  buildRassemblement();
+  scheduleAutoSave();
+}
+
+function deleteRassemSection(sectionId) {
+  if (!confirm('Supprimer cette section de date et toutes ses lignes ?')) return;
+  rassemblement = rassemblement.filter(function(s){ return s.id !== sectionId; });
+  buildRassemblement();
+  scheduleAutoSave();
+}
+
+function updateRassemCount() {
+  var total = rassemblement.reduce(function(sum, sec){ return sum + sec.rows.length; }, 0);
+  var badge = document.getElementById('manquantsCount');
+  if (total > 0) { badge.style.display = 'inline-block'; badge.textContent = total; }
+  else { badge.style.display = 'none'; }
+}
+
+function buildRassemblement() {
+  var wrap = document.getElementById('rassemblementSections');
+  wrap.innerHTML = '';
+  updateRassemCount();
+
+  if (rassemblement.length === 0) {
+    wrap.innerHTML = '<div class="manquants-empty">Aucune date ajoutée. Clique sur « + Ajouter une date » pour commencer.</div>';
+    return;
+  }
+
+  // Tri par date croissante (les sections sans date restent en fin de liste, dans l'ordre d'ajout)
+  var ordered = rassemblement.slice().sort(function(a,b) {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+
+  ordered.forEach(function(sec) {
+    wrap.appendChild(buildRassemSectionEl(sec));
+  });
+}
+
+function buildRassemSectionEl(sec) {
+  var box = document.createElement('div');
+  box.className = 'rassem-section';
+
+  // ── Header de section ──
+  var head = document.createElement('div');
+  head.className = 'rassem-section-head';
+
+  var display = document.createElement('span');
+  display.className = 'rassem-date-display';
+  display.textContent = isoToDisplay(sec.date) ? (sec.date.split('-').reverse().join('/')) : '— Choisir une date —';
+
+  var picker = document.createElement('input');
+  picker.type = 'date';
+  picker.className = 'rassem-date-picker';
+  picker.value = sec.date || '';
+
+  (function(sp, pk, s) {
+    sp.onclick = function() {
+      pk.classList.add('visible');
+      pk.focus();
+      try { pk.showPicker && pk.showPicker(); } catch(e) {}
+    };
+    pk.onchange = function() {
+      s.date = pk.value;
+      sp.textContent = pk.value ? pk.value.split('-').reverse().join('/') : '— Choisir une date —';
+      pk.classList.remove('visible');
+      buildRassemblement();
+      scheduleAutoSave();
+    };
+    pk.onblur = function() { pk.classList.remove('visible'); };
+  })(display, picker, sec);
+
+  var jourInput = document.createElement('input');
+  jourInput.type = 'text';
+  jourInput.className = 'rassem-jour-input';
+  jourInput.placeholder = 'Repère';
+  jourInput.value = sec.jour || '';
+  jourInput.oninput = function() { sec.jour = jourInput.value; scheduleAutoSave(); };
+
+  var count = document.createElement('span');
+  count.className = 'rassem-count';
+  count.textContent = sec.rows.length + (sec.rows.length === 1 ? ' article' : ' articles');
+
+  var actions = document.createElement('div');
+  actions.className = 'rassem-section-actions';
+  var delSecBtn = document.createElement('button');
+  delSecBtn.className = 'btn-del-section';
+  delSecBtn.textContent = '✕ Supprimer la date';
+  delSecBtn.onclick = function() { deleteRassemSection(sec.id); };
+  actions.appendChild(delSecBtn);
+
+  head.appendChild(display);
+  head.appendChild(picker);
+  head.appendChild(jourInput);
+  head.appendChild(count);
+  head.appendChild(actions);
+  box.appendChild(head);
+
+  // ── Table des lignes ──
+  var table = document.createElement('table');
+  table.className = 'manquants-table';
+  var thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Qté</th><th>Désignation / Commentaire</th><th></th></tr>';
+  table.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  if (sec.rows.length === 0) {
+    var trEmpty = document.createElement('tr');
+    var tdEmpty = document.createElement('td');
+    tdEmpty.colSpan = 6;
+    tdEmpty.className = 'manquants-empty';
+    tdEmpty.textContent = 'Aucun article manquant pour cette date.';
+    trEmpty.appendChild(tdEmpty);
+    tbody.appendChild(trEmpty);
+  } else {
+    sec.rows.forEach(function(row) {
+      tbody.appendChild(buildRassemRowEl(sec, row));
+    });
+  }
+  table.appendChild(tbody);
+  box.appendChild(table);
+
+  var footer = document.createElement('div');
+  footer.className = 'rassem-section-footer';
+  var addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-row';
+  addBtn.textContent = '+ Ajouter une ligne';
+  addBtn.onclick = function() { addRassemRow(sec.id); };
+  footer.appendChild(addBtn);
+  box.appendChild(footer);
+
+  return box;
+}
+
+function buildRassemRowEl(sec, row) {
+  var tr = document.createElement('tr');
+
+  function fieldCell(field, type) {
+    var td = document.createElement('td');
+    var inp = document.createElement('input');
+    inp.type = type || 'text';
+    inp.value = row[field] || '';
+    inp.oninput = function() { row[field] = inp.value; scheduleAutoSave(); };
+    td.appendChild(inp);
+    return td;
+  }
+
+  tr.appendChild(fieldCell('engin'));
+  tr.appendChild(fieldCell('kit'));
+  tr.appendChild(fieldCell('symbole'));
+  tr.appendChild(fieldCell('qte', 'number'));
+
+  // Désignation + commentaire fusionnés visuellement en une cellule large avec deux champs
+  var tdDesc = document.createElement('td');
+  var inpDesc = document.createElement('input');
+  inpDesc.type = 'text';
+  inpDesc.placeholder = 'Désignation...';
+  inpDesc.value = row.designation || '';
+  inpDesc.style.borderBottom = '1px solid #e0ddd6';
+  inpDesc.oninput = function() { row.designation = inpDesc.value; scheduleAutoSave(); };
+  tdDesc.appendChild(inpDesc);
+  tr.appendChild(tdDesc);
+
+  var tdDel = document.createElement('td');
+  tdDel.style.textAlign = 'center';
+  var delBtn = document.createElement('button');
+  delBtn.className = 'manquants-del-btn';
+  delBtn.textContent = '✕';
+  delBtn.title = 'Supprimer la ligne';
+  delBtn.onclick = function() { deleteRassemRow(sec.id, row.id); };
+  tdDel.appendChild(delBtn);
+  tr.appendChild(tdDel);
+
+  return tr;
+}
+
+function exportManquantsCSV() {
+  var rows = [['Date','Repère','Engin','Kit','Symbole','Qté','Désignation','Commentaire']];
+  var ordered = rassemblement.slice().sort(function(a,b) {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+  ordered.forEach(function(sec) {
+    var dateAff = sec.date ? sec.date.split('-').reverse().join('/') : '';
+    sec.rows.forEach(function(row) {
+      rows.push([dateAff, sec.jour||'', row.engin||'', row.kit||'', row.symbole||'', row.qte||'', row.designation||'', row.commentaire||'']);
+    });
+  });
+  var csv = '\ufeff' + rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'rassemblement_'+(document.getElementById('dateJour').value||'export')+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 function finishBoot() {
   build();
+  buildRassemblement();
 }
 
 var now = new Date();
