@@ -132,6 +132,11 @@ canvas.chart-canvas { width: 100% !important; }
 /* ─── RASSEMBLEMENT (sections par date) ──────────────────────────────── */
 .rassemblement-sections { display: flex; flex-direction: column; gap: 18px; }
 
+.rassem-hidden-note {
+  font-size: 11px; color: var(--muted); text-align: center; padding: 6px;
+  background: #eae7e0; border-radius: 6px; border: 1px dashed var(--border);
+}
+
 .rassem-section { background: var(--surface); border: 2px solid #555; border-radius: 6px; overflow: hidden; }
 
 .rassem-section-head {
