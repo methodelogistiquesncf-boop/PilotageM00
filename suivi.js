@@ -784,7 +784,7 @@ function buildRassemSectionEl(sec) {
   var table = document.createElement('table');
   table.className = 'manquants-table';
   var thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Qté</th><th>Désignation</th><th>Commentaire</th><th></th></tr>';
+  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th></th></tr>';
   table.appendChild(thead);
 
   var tbody = document.createElement('tbody');
@@ -832,9 +832,7 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(fieldCell('engin'));
   tr.appendChild(fieldCell('kit'));
   tr.appendChild(fieldCell('symbole'));
-  tr.appendChild(fieldCell('qte', 'number'));
 
-  // Désignation et Commentaire séparés en deux colonnes distinctes
   var tdDesc = document.createElement('td');
   var inpDesc = document.createElement('input');
   inpDesc.type = 'text';
@@ -844,6 +842,9 @@ function buildRassemRowEl(sec, row) {
   tdDesc.appendChild(inpDesc);
   tr.appendChild(tdDesc);
 
+  tr.appendChild(fieldCell('qte', 'number'));
+
+  // Désignation et Commentaire séparés en deux colonnes distinctes
   var tdComment = document.createElement('td');
   var inpComment = document.createElement('input');
   inpComment.type = 'text';
@@ -867,7 +868,7 @@ function buildRassemRowEl(sec, row) {
 }
 
 function exportManquantsCSV() {
-  var rows = [['Date','Repère','Engin','Kit','Symbole','Qté','Désignation','Commentaire']];
+  var rows = [['Date','Repère','Engin','Kit','Symbole','Désignation','Qté','Commentaire']];
   var ordered = rassemblement.slice().sort(function(a,b) {
     if (!a.date && !b.date) return 0;
     if (!a.date) return 1;
@@ -877,7 +878,7 @@ function exportManquantsCSV() {
   ordered.forEach(function(sec) {
     var dateAff = sec.date ? sec.date.split('-').reverse().join('/') : '';
     sec.rows.forEach(function(row) {
-      rows.push([dateAff, sec.jour||'', row.engin||'', row.kit||'', row.symbole||'', row.qte||'', row.designation||'', row.commentaire||'']);
+      rows.push([dateAff, sec.jour||'', row.engin||'', row.kit||'', row.symbole||'', row.designation||'', row.qte||'', row.commentaire||'']);
     });
   });
   var csv = '\ufeff' + rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
