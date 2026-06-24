@@ -739,9 +739,34 @@ function buildRassemblement() {
     return a.date.localeCompare(b.date);
   });
 
-  ordered.forEach(function(sec) {
-    wrap.appendChild(buildRassemSectionEl(sec));
-  });
+  // Une section est "entièrement reçue" si elle a au moins une ligne et qu'elles sont toutes reçues.
+  // Une section vide (pas encore de ligne) n'est jamais masquée.
+  function isSectionFullyRecu(sec) {
+    return sec.rows.length > 0 && sec.rows.every(function(r){ return r.recu; });
+  }
+
+  var visibleSections = showRecus ? ordered : ordered.filter(function(sec){ return !isSectionFullyRecu(sec); });
+  var hiddenCount = ordered.length - visibleSections.length;
+
+  if (visibleSections.length === 0) {
+    var msg = document.createElement('div');
+    msg.className = 'manquants-empty';
+    msg.textContent = hiddenCount > 0
+      ? 'Toutes les dates sont soldées (tous les articles reçus). Clique sur « Afficher les reçus » pour les revoir.'
+      : 'Aucune date ajoutée. Clique sur « + Ajouter une date » pour commencer.';
+    wrap.appendChild(msg);
+  } else {
+    visibleSections.forEach(function(sec) {
+      wrap.appendChild(buildRassemSectionEl(sec));
+    });
+  }
+
+  if (hiddenCount > 0 && !showRecus && visibleSections.length > 0) {
+    var note = document.createElement('div');
+    note.className = 'rassem-hidden-note';
+    note.textContent = hiddenCount + ' date' + (hiddenCount>1?'s':'') + ' soldée' + (hiddenCount>1?'s':'') + ' masquée' + (hiddenCount>1?'s':'') + ' — « Afficher les reçus » pour les revoir.';
+    wrap.appendChild(note);
+  }
 }
 
 function buildRassemSectionEl(sec) {
