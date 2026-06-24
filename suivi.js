@@ -784,14 +784,14 @@ function buildRassemSectionEl(sec) {
   var table = document.createElement('table');
   table.className = 'manquants-table';
   var thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Qté</th><th>Désignation / Commentaire</th><th></th></tr>';
+  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Qté</th><th>Désignation</th><th>Commentaire</th><th></th></tr>';
   table.appendChild(thead);
 
   var tbody = document.createElement('tbody');
   if (sec.rows.length === 0) {
     var trEmpty = document.createElement('tr');
     var tdEmpty = document.createElement('td');
-    tdEmpty.colSpan = 6;
+    tdEmpty.colSpan = 7;
     tdEmpty.className = 'manquants-empty';
     tdEmpty.textContent = 'Aucun article manquant pour cette date.';
     trEmpty.appendChild(tdEmpty);
@@ -834,16 +834,24 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(fieldCell('symbole'));
   tr.appendChild(fieldCell('qte', 'number'));
 
-  // Désignation + commentaire fusionnés visuellement en une cellule large avec deux champs
+  // Désignation et Commentaire séparés en deux colonnes distinctes
   var tdDesc = document.createElement('td');
   var inpDesc = document.createElement('input');
   inpDesc.type = 'text';
   inpDesc.placeholder = 'Désignation...';
   inpDesc.value = row.designation || '';
-  inpDesc.style.borderBottom = '1px solid #e0ddd6';
   inpDesc.oninput = function() { row.designation = inpDesc.value; scheduleAutoSave(); };
   tdDesc.appendChild(inpDesc);
   tr.appendChild(tdDesc);
+
+  var tdComment = document.createElement('td');
+  var inpComment = document.createElement('input');
+  inpComment.type = 'text';
+  inpComment.placeholder = 'Commentaire...';
+  inpComment.value = row.commentaire || '';
+  inpComment.oninput = function() { row.commentaire = inpComment.value; scheduleAutoSave(); };
+  tdComment.appendChild(inpComment);
+  tr.appendChild(tdComment);
 
   var tdDel = document.createElement('td');
   tdDel.style.textAlign = 'center';
