@@ -26,13 +26,13 @@
 
 <!-- Onglets principaux -->
 <div class="main-tabs" id="mainTabs">
-  <button class="main-tab active" id="tabViewSuivi" onclick="switchMainTab('suivi')">Suivi</button>
+  <button class="main-tab active" id="tabViewSuivi" onclick="switchMainTab('suivi')">Supermarché</button>
   <button class="main-tab" id="tabViewManquants" onclick="switchMainTab('manquants')">
-    Articles manquants <span class="badge-count" id="manquantsCount" style="display:none">0</span>
+    Rassemblement <span class="badge-count" id="manquantsCount" style="display:none">0</span>
   </button>
 </div>
 
-<!-- Vue : Suivi -->
+<!-- Vue : Supermarché -->
 <div class="view-panel active" id="panelSuivi">
   <div class="wrap">
     <table id="mainTable">
@@ -54,27 +54,11 @@
   </div>
 </div>
 
-<!-- Vue : Articles manquants -->
+<!-- Vue : Rassemblement (articles manquants groupés par date) -->
 <div class="view-panel" id="panelManquants">
-  <div class="manquants-wrap">
-    <table class="manquants-table" id="manquantsTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Engin</th>
-          <th>Kit</th>
-          <th>Symbole</th>
-          <th>Désignation</th>
-          <th>Qté</th>
-          <th>Commentaire</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="manquantsBody"></tbody>
-    </table>
-  </div>
+  <div class="rassemblement-sections" id="rassemblementSections"></div>
   <div class="manquants-toolbar">
-    <button class="btn btn-primary" onclick="addManquantRow()">+ Ajouter une ligne</button>
+    <button class="btn btn-primary" onclick="addRassemSection()">+ Ajouter une date</button>
     <button class="btn btn-ghost" onclick="exportManquantsCSV()">Exporter CSV</button>
     <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   </div>
