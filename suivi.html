@@ -61,11 +61,12 @@
     <button class="btn btn-primary" onclick="addRassemSection()">+ Ajouter une date</button>
     <button class="btn btn-ghost" id="btnToggleRecus" onclick="toggleShowRecus()">👁 Afficher les reçus</button>
     <button class="btn btn-ghost" onclick="exportManquantsCSV()">Exporter CSV</button>
+    <button class="btn btn-ghost" onclick="openStats()">📊 Statistiques</button>
     <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   </div>
 </div>
 
-<!-- Modal Graphique -->
+<!-- Modal Graphique (Supermarché) -->
 <div class="modal-overlay" id="chartOverlay">
   <div class="modal-box">
     <button class="close-btn" onclick="closeChart()">&#x2715;</button>
@@ -81,6 +82,7 @@
     <canvas class="chart-canvas" id="approsChart" height="320"></canvas>
   </div>
 </div>
+
 <!-- Modal Historique -->
 <div class="modal-overlay" id="histOverlay">
   <div class="modal-box">
@@ -97,6 +99,29 @@
     <div class="hist-table-wrap" id="histTableWrap"></div>
   </div>
 </div>
+
+<!-- Modal Statistiques Rassemblement -->
+<div class="modal-overlay" id="statsOverlay">
+  <div class="modal-box modal-box-stats">
+    <button class="close-btn" onclick="closeStats()">&#x2715;</button>
+    <h2>📊 Statistiques Rassemblement</h2>
+
+    <div class="stats-tabs">
+      <button class="stats-tab active" id="statsTab_global"  onclick="switchStatsTab('global')">Vue globale</button>
+      <button class="stats-tab"        id="statsTab_delais"  onclick="switchStatsTab('delais')">Délais</button>
+      <button class="stats-tab"        id="statsTab_engins"  onclick="switchStatsTab('engins')">Par engin</button>
+      <button class="stats-tab"        id="statsTab_cadence" onclick="switchStatsTab('cadence')">Cadence</button>
+      <button class="stats-tab"        id="statsTab_top"     onclick="switchStatsTab('top')">Top articles</button>
+    </div>
+
+    <div class="stats-panel active" id="statsPanel_global"></div>
+    <div class="stats-panel"        id="statsPanel_delais"></div>
+    <div class="stats-panel"        id="statsPanel_engins"></div>
+    <div class="stats-panel"        id="statsPanel_cadence"></div>
+    <div class="stats-panel"        id="statsPanel_top"></div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
