@@ -898,14 +898,16 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(fieldCell('qte', 'number'));
 
   var tdComment = document.createElement('td');
-  var inpComment = document.createElement('input');
-  inpComment.type = 'text';
+  var inpComment = document.createElement('textarea');
+  inpComment.className = 'comment-area';
+  inpComment.rows = 1;
   inpComment.placeholder = 'Commentaire...';
   inpComment.value = row.commentaire || '';
   inpComment.disabled = !!row.recu;
-  inpComment.oninput = function() { row.commentaire = inpComment.value; scheduleAutoSave(); };
+  inpComment.oninput = function() { row.commentaire = inpComment.value; autoResize(inpComment); scheduleAutoSave(); };
   tdComment.appendChild(inpComment);
   tr.appendChild(tdComment);
+  requestAnimationFrame(function(){ autoResize(inpComment); });
 
   var tdRecu = document.createElement('td');
   tdRecu.className = 'recu-cell';
@@ -959,6 +961,14 @@ function exportManquantsCSV() {
   a.href = url; a.download = 'rassemblement_'+(document.getElementById('dateJour').value||'export')+'.csv';
   a.click(); URL.revokeObjectURL(url);
 }
+
+function printRassemblement() {
+  document.body.classList.add('print-rassemblement');
+  window.print();
+}
+window.addEventListener('afterprint', function() {
+  document.body.classList.remove('print-rassemblement');
+});
 
 // ─── STATISTIQUES RASSEMBLEMENT ───────────────────────────────────────────────
 
