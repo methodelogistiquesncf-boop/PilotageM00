@@ -187,6 +187,16 @@ table.manquants-table input:focus { background: #f0f4ff; }
 table.manquants-table tr:hover td { background: #fafafa; }
 table.manquants-table tr:hover td input:focus { background: #f0f4ff; }
 
+/* Commentaire : zone de texte extensible, plusieurs lignes possibles */
+table.manquants-table textarea.comment-area {
+  width: 100%; box-sizing: border-box; display: block; resize: none; overflow: hidden;
+  min-height: 34px; max-height: none; border: none; background: transparent;
+  font-size: 12px; font-family: inherit; color: var(--text); padding: 7px 7px;
+  outline: none; line-height: 1.35;
+}
+table.manquants-table textarea.comment-area:focus { background: #f0f4ff; }
+table.manquants-table textarea.comment-area:disabled { color: var(--muted); }
+
 .manquants-del-btn {
   border: none; background: transparent; cursor: pointer; color: #b7b3a9;
   font-size: 15px; padding: 4px; line-height: 1; border-radius: 4px;
@@ -197,7 +207,8 @@ table.manquants-table tr:hover td input:focus { background: #f0f4ff; }
 table.manquants-table tr.row-recu td { background: #f0f0ec; }
 table.manquants-table tr.row-recu:hover td { background: #ebebe6; }
 table.manquants-table tr.row-recu input[type="text"],
-table.manquants-table tr.row-recu input[type="number"] {
+table.manquants-table tr.row-recu input[type="number"],
+table.manquants-table tr.row-recu textarea.comment-area {
   color: var(--muted); text-decoration: line-through; text-decoration-color: #c8c4bc;
 }
 td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
@@ -317,5 +328,11 @@ td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
   .btn-del-col { display: none; }
   .th-date-picker { display: none !important; }
   .rassem-date-picker { display: none !important; }
+
+  /* Par défaut (Ctrl+P / bouton "Imprimer" du haut) : on imprime tout */
   .view-panel { display: block !important; }
+
+  /* Quand on imprime via le bouton dédié du Rassemblement : seul ce panneau s'imprime */
+  body.print-rassemblement .view-panel { display: none !important; }
+  body.print-rassemblement #panelManquants { display: block !important; }
 }
