@@ -329,10 +329,7 @@ td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
   .th-date-picker { display: none !important; }
   .rassem-date-picker { display: none !important; }
 
-  /* Par défaut (Ctrl+P / bouton "Imprimer" du haut) : on imprime tout */
-  .view-panel { display: block !important; }
-
-  /* Quand on imprime via le bouton dédié du Rassemblement : seul ce panneau s'imprime */
-  body.print-rassemblement .view-panel { display: none !important; }
-  body.print-rassemblement #panelManquants { display: block !important; }
+  /* On n'imprime que l'onglet actuellement affiché à l'écran */
+  .view-panel { display: none !important; }
+  .view-panel.active { display: block !important; }
 }
