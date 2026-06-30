@@ -320,6 +320,11 @@ td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
 /* Empty state */
 .stats-empty { color: var(--muted); font-size: 13px; padding: 40px; text-align: center; }
 
+@page {
+  size: A4 landscape;
+  margin: 5mm 10mm;
+}
+
 @media print {
   body { padding: 0; background: #fff; }
   .topbar, .bottombar, .main-tabs, .manquants-toolbar, .manquants-del-btn, .btn-add-row, .btn-del-section, .rassem-section-actions { display: none !important; }
