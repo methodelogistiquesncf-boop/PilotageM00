@@ -963,12 +963,9 @@ function exportManquantsCSV() {
 }
 
 function printRassemblement() {
-  document.body.classList.add('print-rassemblement');
-  window.print();
+  switchMainTab('manquants');
+  setTimeout(function(){ window.print(); }, 50);
 }
-window.addEventListener('afterprint', function() {
-  document.body.classList.remove('print-rassemblement');
-});
 
 // ─── STATISTIQUES RASSEMBLEMENT ───────────────────────────────────────────────
 
