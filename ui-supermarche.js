@@ -133,11 +133,11 @@ function buildBody() {
       var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
       for (var d3 = 0; d3 < D_FIXED; d3++) {
         var td3 = document.createElement('td'); td3.className = 'data-cell';
-        td3.appendChild(makeNote_fixed(e.id, s, state.colOrder[d3])); rNote.appendChild(td3);
+        td3.appendChild(makeNoteList_fixed(e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
       }
       state.synthCols.forEach(function (col) {
         var td = document.createElement('td'); td.className = 'data-cell synth-cell';
-        td.appendChild(makeNote_synth(col, e.id, s)); rNote.appendChild(td);
+        td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
       });
       tb.appendChild(rNote);
 
@@ -174,19 +174,103 @@ function makeLoco_synth(col, eid) {
   inp.oninput = function () { col.enginData[eid].loco = inp.value; markDirty(); };
   return inp;
 }
-function makeNote_fixed(eid, s, p) {
-  var ta = document.createElement('textarea');
-  ta.className = 'note'; ta.placeholder = 'Remarque...'; ta.value = state.S[eid][s][p].note;
-  (function (ei, si, pi) { ta.oninput = function () { state.S[ei][si][pi].note = ta.value; autoResize(ta); markDirty(); }; })(eid, s, p);
-  requestAnimationFrame(function () { autoResize(ta); });
-  return ta;
+// ─── Notes : liste de lignes éditables ─────────────────────────────────────
+// Chaque cellule de remarque contient désormais une petite liste de lignes
+// (au lieu d'un textarea unique), pour que chaque sujet distinct puisse être
+// envoyé individuellement vers Actions. Les anciennes notes (simple texte)
+// sont migrées en place vers une liste à une seule ligne, sans être découpées.
+function genId() { return 'ni_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+
+function ensureNoteItems(obj) {
+  if (!Array.isArray(obj.note)) {
+    var txt = obj.note;
+    obj.note = (txt && String(txt).trim()) ? [{ id: genId(), texte: String(txt) }] : [];
+  }
+  return obj.note;
 }
-function makeNote_synth(col, eid, s) {
+
+function noteToText(noteVal) {
+  if (Array.isArray(noteVal)) return noteVal.map(function (it) { return (it.texte || '').trim(); }).filter(Boolean).join(' | ');
+  return noteVal || '';
+}
+
+function noteToActionText(noteVal) {
+  var items = Array.isArray(noteVal) ? noteVal : [];
+  return items.map(function (it) { return (it.texte || '').trim(); }).filter(Boolean).join('\n');
+}
+
+// container : liste de lignes ; onDelete supprime l'item ; getMeta() renvoie
+// à l'instant T {engin, poste, date, jour} pour cette colonne (fonction, pas
+// valeur figée, pour rester à jour si le n° d'engin est modifié après coup).
+function buildNoteItemEl(item, onDelete, getMeta, section) {
+  var row = document.createElement('div');
+  row.className = 'note-item';
+
   var ta = document.createElement('textarea');
-  ta.className = 'note'; ta.placeholder = 'Remarque...'; ta.value = col.enginData[eid][s].note;
-  ta.oninput = function () { col.enginData[eid][s].note = ta.value; autoResize(ta); markDirty(); };
+  ta.className = 'note-line';
+  ta.placeholder = 'Remarque...';
+  ta.value = item.texte || '';
+  ta.oninput = function () { item.texte = ta.value; autoResize(ta); markDirty(); };
   requestAnimationFrame(function () { autoResize(ta); });
-  return ta;
+  row.appendChild(ta);
+
+  var actions = document.createElement('div');
+  actions.className = 'note-item-actions';
+
+  var sendBtn = document.createElement('button');
+  sendBtn.type = 'button'; sendBtn.className = 'note-send-btn'; sendBtn.textContent = '→';
+  sendBtn.title = 'Envoyer cette ligne vers Actions';
+  sendBtn.onclick = function () {
+    var meta = getMeta();
+    sendToAction({ engin: meta.engin, poste: meta.poste, section: section, date: meta.date, jour: meta.jour, texte: item.texte || '' });
+  };
+  actions.appendChild(sendBtn);
+
+  var delBtn = document.createElement('button');
+  delBtn.type = 'button'; delBtn.className = 'note-del-btn'; delBtn.textContent = '✕';
+  delBtn.title = 'Supprimer cette ligne';
+  delBtn.onclick = onDelete;
+  actions.appendChild(delBtn);
+
+  row.appendChild(actions);
+  return row;
+}
+
+function buildNoteList(items, getMeta, section) {
+  var container = document.createElement('div');
+  container.className = 'note-list';
+
+  function render() {
+    container.innerHTML = '';
+    items.forEach(function (item, idx) {
+      container.appendChild(buildNoteItemEl(item, function () {
+        items.splice(idx, 1); markDirty(); render();
+      }, getMeta, section));
+    });
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button'; addBtn.className = 'btn-add-line';
+    addBtn.textContent = '+ ligne';
+    addBtn.onclick = function () {
+      items.push({ id: genId(), texte: '' });
+      markDirty(); render();
+      var tas = container.querySelectorAll('textarea.note-line');
+      if (tas.length) tas[tas.length - 1].focus();
+    };
+    container.appendChild(addBtn);
+  }
+  render();
+  return container;
+}
+
+function makeNoteList_fixed(eid, s, p, d) {
+  var obj = state.S[eid][s][p];
+  var items = ensureNoteItems(obj);
+  return buildNoteList(items, function () { return actionMetaFixed(eid, p, d); }, s);
+}
+function makeNoteList_synth(col, eid, s) {
+  var obj = col.enginData[eid][s];
+  var items = ensureNoteItems(obj);
+  return buildNoteList(items, function () { return actionMetaSynth(col, eid); }, s);
 }
 function makeEnginLabelInput(eid) {
   var inp = document.createElement('input');
@@ -206,15 +290,32 @@ function enginLabelOf(eid) {
   var cfg = ENGINS_CONFIG.find(function (c) { return c.id === eid; });
   return state.enginLabels[eid] || (cfg ? cfg.defaultLabel : eid);
 }
+function actionMetaFixed(eid, p, d) {
+  return {
+    engin: state.S[eid].loco[p] || enginLabelOf(eid),
+    poste: enginLabelOf(eid),
+    date: isoToDisplay(state.headersData.dates[d]) || '',
+    jour: state.headersData.jours[d] || ''
+  };
+}
+function actionMetaSynth(col, eid) {
+  return {
+    engin: col.enginData[eid].loco || enginLabelOf(eid),
+    poste: enginLabelOf(eid),
+    date: isoToDisplay(col.date) || '',
+    jour: col.jour || ''
+  };
+}
 
-// Bouton "→" : envoie une copie figée de la remarque courante vers l'onglet Actions.
-// Mis en avant (classe "alert") si le point est rouge (NOK).
+// Bouton "→" au niveau de la cellule score : envoie TOUTES les lignes de
+// remarque de la cellule d'un coup (une par ligne, jointes). Complète les
+// boutons "→" individuels de chaque ligne de remarque.
 function makeActionBtn(getDot, getData) {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn-action' + (getDot() === 'red' ? ' alert' : '');
   btn.textContent = '→';
-  btn.title = 'Envoyer vers Actions';
+  btn.title = 'Envoyer toutes les lignes vers Actions';
   btn.onclick = function (e) { e.stopPropagation(); sendToAction(getData()); };
   return btn;
 }
@@ -231,13 +332,14 @@ function makeScoreInner_fixed(eid, s, p, d) {
     inner.appendChild(makeActionBtn(
       function () { return state.S[ei][si][pi].dot; },
       function () {
+        var meta = actionMetaFixed(ei, pi, di);
         return {
-          engin: state.S[ei].loco[pi] || enginLabelOf(ei),
-          poste: enginLabelOf(ei),
+          engin: meta.engin,
+          poste: meta.poste,
           section: si,
-          date: isoToDisplay(state.headersData.dates[di]) || '',
-          jour: state.headersData.jours[di] || '',
-          texte: state.S[ei][si][pi].note || ''
+          date: meta.date,
+          jour: meta.jour,
+          texte: noteToActionText(ensureNoteItems(state.S[ei][si][pi]))
         };
       }
     ));
@@ -256,13 +358,14 @@ function makeScoreInner_synth(col, eid, s) {
   inner.appendChild(makeActionBtn(
     function () { return data.dot; },
     function () {
+      var meta = actionMetaSynth(col, eid);
       return {
-        engin: col.enginData[eid].loco || enginLabelOf(eid),
-        poste: enginLabelOf(eid),
+        engin: meta.engin,
+        poste: meta.poste,
         section: s,
-        date: isoToDisplay(col.date) || '',
-        jour: col.jour || '',
-        texte: data.note || ''
+        date: meta.date,
+        jour: meta.jour,
+        texte: noteToActionText(ensureNoteItems(data))
       };
     }
   ));
@@ -284,7 +387,7 @@ export function exportCSV() {
       for (var d = 0; d < D_FIXED; d++) {
         var p = state.colOrder[d];
         var c = state.S[e.id][s][p];
-        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', state.S[e.id].loco[p] || '', c.note || '', c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
+        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', state.S[e.id].loco[p] || '', noteToText(c.note), c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
       }
     });
   });
@@ -292,7 +395,7 @@ export function exportCSV() {
     ENGINS_CONFIG.forEach(function (e) {
       e.sections.forEach(function (s) {
         var data = col.enginData[e.id][s];
-        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, col.jour || 'Synthèse ' + (ci + 1), isoToDisplay(col.date) || '', col.enginData[e.id].loco || '', data.note || '', data.score || '', data.dot === 'green' ? 'OK' : data.dot === 'red' ? 'NOK' : '']);
+        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, col.jour || 'Synthèse ' + (ci + 1), isoToDisplay(col.date) || '', col.enginData[e.id].loco || '', noteToText(data.note), data.score || '', data.dot === 'green' ? 'OK' : data.dot === 'red' ? 'NOK' : '']);
       });
     });
   });
