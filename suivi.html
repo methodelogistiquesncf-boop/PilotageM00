@@ -73,7 +73,10 @@
 <!-- Vue : Actions (remarques envoyées depuis le tableau Supermarché) -->
 <div class="view-panel" id="panelActions">
   <div class="actions-toolbar-top">
+    <select class="actions-filter-select" id="actionsFilterPoste"></select>
+    <select class="actions-filter-select" id="actionsFilterSection"></select>
     <button class="btn btn-ghost" id="btnToggleActionsDone" onclick="toggleShowDoneActions()">👁 Afficher les faites</button>
+    <button class="btn btn-ghost" onclick="exportActionsCSV()">Exporter CSV</button>
     <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   </div>
   <div class="actions-table-wrap" id="actionsTableWrap"></div>
