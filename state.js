@@ -44,7 +44,7 @@ export function initState() {
     state.S[e.id] = { loco: Array(D_FIXED).fill('') };
     e.sections.forEach(function (s) {
       state.S[e.id][s] = Array.from({ length: D_FIXED }, function () {
-        return { note: '', score: '', dot: null };
+        return { note: [], score: '', dot: null };
       });
     });
   });
@@ -56,7 +56,7 @@ export function makeSynthColData() {
   var col = { id: 'sc_' + Date.now(), date: '', jour: '', enginData: {} };
   ENGINS_CONFIG.forEach(function (e) {
     col.enginData[e.id] = { loco: '' };
-    e.sections.forEach(function (s) { col.enginData[e.id][s] = { note: '', dot: null, score: '' }; });
+    e.sections.forEach(function (s) { col.enginData[e.id][s] = { note: [], dot: null, score: '' }; });
   });
   return col;
 }
