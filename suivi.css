@@ -84,6 +84,15 @@ textarea.note:focus { background: #f0f4ff; border-radius: 3px; }
 .dot-btn.red   { background: #d03030; border-color: #a02020; }
 .dot-btn.off   { background: #ccc; border-color: #aaa; }
 
+.btn-action {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700;
+  line-height: 1; display: inline-flex; align-items: center; justify-content: center; transition: all .12s;
+}
+.btn-action:hover { background: #eef2fb; color: var(--accent); border-color: var(--accent); }
+.btn-action.alert { background: #fdeaea; border-color: #e3a0a0; color: #c03030; }
+.btn-action.alert:hover { background: #fbd5d5; }
+
 input.score { width: 52px; font-size: 12px; text-align: center; font-weight: 600; color: #1a4fa0; border: 1px solid #ccc; border-radius: 4px; padding: 2px 4px; background: var(--surface); }
 input.score:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
@@ -320,6 +329,30 @@ td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
 /* Empty state */
 .stats-empty { color: var(--muted); font-size: 13px; padding: 40px; text-align: center; }
 
+/* ─── ACTIONS ─────────────────────────────────────────────────────────── */
+.actions-toolbar-top { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+#btnToggleActionsDone.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+table.actions-table { border-collapse: collapse; background: var(--surface); width: 100%; border: 2px solid #555; }
+table.actions-table th {
+  background: #e0ddd6; text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .03em; padding: 7px 8px; border: 1px solid #ccc; color: #444;
+}
+table.actions-table td { border: 1px solid #ccc; padding: 7px 8px; vertical-align: middle; font-size: 12px; }
+table.actions-table tr:hover td { background: #fafafa; }
+table.actions-table td.action-texte { color: #1a4fa0; }
+table.actions-table td.action-done-cell { text-align: center; }
+table.actions-table .action-checkbox { width: 17px; height: 17px; cursor: pointer; accent-color: #22a050; vertical-align: middle; }
+
+table.actions-table tr.action-done td { background: #f0f0ec; color: var(--muted); text-decoration: line-through; text-decoration-color: #c8c4bc; }
+table.actions-table tr.action-done td.action-done-cell { text-decoration: none; }
+
+.actions-del-btn {
+  border: none; background: transparent; cursor: pointer; color: #b7b3a9;
+  font-size: 15px; padding: 4px; line-height: 1; border-radius: 4px;
+}
+.actions-del-btn:hover { color: #c03030; background: #fdeaea; }
+
 @page {
   size: A4 landscape;
   margin: 5mm 10mm;
@@ -328,6 +361,7 @@ td.recu-cell { text-align: center; padding: 6px 4px; white-space: nowrap; }
 @media print {
   body { padding: 0; background: #fff; }
   .topbar, .bottombar, .main-tabs, .manquants-toolbar, .manquants-del-btn, .btn-add-row, .btn-del-section, .rassem-section-actions { display: none !important; }
+  .btn-action, .actions-toolbar-top, .actions-del-btn { display: none !important; }
   .th-date-display { color: #000 !important; }
   input.engin-label-input { color: var(--accent) !important; }
   .btn-del-col { display: none; }
