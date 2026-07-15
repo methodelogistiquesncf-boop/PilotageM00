@@ -30,6 +30,9 @@
   <button class="main-tab" id="tabViewManquants" onclick="switchMainTab('manquants')">
     Rassemblement <span class="badge-count" id="manquantsCount" style="display:none">0</span>
   </button>
+  <button class="main-tab" id="tabViewActions" onclick="switchMainTab('actions')">
+    Actions <span class="badge-count" id="actionsCount" style="display:none">0</span>
+  </button>
 </div>
 
 <!-- Vue : Supermarché -->
@@ -65,6 +68,15 @@
     <button class="btn btn-ghost" onclick="printRassemblement()">🖨 Imprimer cette page</button>
     <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   </div>
+</div>
+
+<!-- Vue : Actions (remarques envoyées depuis le tableau Supermarché) -->
+<div class="view-panel" id="panelActions">
+  <div class="actions-toolbar-top">
+    <button class="btn btn-ghost" id="btnToggleActionsDone" onclick="toggleShowDoneActions()">👁 Afficher les faites</button>
+    <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
+  </div>
+  <div class="actions-table-wrap" id="actionsTableWrap"></div>
 </div>
 
 <!-- Modal Graphique (Supermarché) -->
