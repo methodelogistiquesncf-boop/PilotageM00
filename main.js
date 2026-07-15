@@ -14,14 +14,17 @@ import {
   exportManquantsCSV, printRassemblement
 } from './ui-rassemblement.js';
 import { openStats, closeStats, switchStatsTab } from './stats.js';
+import { buildActions, toggleShowDoneActions } from './ui-actions.js';
 
-// ─── Onglets principaux (Supermarché / Rassemblement) ────────────────────────
+// ─── Onglets principaux (Supermarché / Rassemblement / Actions) ─────────────
 function switchMainTab(tab) {
-  var isSuivi = tab === 'suivi';
-  document.getElementById('tabViewSuivi').classList.toggle('active', isSuivi);
-  document.getElementById('tabViewManquants').classList.toggle('active', !isSuivi);
-  document.getElementById('panelSuivi').classList.toggle('active', isSuivi);
-  document.getElementById('panelManquants').classList.toggle('active', !isSuivi);
+  document.getElementById('tabViewSuivi').classList.toggle('active', tab === 'suivi');
+  document.getElementById('tabViewManquants').classList.toggle('active', tab === 'manquants');
+  document.getElementById('tabViewActions').classList.toggle('active', tab === 'actions');
+  document.getElementById('panelSuivi').classList.toggle('active', tab === 'suivi');
+  document.getElementById('panelManquants').classList.toggle('active', tab === 'manquants');
+  document.getElementById('panelActions').classList.toggle('active', tab === 'actions');
+  if (tab === 'actions') buildActions();
 }
 
 // ─── Fonctions exposées sur window pour les onclick="" du HTML ──────────────
@@ -47,6 +50,7 @@ Object.assign(window, {
   openStats,
   closeStats,
   switchStatsTab,
+  toggleShowDoneActions,
 });
 
 // ─── Fermeture des modals au clic sur l'overlay ──────────────────────────────
@@ -60,6 +64,7 @@ Object.assign(window, {
 function finishBoot() {
   build();
   buildRassemblement();
+  buildActions();
 }
 
 var now = new Date();
