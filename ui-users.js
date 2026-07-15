@@ -9,7 +9,7 @@
 
 import { state } from './state.js';
 import { ROLES } from './state.js';
-import { loadUsersList, updateUserRole } from './firebase.js';
+import { loadUsersList, updateUserRole, createUser } from './firebase.js';
 
 let cachedUsers = [];
 
@@ -22,19 +22,109 @@ export async function buildUsers() {
     return;
   }
 
-  wrap.innerHTML = '<div class="manquants-empty">Chargement...</div>';
+  wrap.innerHTML = '';
+  wrap.appendChild(buildAddUserForm());
+
+  var tableZone = document.createElement('div');
+  tableZone.id = 'usersTableZone';
+  tableZone.innerHTML = '<div class="manquants-empty">Chargement...</div>';
+  wrap.appendChild(tableZone);
+
   try {
     cachedUsers = await loadUsersList();
   } catch (e) {
     console.error(e);
-    wrap.innerHTML = '<div class="manquants-empty">Erreur de chargement des utilisateurs.</div>';
+    tableZone.innerHTML = '<div class="manquants-empty">Erreur de chargement des utilisateurs.</div>';
     return;
   }
   renderUsersTable();
 }
 
+// ─── Formulaire "+ Ajouter un utilisateur" ─────────────────────────────────
+// Crée un compte Firebase Auth (mot de passe aléatoire jamais communiqué) et
+// envoie un e-mail à la personne pour qu'elle définisse elle-même son mot de
+// passe. Ne fonctionne que pour une adresse qui n'a pas encore de compte.
+function buildAddUserForm() {
+  var box = document.createElement('div');
+  box.className = 'users-toolbar-top';
+
+  var toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.className = 'btn btn-primary';
+  toggleBtn.textContent = '+ Ajouter un utilisateur';
+
+  var form = document.createElement('div');
+  form.className = 'user-add-form';
+  form.style.display = 'none';
+
+  var emailInput = document.createElement('input');
+  emailInput.type = 'email';
+  emailInput.className = 'action-input user-add-email';
+  emailInput.placeholder = 'adresse@exemple.fr';
+
+  var roleSelect = document.createElement('select');
+  roleSelect.className = 'actions-filter-select';
+  var optNone = document.createElement('option'); optNone.value = ''; optNone.textContent = '— Aucun rôle —';
+  roleSelect.appendChild(optNone);
+  ROLES.forEach(function (r) {
+    var o = document.createElement('option'); o.value = r; o.textContent = r;
+    roleSelect.appendChild(o);
+  });
+
+  var submitBtn = document.createElement('button');
+  submitBtn.type = 'button';
+  submitBtn.className = 'btn btn-primary';
+  submitBtn.textContent = 'Créer le compte';
+
+  var msg = document.createElement('span');
+  msg.className = 'user-add-msg';
+
+  toggleBtn.onclick = function () {
+    var show = form.style.display === 'none';
+    form.style.display = show ? 'flex' : 'none';
+    if (show) emailInput.focus();
+  };
+
+  submitBtn.onclick = function () {
+    var email = emailInput.value.trim();
+    if (!email) { msg.className = 'user-add-msg err'; msg.textContent = 'Adresse e-mail requise.'; return; }
+    submitBtn.disabled = true;
+    msg.className = 'user-add-msg';
+    msg.textContent = 'Création en cours...';
+    createUser(email, roleSelect.value).then(function () {
+      msg.className = 'user-add-msg ok';
+      msg.textContent = '✓ Compte créé — e-mail de définition du mot de passe envoyé à ' + email + '.';
+      emailInput.value = '';
+      roleSelect.value = '';
+      buildUsers();
+    }).catch(function (e) {
+      msg.className = 'user-add-msg err';
+      if (e && e.code === 'auth/email-already-in-use') {
+        msg.textContent = 'Ce compte existe déjà — il apparaîtra automatiquement dans la liste à sa 1ère connexion.';
+      } else if (e && e.code === 'auth/invalid-email') {
+        msg.textContent = 'Adresse e-mail invalide.';
+      } else {
+        msg.textContent = 'Erreur lors de la création du compte.';
+        console.error(e);
+      }
+    }).finally(function () {
+      submitBtn.disabled = false;
+    });
+  };
+
+  form.appendChild(emailInput);
+  form.appendChild(roleSelect);
+  form.appendChild(submitBtn);
+  form.appendChild(msg);
+
+  box.appendChild(toggleBtn);
+  box.appendChild(form);
+  return box;
+}
+
 function renderUsersTable() {
-  var wrap = document.getElementById('usersTableWrap');
+  var wrap = document.getElementById('usersTableZone');
+  if (!wrap) return;
   wrap.innerHTML = '';
 
   if (cachedUsers.length === 0) {
