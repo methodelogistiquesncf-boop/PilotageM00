@@ -6,6 +6,10 @@ export const ENGINS_CONFIG = [
 ];
 export const D_FIXED = 4;
 
+// Rôles utilisateur disponibles (gestion via l'onglet "Utilisateurs", visible
+// uniquement par les comptes ayant le rôle Administrateur).
+export const ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérateur', 'Administrateur'];
+
 // Objet unique, muté en place par tous les modules. On ne le réassigne jamais
 // depuis l'extérieur : on modifie ses propriétés via setState().
 export const state = {
@@ -19,6 +23,12 @@ export const state = {
   showRecus: false,
   actions: [],
   showDoneActions: false,
+  // Profil de l'utilisateur connecté (rempli par ensureUserDoc dans firebase.js).
+  // Volontairement absent du payload de saveFirebase() : ce n'est pas une donnée
+  // du document "suivi/default", mais un attribut de session lié au compte connecté.
+  currentUserUid: '',
+  currentUserEmail: '',
+  currentUserRole: '',
 };
 
 // Remplace en bloc une ou plusieurs propriétés de state (utilisé au chargement
