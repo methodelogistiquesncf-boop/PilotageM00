@@ -389,6 +389,13 @@ table.users-table td { vertical-align: middle; }
 }
 .user-role-select { min-width: 170px; }
 
+.users-toolbar-top { margin-bottom: 14px; }
+.user-add-form { display: none; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.user-add-email { min-width: 240px; }
+.user-add-msg { font-size: 12px; color: var(--muted); }
+.user-add-msg.ok  { color: #1a7a3c; font-weight: 600; }
+.user-add-msg.err { color: #c03030; font-weight: 600; }
+
 /* ─── AIDE ─────────────────────────────────────────────────────────────── */
 .aide-wrap { display: flex; flex-direction: column; gap: 18px; max-width: 820px; }
 .aide-section {
