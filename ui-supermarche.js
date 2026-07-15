@@ -233,6 +233,7 @@ function makeScoreInner_fixed(eid, s, p, d) {
       function () {
         return {
           engin: state.S[ei].loco[pi] || enginLabelOf(ei),
+          poste: enginLabelOf(ei),
           section: si,
           date: isoToDisplay(state.headersData.dates[di]) || '',
           jour: state.headersData.jours[di] || '',
@@ -257,6 +258,7 @@ function makeScoreInner_synth(col, eid, s) {
     function () {
       return {
         engin: col.enginData[eid].loco || enginLabelOf(eid),
+        poste: enginLabelOf(eid),
         section: s,
         date: isoToDisplay(col.date) || '',
         jour: col.jour || '',
