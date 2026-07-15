@@ -2,7 +2,7 @@
 // sur window des fonctions référencées par les onclick="" du HTML existant
 // (le HTML n'a volontairement pas été réécrit, pour limiter le risque de régression).
 
-import { initState } from './state.js';
+import { initState, state } from './state.js';
 import { initAuth, doLogout, saveFirebase } from './firebase.js';
 import {
   build, addSynthCol, resetAll, exportCSV,
@@ -15,16 +15,20 @@ import {
 } from './ui-rassemblement.js';
 import { openStats, closeStats, switchStatsTab } from './stats.js';
 import { buildActions, toggleShowDoneActions, exportActionsCSV } from './ui-actions.js';
+import { buildUsers } from './ui-users.js';
 
-// ─── Onglets principaux (Supermarché / Rassemblement / Actions) ─────────────
+// ─── Onglets principaux (Supermarché / Rassemblement / Actions / Utilisateurs) ──
 function switchMainTab(tab) {
   document.getElementById('tabViewSuivi').classList.toggle('active', tab === 'suivi');
   document.getElementById('tabViewManquants').classList.toggle('active', tab === 'manquants');
   document.getElementById('tabViewActions').classList.toggle('active', tab === 'actions');
+  document.getElementById('tabViewUsers').classList.toggle('active', tab === 'users');
   document.getElementById('panelSuivi').classList.toggle('active', tab === 'suivi');
   document.getElementById('panelManquants').classList.toggle('active', tab === 'manquants');
   document.getElementById('panelActions').classList.toggle('active', tab === 'actions');
+  document.getElementById('panelUsers').classList.toggle('active', tab === 'users');
   if (tab === 'actions') buildActions();
+  if (tab === 'users') buildUsers();
 }
 
 // ─── Fonctions exposées sur window pour les onclick="" du HTML ──────────────
@@ -66,6 +70,7 @@ function finishBoot() {
   build();
   buildRassemblement();
   buildActions();
+  document.getElementById('tabViewUsers').style.display = state.currentUserRole === 'Administrateur' ? '' : 'none';
 }
 
 var now = new Date();
