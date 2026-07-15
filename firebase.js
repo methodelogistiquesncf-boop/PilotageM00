@@ -91,6 +91,42 @@ async function ensureUserDoc(user) {
   }
 }
 
+// Crée un nouveau compte (email + rôle) depuis l'onglet Utilisateurs, réservé
+// aux Administrateurs. Utilise une instance Firebase secondaire temporaire pour
+// que la création du compte (createUserWithEmailAndPassword) ne déconnecte pas
+// la session de l'admin en cours — sinon la connexion active basculerait sur le
+// nouveau compte. Le mot de passe généré n'est jamais communiqué : un e-mail de
+// réinitialisation est envoyé pour que la personne définisse elle-même le sien.
+export async function createUser(email, role) {
+  var tempPassword = generateTempPassword();
+  var secondaryApp = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_' + Date.now());
+  try {
+    var secondaryAuth = secondaryApp.auth();
+    var cred = await secondaryAuth.createUserWithEmailAndPassword(email, tempPassword);
+    var uid = cred.user.uid;
+    await db.collection('users').doc(uid).set({
+      email: email,
+      role: role || '',
+      createdAt: new Date().toISOString(),
+      lastLogin: '',
+      createdBy: state.currentUserUid
+    });
+    await secondaryAuth.signOut();
+    // Envoyé via l'instance principale : pas besoin d'être connecté en tant que
+    // ce compte pour lui envoyer un lien de définition de mot de passe.
+    await auth.sendPasswordResetEmail(email);
+    return { uid: uid };
+  } finally {
+    await secondaryApp.delete();
+  }
+}
+
+function generateTempPassword() {
+  var arr = new Uint8Array(24);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
 // Liste tous les profils utilisateurs (pour l'onglet Utilisateurs, réservé aux Administrateurs).
 export async function loadUsersList() {
   var snap = await db.collection('users').orderBy('email').get();
