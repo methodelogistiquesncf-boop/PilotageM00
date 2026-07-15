@@ -1,11 +1,16 @@
 // ui-actions.js — onglet "Actions" : liste des remarques envoyées depuis le tableau
-// Supermarché (bouton "→" sur les cellules score), avec statut Fait / Pas fait.
+// Supermarché (bouton "→" sur les cellules score / lignes de remarque), avec
+// statut Fait / Pas fait, responsable, échéance, filtres et export CSV.
 //
 // Une action est une COPIE FIGÉE de la remarque au moment de l'envoi (Engin, Section,
 // Date, Repère, Texte). Elle vit indépendamment des cellules du tableau : elle ne
 // disparaît donc pas quand la case d'origine est réutilisée le lendemain.
 
-import { state, markDirty } from './state.js';
+import { state, markDirty, todayISO } from './state.js';
+
+// Filtres de vue (état d'affichage uniquement, pas persisté)
+var currentFilterPoste = '';
+var currentFilterSection = '';
 
 function makeActionItem(data) {
   return {
@@ -16,13 +21,15 @@ function makeActionItem(data) {
     date: data.date || '',
     jour: data.jour || '',
     texte: data.texte || '',
+    responsable: '',
+    echeance: '',
     done: false,
     createdAt: new Date().toISOString(),
     doneAt: ''
   };
 }
 
-// Appelée depuis ui-supermarche.js par le bouton "→" des cellules score.
+// Appelée depuis ui-supermarche.js par les boutons "→" (par ligne ou global cellule).
 export function sendToAction(data) {
   if (!data.texte || !data.texte.trim()) return;
 
@@ -72,13 +79,45 @@ function updateActionsCount() {
   else { badge.style.display = 'none'; }
 }
 
+// ─── Filtres (poste / section) ─────────────────────────────────────────────
+function fillSelect(id, values, allLabel, current) {
+  var sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = '';
+  var optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = allLabel;
+  sel.appendChild(optAll);
+  values.forEach(function (v) {
+    var o = document.createElement('option'); o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  sel.value = values.indexOf(current) >= 0 ? current : '';
+}
+
+function setupFilters() {
+  var postes = Array.from(new Set(state.actions.map(function (a) { return a.poste; }).filter(Boolean))).sort();
+  var sections = Array.from(new Set(state.actions.map(function (a) { return a.section; }).filter(Boolean))).sort();
+  fillSelect('actionsFilterPoste', postes, 'Tous les postes', currentFilterPoste);
+  fillSelect('actionsFilterSection', sections, 'Toutes sections', currentFilterSection);
+
+  var selPoste = document.getElementById('actionsFilterPoste');
+  var selSection = document.getElementById('actionsFilterSection');
+  if (selPoste) selPoste.onchange = function () { currentFilterPoste = selPoste.value; buildActions(); };
+  if (selSection) selSection.onchange = function () { currentFilterSection = selSection.value; buildActions(); };
+}
+
 export function buildActions() {
   updateActionsCount();
+  setupFilters();
+
   var wrap = document.getElementById('actionsTableWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
 
-  var list = state.actions.slice().sort(function (a, b) {
+  var list = state.actions.slice();
+  if (currentFilterPoste) list = list.filter(function (a) { return a.poste === currentFilterPoste; });
+  if (currentFilterSection) list = list.filter(function (a) { return a.section === currentFilterSection; });
+
+  list.sort(function (a, b) {
     if (a.done !== b.done) return a.done ? 1 : -1;
     var d = (b.date || '').localeCompare(a.date || '');
     if (d !== 0) return d;
@@ -87,18 +126,20 @@ export function buildActions() {
   if (!state.showDoneActions) list = list.filter(function (a) { return !a.done; });
 
   if (list.length === 0) {
-    wrap.innerHTML = '<div class="manquants-empty">' +
-      (state.actions.length === 0
-        ? 'Aucune action pour le moment. Utilise le bouton « → » sur une remarque du tableau Supermarché pour en créer une.'
-        : 'Toutes les actions sont faites. « Afficher les faites » pour les revoir.') +
-      '</div>';
+    var msg = state.actions.length === 0
+      ? 'Aucune action pour le moment. Utilise le bouton « → » sur une remarque du tableau Supermarché pour en créer une.'
+      : (currentFilterPoste || currentFilterSection)
+        ? 'Aucune action ne correspond aux filtres sélectionnés.'
+        : 'Toutes les actions sont faites. « Afficher les faites » pour les revoir.';
+    wrap.innerHTML = '<div class="manquants-empty">' + msg + '</div>';
     return;
   }
 
   var table = document.createElement('table');
   table.className = 'actions-table';
   var thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Engin</th><th>Poste</th><th>Section</th><th>Date</th><th>Repère</th><th>Action</th><th>Fait</th><th></th></tr>';
+  thead.innerHTML = '<tr><th>Engin</th><th>Poste</th><th>Section</th><th>Date</th><th>Repère</th>' +
+    '<th>Action</th><th>Responsable</th><th>Échéance</th><th>Fait</th><th></th></tr>';
   table.appendChild(thead);
 
   var tbody = document.createElement('tbody');
@@ -109,7 +150,9 @@ export function buildActions() {
 
 function buildActionRow(a) {
   var tr = document.createElement('tr');
+  var isOverdue = !a.done && a.echeance && a.echeance < todayISO();
   if (a.done) tr.className = 'action-done';
+  else if (isOverdue) tr.className = 'action-overdue';
 
   var tdEngin = document.createElement('td'); tdEngin.textContent = a.engin; tr.appendChild(tdEngin);
   var tdPoste = document.createElement('td'); tdPoste.textContent = a.poste || '—'; tr.appendChild(tdPoste);
@@ -117,6 +160,30 @@ function buildActionRow(a) {
   var tdDate = document.createElement('td'); tdDate.textContent = a.date || '—'; tr.appendChild(tdDate);
   var tdJour = document.createElement('td'); tdJour.textContent = a.jour || '—'; tr.appendChild(tdJour);
   var tdTexte = document.createElement('td'); tdTexte.className = 'action-texte'; tdTexte.textContent = a.texte; tr.appendChild(tdTexte);
+
+  var tdResp = document.createElement('td');
+  var respInput = document.createElement('input');
+  respInput.type = 'text'; respInput.className = 'action-input'; respInput.placeholder = 'Nom...';
+  respInput.value = a.responsable || '';
+  respInput.disabled = !!a.done;
+  respInput.oninput = function () { a.responsable = respInput.value; markDirty(); };
+  tdResp.appendChild(respInput);
+  tr.appendChild(tdResp);
+
+  var tdEch = document.createElement('td');
+  var echInput = document.createElement('input');
+  echInput.type = 'date'; echInput.className = 'action-input action-date-input';
+  echInput.value = a.echeance || '';
+  echInput.disabled = !!a.done;
+  echInput.onchange = function () { a.echeance = echInput.value; markDirty(); buildActions(); };
+  tdEch.appendChild(echInput);
+  if (isOverdue) {
+    var warn = document.createElement('span');
+    warn.className = 'action-overdue-tag';
+    warn.textContent = 'En retard';
+    tdEch.appendChild(warn);
+  }
+  tr.appendChild(tdEch);
 
   var tdDone = document.createElement('td'); tdDone.className = 'action-done-cell';
   var checkbox = document.createElement('input');
@@ -138,4 +205,19 @@ function buildActionRow(a) {
   tr.appendChild(tdDel);
 
   return tr;
+}
+
+// ─── Export CSV ─────────────────────────────────────────────────────────────
+export function exportActionsCSV() {
+  var rows = [['Engin', 'Poste', 'Section', 'Date remarque', 'Repère', 'Action', 'Responsable', 'Échéance', 'Statut']];
+  state.actions.forEach(function (a) {
+    var echAff = a.echeance ? a.echeance.split('-').reverse().join('/') : '';
+    rows.push([a.engin, a.poste, a.section, a.date, a.jour, a.texte, a.responsable || '', echAff, a.done ? 'Fait' : 'À faire']);
+  });
+  var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'actions_' + (document.getElementById('dateJour').value || 'export') + '.csv';
+  a.click(); URL.revokeObjectURL(url);
 }
