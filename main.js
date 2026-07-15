@@ -17,16 +17,18 @@ import { openStats, closeStats, switchStatsTab } from './stats.js';
 import { buildActions, toggleShowDoneActions, exportActionsCSV } from './ui-actions.js';
 import { buildUsers } from './ui-users.js';
 
-// ─── Onglets principaux (Supermarché / Rassemblement / Actions / Utilisateurs) ──
+// ─── Onglets principaux (Supermarché / Rassemblement / Actions / Utilisateurs / Aide) ──
 function switchMainTab(tab) {
   document.getElementById('tabViewSuivi').classList.toggle('active', tab === 'suivi');
   document.getElementById('tabViewManquants').classList.toggle('active', tab === 'manquants');
   document.getElementById('tabViewActions').classList.toggle('active', tab === 'actions');
   document.getElementById('tabViewUsers').classList.toggle('active', tab === 'users');
+  document.getElementById('tabViewAide').classList.toggle('active', tab === 'aide');
   document.getElementById('panelSuivi').classList.toggle('active', tab === 'suivi');
   document.getElementById('panelManquants').classList.toggle('active', tab === 'manquants');
   document.getElementById('panelActions').classList.toggle('active', tab === 'actions');
   document.getElementById('panelUsers').classList.toggle('active', tab === 'users');
+  document.getElementById('panelAide').classList.toggle('active', tab === 'aide');
   if (tab === 'actions') buildActions();
   if (tab === 'users') buildUsers();
 }
