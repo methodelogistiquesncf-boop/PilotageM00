@@ -34,6 +34,7 @@
     Actions <span class="badge-count" id="actionsCount" style="display:none">0</span>
   </button>
   <button class="main-tab" id="tabViewUsers" style="display:none" onclick="switchMainTab('users')">Utilisateurs</button>
+  <button class="main-tab" id="tabViewAide" onclick="switchMainTab('aide')">Aide</button>
 </div>
 
 <!-- Vue : Supermarché -->
@@ -86,6 +87,59 @@
 <!-- Vue : Utilisateurs (gestion des rôles, réservée aux Administrateurs) -->
 <div class="view-panel" id="panelUsers">
   <div class="users-table-wrap" id="usersTableWrap"></div>
+</div>
+
+<!-- Vue : Aide -->
+<div class="view-panel" id="panelAide">
+  <div class="aide-wrap">
+
+    <div class="aide-section">
+      <h3>🛒 Onglet Supermarché</h3>
+      <p>Le tableau principal, un bloc par engin (P18, P26...). Chaque bloc contient une ligne "N° engin" puis une section par type de suivi (APPROS, PIÈCES DÉPOSÉES). Les colonnes correspondent aux 4 derniers jours (J0 à J-3, dates modifiables en cliquant dessus) et, si besoin, à des colonnes de synthèse ajoutées manuellement.</p>
+      <ul>
+        <li><strong>Remarques</strong> — une ou plusieurs lignes de texte par case. « + ligne » en ajoute une, ✕ en supprime une. Le bouton <strong>→</strong> sur une ligne (ou sur toute la cellule, à côté du score) envoie le texte vers l'onglet <strong>Actions</strong> pour en faire un suivi avec responsable et échéance.</li>
+        <li><strong>Points OK / NOK</strong> — les deux ronds à gauche du score marquent l'état : vert = conforme, rouge = non conforme (cliquer à nouveau désactive). Un score sur fond rouge dans les Actions signale une remarque liée à un point NOK.</li>
+        <li><strong>Score</strong> — champ libre au format <code>0/0</code>, utilisé aussi dans les graphiques de taux de réalisation.</li>
+        <li><strong>+ Ajouter colonne synthèse</strong> — crée une colonne supplémentaire (ex. bilan de semaine), supprimable individuellement via son bouton "✕ Supprimer".</li>
+        <li><strong>Historique</strong> — chaque sauvegarde archive l'état du jour ; la modal Historique permet de consulter/filtrer par date et de supprimer une entrée.</li>
+        <li><strong>Graphiques</strong> — évolution du taux de réalisation par section (APPROS / PIÈCES DÉPOSÉES), en vue courante (4 jours) ou sur tout l'historique.</li>
+        <li><strong>Exporter CSV / Réinitialiser</strong> — export du tableau du jour ; réinitialiser vide le tableau courant (l'historique n'est pas touché).</li>
+      </ul>
+    </div>
+
+    <div class="aide-section">
+      <h3>📦 Onglet Rassemblement</h3>
+      <p>Suivi des articles manquants, regroupés par date (« + Ajouter une date »). Dans chaque section : une ligne par article manquant (engin, kit, symbole, désignation, quantité, commentaire).</p>
+      <ul>
+        <li><strong>Reçu</strong> — cocher la case marque l'article comme reçu (la ligne grise, date d'arrivée horodatée). « Afficher les reçus » permet de les faire réapparaître.</li>
+        <li>Une date dont tous les articles sont reçus est masquée automatiquement de la vue par défaut.</li>
+        <li><strong>Statistiques</strong> — vue globale, délais moyens de réception, répartition par engin, cadence et top des articles les plus fréquemment manquants.</li>
+        <li><strong>Exporter CSV / Imprimer cette page</strong> — export ou impression de la liste actuelle.</li>
+      </ul>
+    </div>
+
+    <div class="aide-section">
+      <h3>✅ Onglet Actions</h3>
+      <p>Liste des remarques envoyées depuis le tableau Supermarché (bouton →). Chaque action est une copie figée de la remarque au moment de l'envoi : elle ne disparaît donc pas si la case d'origine est réutilisée le lendemain.</p>
+      <ul>
+        <li><strong>Responsable / Échéance</strong> — éditables directement dans le tableau. Une échéance dépassée sans que l'action soit faite est surlignée « En retard ».</li>
+        <li><strong>Filtres</strong> — par poste et par section, en haut de l'onglet.</li>
+        <li><strong>Fait</strong> — coche l'action comme terminée (elle passe en grisé/barré). « Afficher les faites » permet de les revoir.</li>
+        <li><strong>Exporter CSV</strong> — export de toutes les actions avec leur statut.</li>
+      </ul>
+    </div>
+
+    <div class="aide-section">
+      <h3>👥 Onglet Utilisateurs <span class="aide-admin-tag">réservé aux Administrateurs</span></h3>
+      <p>Liste des comptes qui se sont déjà connectés à l'application, avec un menu déroulant pour attribuer un rôle (Approvisionneur, Ordonnanceur, Responsable, Opérateur, Administrateur). Un utilisateur n'apparaît dans cette liste qu'après sa toute première connexion — inutile de chercher à l'ajouter avant.</p>
+    </div>
+
+    <div class="aide-section">
+      <h3>💾 Sauvegarde</h3>
+      <p>Toute modification déclenche une sauvegarde automatique après quelques secondes (indicateur « Modifications en cours... » puis « ✓ Synchronisé » en haut à droite). Le bouton <strong>Sauvegarder</strong> force un enregistrement immédiat. Les données sont stockées sur Firebase et partagées entre tous les utilisateurs connectés ; une copie de secours est aussi conservée localement dans le navigateur.</p>
+    </div>
+
+  </div>
 </div>
 
 <!-- Modal Graphique (Supermarché) -->
