@@ -71,6 +71,8 @@ async function ensureUserDoc(user) {
       tx.set(userRef, {
         email: user.email,
         role: isFirstEver ? 'Administrateur' : '',
+        prenom: '',
+        nom: '',
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       });
@@ -91,13 +93,13 @@ async function ensureUserDoc(user) {
   }
 }
 
-// Crée un nouveau compte (email + rôle) depuis l'onglet Utilisateurs, réservé
-// aux Administrateurs. Utilise une instance Firebase secondaire temporaire pour
+// Crée un nouveau compte (email + rôle + nom/prénom) depuis l'onglet Utilisateurs,
+// réservé aux Administrateurs. Utilise une instance Firebase secondaire temporaire pour
 // que la création du compte (createUserWithEmailAndPassword) ne déconnecte pas
 // la session de l'admin en cours — sinon la connexion active basculerait sur le
 // nouveau compte. Le mot de passe généré n'est jamais communiqué : un e-mail de
 // réinitialisation est envoyé pour que la personne définisse elle-même le sien.
-export async function createUser(email, role) {
+export async function createUser(email, role, prenom, nom) {
   var tempPassword = generateTempPassword();
   var secondaryApp = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_' + Date.now());
   try {
@@ -107,6 +109,8 @@ export async function createUser(email, role) {
     await db.collection('users').doc(uid).set({
       email: email,
       role: role || '',
+      prenom: (prenom || '').trim(),
+      nom: (nom || '').trim(),
       createdAt: new Date().toISOString(),
       lastLogin: '',
       createdBy: state.currentUserUid
@@ -152,6 +156,12 @@ export async function tryLoadUserEmails() {
 export async function updateUserRole(uid, role) {
   await db.collection('users').doc(uid).update({ role: role });
   if (uid === state.currentUserUid) state.currentUserRole = role;
+}
+
+// Met à jour le prénom et/ou le nom d'un utilisateur (édition directe dans le
+// tableau de l'onglet Utilisateurs). patch ex : { prenom: 'Jean' } ou { nom: 'Dupont' }.
+export async function updateUserProfile(uid, patch) {
+  await db.collection('users').doc(uid).update(patch);
 }
 
 // Supprime la fiche Firestore d'un utilisateur (son rôle et ses infos).
