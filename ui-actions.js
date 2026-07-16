@@ -7,7 +7,7 @@
 // Date, Texte). Elle vit indépendamment des cellules du tableau : elle ne
 // disparaît donc pas quand la case d'origine est réutilisée le lendemain.
 
-import { state, markDirty, todayISO, isoToDisplay } from './state.js';
+import { state, markDirty, todayISO, isoToDisplay, showConfirm } from './state.js';
 
 // Filtres de vue (état d'affichage uniquement, pas persisté)
 var currentFilterPoste = '';
@@ -67,8 +67,9 @@ export function toggleActionDone(id) {
   markDirty();
 }
 
-export function deleteAction(id) {
-  if (!confirm('Supprimer cette action ?')) return;
+export async function deleteAction(id) {
+  var ok = await showConfirm('Cette action sera définitivement supprimée. Cette opération est irréversible.', { title: 'Supprimer cette action ?' });
+  if (!ok) return;
   state.actions = state.actions.filter(function (a) { return a.id !== id; });
   buildActions();
   markDirty();
