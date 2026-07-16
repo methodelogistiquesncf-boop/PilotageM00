@@ -9,7 +9,7 @@
 
 import { state } from './state.js';
 import { ROLES } from './state.js';
-import { loadUsersList, updateUserRole, updateUserProfile, createUser, deleteUserDoc } from './firebase.js';
+import { loadUsersList, updateUserRole, updateUserProfile, createUser, deleteUserDoc, updateUserBadge } from './firebase.js';
 
 let cachedUsers = [];
 
@@ -192,7 +192,13 @@ function editableNameCell(u, field, placeholder) {
     var previous = original;
     original = value; // évite un double-envoi si save() est rappelée avant la réponse
     u[field] = value;
-    updateUserProfile(u.uid, { [field]: value }).catch(function (e) {
+    updateUserProfile(u.uid, { [field]: value }).then(function () {
+      if (u.uid === state.currentUserUid) {
+        if (field === 'prenom') state.currentUserPrenom = value;
+        if (field === 'nom') state.currentUserNom = value;
+        updateUserBadge();
+      }
+    }).catch(function (e) {
       console.error(e);
       original = previous;
       u[field] = previous;
