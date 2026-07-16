@@ -133,6 +133,21 @@ export async function loadUsersList() {
   return snap.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); });
 }
 
+// Variante tolérante utilisée pour l'autocomplétion du champ "Responsable"
+// (onglet Actions) : contrairement à loadUsersList(), on l'appelle pour tous
+// les rôles, pas seulement les Administrateurs. Les règles Firestore refusant
+// le list() sur la collection users aux non-admins, on échoue silencieusement
+// et on retourne un tableau vide plutôt que de propager l'erreur.
+export async function tryLoadUserEmails() {
+  if (!db) return [];
+  try {
+    var snap = await db.collection('users').orderBy('email').get();
+    return snap.docs.map(function (d) { return d.data().email; }).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
 // Met à jour le rôle d'un utilisateur donné.
 export async function updateUserRole(uid, role) {
   await db.collection('users').doc(uid).update({ role: role });
