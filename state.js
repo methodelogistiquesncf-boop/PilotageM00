@@ -88,3 +88,41 @@ export function autoResize(ta) {
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
 }
+
+// ─── Modale de confirmation générique (remplace window.confirm) ──────────
+// Retourne une Promise<boolean> résolue selon le choix de l'utilisateur.
+// Utilise la modal #confirmOverlay présente dans suivi.html.
+export function showConfirm(message, opts) {
+  opts = opts || {};
+  return new Promise(function (resolve) {
+    var overlay = document.getElementById('confirmOverlay');
+    var titleEl = document.getElementById('confirmTitle');
+    var msgEl = document.getElementById('confirmMessage');
+    var btnOk = document.getElementById('confirmBtnOk');
+    var btnCancel = document.getElementById('confirmBtnCancel');
+
+    titleEl.textContent = opts.title || 'Confirmation';
+    msgEl.textContent = message || '';
+    btnOk.textContent = opts.okLabel || 'Supprimer';
+    btnCancel.textContent = opts.cancelLabel || 'Annuler';
+    overlay.classList.add('open');
+
+    function cleanup(result) {
+      overlay.classList.remove('open');
+      btnOk.onclick = null;
+      btnCancel.onclick = null;
+      overlay.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      if (e.key === 'Enter') cleanup(true);
+    }
+
+    btnOk.onclick = function () { cleanup(true); };
+    btnCancel.onclick = function () { cleanup(false); };
+    overlay.onclick = function (e) { if (e.target === overlay) cleanup(false); };
+    document.addEventListener('keydown', onKey);
+  });
+}
