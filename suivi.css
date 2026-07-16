@@ -366,9 +366,19 @@ table.actions-table th {
 }
 table.actions-table td { border: 1px solid #ccc; padding: 7px 8px; vertical-align: middle; font-size: 12px; }
 table.actions-table tr:hover td { background: #fafafa; }
-table.actions-table td.action-texte { color: #1a4fa0; white-space: pre-line; }
 table.actions-table td.action-done-cell { text-align: center; }
 table.actions-table .action-checkbox { width: 17px; height: 17px; cursor: pointer; accent-color: #22a050; vertical-align: middle; }
+
+.action-input {
+  width: 100%; font-size: 12px; font-family: inherit; color: var(--text);
+  border: 1px solid transparent; border-radius: 4px; background: transparent;
+  padding: 3px 5px; outline: none;
+}
+.action-input:hover { border-color: var(--border); }
+.action-input:focus { background: #f0f4ff; border-color: var(--accent); }
+.action-input:disabled { color: var(--muted); background: transparent; border-color: transparent; }
+.action-input.action-date-input { width: auto; }
+.action-input.action-texte-input { color: #1a4fa0; font-weight: 600; }
 
 table.actions-table tr.action-done td { background: #f0f0ec; color: var(--muted); text-decoration: line-through; text-decoration-color: #c8c4bc; }
 table.actions-table tr.action-done td.action-done-cell { text-decoration: none; }
