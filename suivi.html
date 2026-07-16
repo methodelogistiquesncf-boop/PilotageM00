@@ -125,16 +125,24 @@
       <ul>
         <li><strong>+ Ajouter une action</strong> — crée une ligne vide en haut de la liste, entièrement modifiable (engin, poste, section, date, action, commentaire, responsable, échéance).</li>
         <li><strong>Commentaire</strong> — champ libre pour toute précision complémentaire à l'action elle-même.</li>
-        <li><strong>Responsable / Échéance</strong> — éditables directement dans le tableau. Une échéance dépassée sans que l'action soit faite est surlignée « En retard ».</li>
+        <li><strong>Responsable</strong> — champ libre avec suggestions : les 5 rôles (avec le badge « Rôle »), le prénom + nom des comptes de l'onglet Utilisateurs (ou leur e-mail si pas encore renseigné), ainsi que les noms déjà utilisés dans d'autres actions. Taper simplement filtre la liste ; on peut aussi naviguer avec les flèches ↑ / ↓ et valider avec Entrée — mais rien n'empêche de saisir un nom qui n'y figure pas.</li>
+        <li><strong>Échéance</strong> — éditable directement dans le tableau. Une échéance dépassée sans que l'action soit faite est surlignée « En retard ».</li>
         <li><strong>Filtres</strong> — par poste et par section, en haut de l'onglet.</li>
         <li><strong>Fait</strong> — coche l'action comme terminée (elle passe en grisé/barré). « Afficher les faites » permet de les revoir.</li>
+        <li><strong>Suppression (✕)</strong> — une confirmation est toujours demandée avant de supprimer une action, l'opération étant définitive.</li>
         <li><strong>Exporter CSV</strong> — export de toutes les actions avec leur statut.</li>
       </ul>
     </div>
 
     <div class="aide-section">
       <h3>👥 Onglet Utilisateurs <span class="aide-admin-tag">réservé aux Administrateurs</span></h3>
-      <p>Liste des comptes qui se sont déjà connectés à l'application, avec un menu déroulant pour attribuer un rôle (Approvisionneur, Ordonnanceur, Responsable, Opérateur, Administrateur). Un utilisateur n'apparaît dans cette liste qu'après sa toute première connexion — inutile de chercher à l'ajouter avant.</p>
+      <p>Liste des comptes qui se sont déjà connectés à l'application, avec prénom, nom, rôle et date de dernière connexion. Un utilisateur n'apparaît dans cette liste qu'après sa toute première connexion — inutile de chercher à l'ajouter avant (sauf via « + Ajouter un utilisateur », voir plus bas).</p>
+      <ul>
+        <li><strong>Prénom / Nom</strong> — éditables directement dans le tableau ; la sauvegarde se fait automatiquement dès qu'on quitte le champ (ou en appuyant sur Entrée). Ces noms alimentent aussi les suggestions du champ Responsable dans l'onglet Actions.</li>
+        <li><strong>Rôle</strong> — menu déroulant (Approvisionneur, Ordonnanceur, Responsable, Opérateur, Administrateur), modifiable à tout moment. Se retirer soi-même le rôle Administrateur fait immédiatement disparaître l'onglet Utilisateurs.</li>
+        <li><strong>+ Ajouter un utilisateur</strong> — crée un compte (prénom, nom, e-mail, rôle) sans jamais communiquer de mot de passe : la personne reçoit un e-mail pour définir le sien.</li>
+        <li><strong>✕</strong> — supprime la fiche d'un utilisateur (pas son compte de connexion). Impossible de supprimer sa propre fiche.</li>
+      </ul>
     </div>
 
     <div class="aide-section">
