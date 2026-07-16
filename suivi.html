@@ -201,6 +201,19 @@
   </div>
 </div>
 
+<!-- Modal Confirmation générique -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠</div>
+    <h3 id="confirmTitle">Confirmation</h3>
+    <p id="confirmMessage"></p>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" id="confirmBtnCancel">Annuler</button>
+      <button class="confirm-btn confirm-btn-danger" id="confirmBtnOk">Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
