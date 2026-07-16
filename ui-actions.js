@@ -8,7 +8,7 @@
 // disparaît donc pas quand la case d'origine est réutilisée le lendemain.
 
 import { state, markDirty, todayISO, isoToDisplay, showConfirm, ROLES } from './state.js';
-import { tryLoadUserEmails } from './firebase.js';
+import { tryLoadUserDirectory } from './firebase.js';
 
 // Filtres de vue (état d'affichage uniquement, pas persisté)
 var currentFilterPoste = '';
@@ -17,27 +17,29 @@ var currentFilterSection = '';
 // ─── Suggestions pour le champ "Responsable" ───────────────────────────────
 // null = pas encore chargé, tableau = chargé (éventuellement vide si les
 // règles Firestore refusent le list() aux comptes non-Administrateur).
-var cachedAgentEmails = null;
+var cachedAgentDirectory = null;
 
 function ensureAgentEmailsLoaded() {
-  if (cachedAgentEmails !== null) return;
-  cachedAgentEmails = []; // évite les appels concurrents pendant le chargement
-  tryLoadUserEmails().then(function (emails) {
-    cachedAgentEmails = emails;
+  if (cachedAgentDirectory !== null) return;
+  cachedAgentDirectory = []; // évite les appels concurrents pendant le chargement
+  tryLoadUserDirectory().then(function (directory) {
+    cachedAgentDirectory = directory;
   });
 }
 
-// Rôles + emails des comptes + noms déjà saisis dans d'autres actions,
-// dédupliqués et triés. isRole permet d'afficher un petit badge distinctif
-// dans le menu déroulant custom.
+// Rôles + noms des comptes (prénom + nom si renseignés, sinon email en repli)
+// + noms déjà saisis dans d'autres actions, dédupliqués et triés. isRole
+// permet d'afficher un petit badge distinctif dans le menu déroulant custom.
 function buildResponsableOptions() {
   var seen = new Set();
   var options = [];
   ROLES.forEach(function (r) {
     if (!seen.has(r)) { seen.add(r); options.push({ value: r, isRole: true }); }
   });
-  cachedAgentEmails.forEach(function (e) {
-    if (e && !seen.has(e)) { seen.add(e); options.push({ value: e, isRole: false }); }
+  cachedAgentDirectory.forEach(function (u) {
+    var fullName = (u.prenom + ' ' + u.nom).trim();
+    var display = fullName || u.email;
+    if (display && !seen.has(display)) { seen.add(display); options.push({ value: display, isRole: false }); }
   });
   state.actions.forEach(function (a) {
     var v = a.responsable && a.responsable.trim();
