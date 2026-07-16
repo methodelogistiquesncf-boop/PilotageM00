@@ -175,28 +175,35 @@ function renderUsersTable() {
   wrap.appendChild(table);
 }
 
-// Champ texte éditable (Prénom / Nom), sauvegardé sur Firestore au blur.
+// Champ texte éditable (Prénom / Nom), sauvegardé sur Firestore au blur (ou
+// à la touche Entrée).
 function editableNameCell(u, field, placeholder) {
   var td = document.createElement('td');
   var inp = document.createElement('input');
   inp.type = 'text';
   inp.className = 'action-input';
   inp.placeholder = placeholder;
-  inp.value = u[field] || '';
-  inp.oninput = function () { u[field] = inp.value; };
-  inp.onblur = function () {
+  var original = u[field] || '';
+  inp.value = original;
+
+  function save() {
     var value = inp.value.trim();
-    if (value === (u[field] || '')) return;
-    var previous = u[field] || '';
+    if (value === original) return; // rien n'a changé : pas d'appel réseau inutile
+    var previous = original;
+    original = value; // évite un double-envoi si save() est rappelée avant la réponse
     u[field] = value;
-    var patch = {}; patch[field] = value;
-    updateUserProfile(u.uid, patch).catch(function (e) {
+    updateUserProfile(u.uid, { [field]: value }).catch(function (e) {
       console.error(e);
+      original = previous;
       u[field] = previous;
       inp.value = previous;
       alert('Erreur lors de la mise à jour.');
     });
-  };
+  }
+
+  inp.onblur = save;
+  inp.onkeydown = function (e) { if (e.key === 'Enter') inp.blur(); };
+
   td.appendChild(inp);
   return td;
 }
