@@ -29,6 +29,8 @@ export const state = {
   currentUserUid: '',
   currentUserEmail: '',
   currentUserRole: '',
+  currentUserPrenom: '',
+  currentUserNom: '',
 };
 
 // Remplace en bloc une ou plusieurs propriétés de state (utilisé au chargement
