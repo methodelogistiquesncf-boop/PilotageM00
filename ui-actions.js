@@ -25,6 +25,7 @@ function makeActionItem(data) {
     responsable: '',
     echeance: '',
     done: false,
+    manual: !!data.manual,
     createdAt: new Date().toISOString(),
     doneAt: ''
   };
@@ -51,7 +52,7 @@ export function sendToAction(data) {
 // éditable directement dans le tableau (contrairement aux actions envoyées depuis
 // le Supermarché, ici tous les champs sont saisis à la main).
 export function addManualAction() {
-  var item = makeActionItem({ date: isoToDisplay(todayISO()) });
+  var item = makeActionItem({ date: isoToDisplay(todayISO()), manual: true });
   state.actions.unshift(item);
   buildActions();
   markDirty();
@@ -159,14 +160,16 @@ export function buildActions() {
   wrap.appendChild(table);
 }
 
-function textInputCell(a, field, placeholder, className) {
+function textInputCell(a, field, placeholder, className, lockableIfAuto) {
   var td = document.createElement('td');
   var inp = document.createElement('input');
   inp.type = 'text';
   inp.className = className || 'action-input';
   if (placeholder) inp.placeholder = placeholder;
   inp.value = a[field] || '';
-  inp.disabled = !!a.done;
+  var locked = lockableIfAuto && !a.manual;
+  inp.disabled = !!a.done || locked;
+  if (locked) inp.title = 'Rempli automatiquement depuis le Supermarché — non modifiable';
   inp.oninput = function () { a[field] = inp.value; markDirty(); };
   td.appendChild(inp);
   return td;
@@ -178,12 +181,12 @@ function buildActionRow(a) {
   if (a.done) tr.className = 'action-done';
   else if (isOverdue) tr.className = 'action-overdue';
 
-  tr.appendChild(textInputCell(a, 'engin', 'Engin...'));
-  tr.appendChild(textInputCell(a, 'poste', 'Poste...'));
-  tr.appendChild(textInputCell(a, 'section', 'Section...'));
+  tr.appendChild(textInputCell(a, 'engin', 'Engin...', null, true));
+  tr.appendChild(textInputCell(a, 'poste', 'Poste...', null, true));
+  tr.appendChild(textInputCell(a, 'section', 'Section...', null, true));
 
-  tr.appendChild(textInputCell(a, 'date', 'jj/mm...'));
-  tr.appendChild(textInputCell(a, 'texte', 'Action...', 'action-input action-texte-input'));
+  tr.appendChild(textInputCell(a, 'date', 'jj/mm...', null, true));
+  tr.appendChild(textInputCell(a, 'texte', 'Action...', 'action-input action-texte-input', true));
   tr.appendChild(textInputCell(a, 'commentaire', 'Commentaire...'));
 
   var tdResp = document.createElement('td');
