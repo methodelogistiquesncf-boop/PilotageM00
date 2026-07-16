@@ -7,7 +7,7 @@
 // Date, Texte). Elle vit indépendamment des cellules du tableau : elle ne
 // disparaît donc pas quand la case d'origine est réutilisée le lendemain.
 
-import { state, markDirty, todayISO } from './state.js';
+import { state, markDirty, todayISO, isoToDisplay } from './state.js';
 
 // Filtres de vue (état d'affichage uniquement, pas persisté)
 var currentFilterPoste = '';
@@ -51,7 +51,7 @@ export function sendToAction(data) {
 // éditable directement dans le tableau (contrairement aux actions envoyées depuis
 // le Supermarché, ici tous les champs sont saisis à la main).
 export function addManualAction() {
-  var item = makeActionItem({ date: todayISO() });
+  var item = makeActionItem({ date: isoToDisplay(todayISO()) });
   state.actions.unshift(item);
   buildActions();
   markDirty();
@@ -182,16 +182,7 @@ function buildActionRow(a) {
   tr.appendChild(textInputCell(a, 'poste', 'Poste...'));
   tr.appendChild(textInputCell(a, 'section', 'Section...'));
 
-  var tdDate = document.createElement('td');
-  var dateInput = document.createElement('input');
-  dateInput.type = 'date';
-  dateInput.className = 'action-input action-date-input';
-  dateInput.value = a.date || '';
-  dateInput.disabled = !!a.done;
-  dateInput.onchange = function () { a.date = dateInput.value; markDirty(); };
-  tdDate.appendChild(dateInput);
-  tr.appendChild(tdDate);
-
+  tr.appendChild(textInputCell(a, 'date', 'jj/mm...'));
   tr.appendChild(textInputCell(a, 'texte', 'Action...', 'action-input action-texte-input'));
   tr.appendChild(textInputCell(a, 'commentaire', 'Commentaire...'));
 
@@ -246,8 +237,7 @@ export function exportActionsCSV() {
   var rows = [['Engin', 'Poste', 'Section', 'Date', 'Action', 'Commentaire', 'Responsable', 'Échéance', 'Statut']];
   state.actions.forEach(function (a) {
     var echAff = a.echeance ? a.echeance.split('-').reverse().join('/') : '';
-    var dateAff = a.date ? a.date.split('-').reverse().join('/') : '';
-    rows.push([a.engin, a.poste, a.section, dateAff, a.texte, a.commentaire || '', a.responsable || '', echAff, a.done ? 'Fait' : 'À faire']);
+    rows.push([a.engin, a.poste, a.section, a.date || '', a.texte, a.commentaire || '', a.responsable || '', echAff, a.done ? 'Fait' : 'À faire']);
   });
   var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
   var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
