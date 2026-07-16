@@ -41,9 +41,19 @@ export function initAuth(onLogin) {
     db = firebase.firestore();
     setStatus('sync', 'Chargement...');
     ensureUserDoc(user)
-      .then(function () { return loadFirebase(); })
+      .then(function () { updateUserBadge(); return loadFirebase(); })
       .then(function () { onLogin(user); });
   });
+}
+
+// Affiche "Prénom Nom" dans le badge en haut à droite si ces champs sont
+// renseignés (onglet Utilisateurs), sinon l'e-mail en repli. Appelée après
+// ensureUserDoc() et aussi depuis ui-users.js quand on modifie son propre profil.
+export function updateUserBadge() {
+  var el = document.getElementById('userEmail');
+  if (!el) return;
+  var fullName = (state.currentUserPrenom + ' ' + state.currentUserNom).trim();
+  el.textContent = '👤 ' + (fullName || state.currentUserEmail);
 }
 
 // Crée la fiche Firestore de l'utilisateur à sa toute première connexion (email,
@@ -85,11 +95,15 @@ async function ensureUserDoc(user) {
     state.currentUserUid = user.uid;
     state.currentUserEmail = data.email || user.email;
     state.currentUserRole = data.role || '';
+    state.currentUserPrenom = data.prenom || '';
+    state.currentUserNom = data.nom || '';
   } catch (e) {
     console.error('Erreur ensureUserDoc', e);
     state.currentUserUid = user.uid;
     state.currentUserEmail = user.email;
     state.currentUserRole = '';
+    state.currentUserPrenom = '';
+    state.currentUserNom = '';
   }
 }
 
