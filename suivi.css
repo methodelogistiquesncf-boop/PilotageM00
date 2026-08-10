@@ -425,6 +425,13 @@ table.actions-table .action-checkbox { width: 17px; height: 17px; cursor: pointe
 .action-input.action-date-input { width: auto; }
 .action-input.action-texte-input { color: #1a4fa0; font-weight: 600; }
 
+/* Action / Commentaire : textarea auto-extensible, retour à la ligne au lieu
+   de déborder (même principe que .comment-area dans l'onglet Rassemblement) */
+textarea.action-input {
+  display: block; resize: none; overflow: hidden; min-height: 22px;
+  line-height: 1.35; white-space: pre-wrap; word-break: break-word; font-family: inherit;
+}
+
 table.actions-table tr.action-done td { background: #f0f0ec; color: var(--muted); text-decoration: line-through; text-decoration-color: #c8c4bc; }
 table.actions-table tr.action-done td.action-done-cell { text-decoration: none; }
 
