@@ -7,7 +7,7 @@
 // Date, Texte). Elle vit indépendamment des cellules du tableau : elle ne
 // disparaît donc pas quand la case d'origine est réutilisée le lendemain.
 
-import { state, markDirty, todayISO, isoToDisplay, showConfirm, ROLES } from './state.js';
+import { state, markDirty, todayISO, isoToDisplay, showConfirm, ROLES, autoResize } from './state.js';
 import { tryLoadUserDirectory } from './firebase.js';
 
 // Filtres de vue (état d'affichage uniquement, pas persisté)
@@ -216,6 +216,26 @@ function textInputCell(a, field, placeholder, className, lockableIfAuto) {
   return td;
 }
 
+// Variante "textarea" auto-extensible (utilisée pour Action / Commentaire) :
+// le texte revient à la ligne au lieu de déborder, et le champ grandit
+// verticalement pour rester lisible (même principe que .comment-area
+// dans l'onglet Rassemblement).
+function textareaCell(a, field, placeholder, className, lockableIfAuto) {
+  var td = document.createElement('td');
+  var ta = document.createElement('textarea');
+  ta.className = className || 'action-input';
+  ta.rows = 1;
+  if (placeholder) ta.placeholder = placeholder;
+  ta.value = a[field] || '';
+  var locked = lockableIfAuto && !a.manual;
+  ta.disabled = !!a.done || locked;
+  if (locked) ta.title = 'Rempli automatiquement depuis le Supermarché — non modifiable';
+  ta.oninput = function () { a[field] = ta.value; autoResize(ta); markDirty(); };
+  td.appendChild(ta);
+  requestAnimationFrame(function () { autoResize(ta); });
+  return td;
+}
+
 // Champ "Responsable" : saisie libre + menu déroulant custom stylé (rôles,
 // emails des comptes, noms déjà utilisés). Remplace le <datalist> natif du
 // navigateur, non personnalisable visuellement.
@@ -322,8 +342,8 @@ function buildActionRow(a) {
   tr.appendChild(textInputCell(a, 'section', 'Section...', null, true));
 
   tr.appendChild(textInputCell(a, 'date', 'jj/mm...', null, true));
-  tr.appendChild(textInputCell(a, 'texte', 'Action...', 'action-input action-texte-input', true));
-  tr.appendChild(textInputCell(a, 'commentaire', 'Commentaire...'));
+  tr.appendChild(textareaCell(a, 'texte', 'Action...', 'action-input action-texte-input', true));
+  tr.appendChild(textareaCell(a, 'commentaire', 'Commentaire...'));
 
   tr.appendChild(buildResponsableCell(a));
 
