@@ -2,7 +2,7 @@
 // sur window des fonctions référencées par les onclick="" du HTML existant
 // (le HTML n'a volontairement pas été réécrit, pour limiter le risque de régression).
 
-import { initState, state } from './state.js';
+import { initState, state, markDirty } from './state.js';
 import { initAuth, doLogout, saveFirebase } from './firebase.js';
 import {
   build, addSynthCol, resetAll, exportCSV,
@@ -67,6 +67,11 @@ Object.assign(window, {
     if (e.target === this) this.classList.remove('open');
   });
 });
+
+// Changer la date du jour doit déclencher la sauvegarde automatique comme
+// n'importe quelle autre modification — sinon rien ne se sauvegarde tant
+// qu'on ne touche pas une autre case ensuite (ou qu'on clique "Sauvegarder").
+document.getElementById('dateJour').addEventListener('change', function () { markDirty(); });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────
 function finishBoot() {
