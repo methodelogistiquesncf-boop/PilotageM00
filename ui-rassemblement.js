@@ -248,14 +248,16 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(fieldCell('symbole'));
 
   var tdDesc = document.createElement('td');
-  var inpDesc = document.createElement('input');
-  inpDesc.type = 'text';
+  var inpDesc = document.createElement('textarea');
+  inpDesc.className = 'comment-area';
+  inpDesc.rows = 1;
   inpDesc.placeholder = 'Désignation...';
   inpDesc.value = row.designation || '';
   inpDesc.disabled = !!row.recu;
-  inpDesc.oninput = function () { row.designation = inpDesc.value; markDirty(); };
+  inpDesc.oninput = function () { row.designation = inpDesc.value; autoResize(inpDesc); markDirty(); };
   tdDesc.appendChild(inpDesc);
   tr.appendChild(tdDesc);
+  observeCommentSize(tdDesc, inpDesc);
 
   tr.appendChild(fieldCell('qte', 'number'));
 
