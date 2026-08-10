@@ -10,6 +10,20 @@
 import { state, markDirty, todayISO, isoToDisplay, showConfirm, autoResize } from './state.js';
 import { ensureAgentEmailsLoaded, buildResponsableCell } from './responsable-field.js';
 
+// Recalcule la hauteur d'une textarea auto-extensible dès qu'elle est
+// effectivement dans le DOM (layout final connu) et à chaque fois que la
+// largeur de sa cellule change ensuite (redimensionnement de la fenêtre...).
+function observeCommentSize(td, textarea) {
+  requestAnimationFrame(function () { requestAnimationFrame(function () { autoResize(textarea); }); });
+  if (typeof ResizeObserver === 'undefined') return;
+  var lastWidth = null;
+  var ro = new ResizeObserver(function (entries) {
+    var w = entries[0].contentRect.width;
+    if (w !== lastWidth) { lastWidth = w; autoResize(textarea); }
+  });
+  ro.observe(td);
+}
+
 // Filtres de vue (état d'affichage uniquement, pas persisté)
 var currentFilterPoste = '';
 var currentFilterSection = '';
@@ -197,7 +211,7 @@ function textareaCell(a, field, placeholder, className, lockableIfAuto) {
   if (locked) ta.title = 'Rempli automatiquement depuis le Supermarché — non modifiable';
   ta.oninput = function () { a[field] = ta.value; autoResize(ta); markDirty(); };
   td.appendChild(ta);
-  requestAnimationFrame(function () { autoResize(ta); });
+  observeCommentSize(td, ta);
   return td;
 }
 
