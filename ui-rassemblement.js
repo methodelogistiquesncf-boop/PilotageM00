@@ -3,7 +3,7 @@
 import { state, markDirty, todayISO, isoToDisplay, autoResize } from './state.js';
 
 function makeRassemRow() {
-  return { id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), engin: '', kit: '', symbole: '', designation: '', qte: '', commentaire: '', recu: false, dateRecu: '' };
+  return { id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), engin: '', kit: '', symbole: '', designation: '', qte: '', commentaire: '', responsable: '', recu: false, dateRecu: '' };
 }
 function makeRassemSection(dateISO) {
   return { id: 'rs_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), date: dateISO || '', jour: '', rows: [] };
@@ -175,7 +175,7 @@ function buildRassemSectionEl(sec) {
   var table = document.createElement('table');
   table.className = 'manquants-table';
   var thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th>Reçu</th><th></th></tr>';
+  thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th>Responsable</th><th>Reçu</th><th></th></tr>';
   table.appendChild(thead);
 
   var visibleRows = state.showRecus ? sec.rows : sec.rows.filter(function (r) { return !r.recu; });
@@ -184,7 +184,7 @@ function buildRassemSectionEl(sec) {
   if (visibleRows.length === 0) {
     var trEmpty = document.createElement('tr');
     var tdEmpty = document.createElement('td');
-    tdEmpty.colSpan = 8;
+    tdEmpty.colSpan = 9;
     tdEmpty.className = 'manquants-empty';
     tdEmpty.textContent = sec.rows.length === 0
       ? 'Aucun article manquant pour cette date.'
@@ -252,6 +252,8 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(tdComment);
   requestAnimationFrame(function () { autoResize(inpComment); });
 
+  tr.appendChild(fieldCell('responsable'));
+
   var tdRecu = document.createElement('td');
   tdRecu.className = 'recu-cell';
   var checkbox = document.createElement('input');
@@ -283,7 +285,7 @@ function buildRassemRowEl(sec, row) {
 }
 
 export function exportManquantsCSV() {
-  var rows = [['Date manquant', 'Repère', 'Engin', 'Kit', 'Symbole', 'Désignation', 'Qté', 'Commentaire', 'Statut', 'Date reçu']];
+  var rows = [['Date manquant', 'Repère', 'Engin', 'Kit', 'Symbole', 'Désignation', 'Qté', 'Commentaire', 'Responsable', 'Statut', 'Date reçu']];
   var ordered = state.rassemblement.slice().sort(function (a, b) {
     if (!a.date && !b.date) return 0;
     if (!a.date) return 1;
@@ -294,7 +296,7 @@ export function exportManquantsCSV() {
     var dateAff = sec.date ? sec.date.split('-').reverse().join('/') : '';
     sec.rows.forEach(function (row) {
       var dateRecuAff = row.dateRecu ? row.dateRecu.split('-').reverse().join('/') : '';
-      rows.push([dateAff, sec.jour || '', row.engin || '', row.kit || '', row.symbole || '', row.designation || '', row.qte || '', row.commentaire || '', row.recu ? 'Reçu' : 'Manquant', dateRecuAff]);
+      rows.push([dateAff, sec.jour || '', row.engin || '', row.kit || '', row.symbole || '', row.designation || '', row.qte || '', row.commentaire || '', row.responsable || '', row.recu ? 'Reçu' : 'Manquant', dateRecuAff]);
     });
   });
   var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
