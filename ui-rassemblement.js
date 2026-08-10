@@ -3,6 +3,23 @@
 import { state, markDirty, todayISO, isoToDisplay, autoResize } from './state.js';
 import { ensureAgentEmailsLoaded, buildResponsableCell } from './responsable-field.js';
 
+// Recalcule la hauteur d'une textarea "commentaire" dès qu'elle est
+// effectivement dans le DOM (layout final connu — la première mesure prise
+// immédiatement après l'insertion peut être fausse) et à chaque fois que la
+// largeur de sa cellule change ensuite (redimensionnement de la fenêtre,
+// ajout/suppression d'une colonne comme "Responsable"...). Sans ça, le texte
+// peut rester coupé après un changement de largeur de colonne.
+function observeCommentSize(td, textarea) {
+  requestAnimationFrame(function () { requestAnimationFrame(function () { autoResize(textarea); }); });
+  if (typeof ResizeObserver === 'undefined') return;
+  var lastWidth = null;
+  var ro = new ResizeObserver(function (entries) {
+    var w = entries[0].contentRect.width;
+    if (w !== lastWidth) { lastWidth = w; autoResize(textarea); }
+  });
+  ro.observe(td);
+}
+
 function makeRassemRow() {
   return { id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), engin: '', kit: '', symbole: '', designation: '', qte: '', commentaire: '', responsable: '', recu: false, dateRecu: '' };
 }
@@ -252,7 +269,7 @@ function buildRassemRowEl(sec, row) {
   inpComment.oninput = function () { row.commentaire = inpComment.value; autoResize(inpComment); markDirty(); };
   tdComment.appendChild(inpComment);
   tr.appendChild(tdComment);
-  requestAnimationFrame(function () { autoResize(inpComment); });
+  observeCommentSize(tdComment, inpComment);
 
   tr.appendChild(buildResponsableCell(row, 'responsable', !!row.recu));
 
