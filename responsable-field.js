@@ -78,7 +78,12 @@ export function buildResponsableCell(obj, field, disabled) {
     if (dropdown.parentNode) dropdown.parentNode.removeChild(dropdown);
   }
 
-  function onWindowScroll() { closeDropdown(); }
+  function onWindowScroll(e) {
+    // Le scroll DANS la liste de suggestions (overflow-y:auto) ne doit pas
+    // la fermer — seul un scroll de la page ou d'un autre conteneur doit le faire.
+    if (e && e.target && dropdown.contains(e.target)) return;
+    closeDropdown();
+  }
 
   function positionDropdown() {
     var rect = input.getBoundingClientRect();
