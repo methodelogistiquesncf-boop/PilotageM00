@@ -156,14 +156,14 @@ input.loco:focus { background: #f0f4ff; border-radius: 3px; }
 .confirm-btn-danger { background: #c03030; color: #fff; border-color: #c03030; }
 .confirm-btn-danger:hover { background: #a52424; }
 
-/* ─── AUTOCOMPLÉTION CUSTOM "RESPONSABLE" (Actions) ───────────────────── */
+/* ─── AUTOCOMPLÉTION CUSTOM "RESPONSABLE" (Actions + Rassemblement) ───── */
 .resp-autocomplete { position: relative; }
 .resp-autocomplete .action-input { width: 100%; }
 .resp-autocomplete-dropdown {
-  display: none; position: absolute; top: calc(100% + 4px); left: 0;
-  min-width: 100%; width: max-content; max-width: 280px; max-height: 230px; overflow-y: auto;
+  display: none; position: fixed;
+  width: max-content; max-width: 280px; max-height: 230px; overflow-y: auto;
   background: #fff; border: 1px solid var(--border); border-radius: 9px;
-  box-shadow: 0 10px 28px rgba(0,0,0,.16); z-index: 60; padding: 5px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.16); z-index: 9999; padding: 5px;
   animation: respDropIn .12s ease-out;
 }
 .resp-autocomplete-dropdown.open { display: block; }
