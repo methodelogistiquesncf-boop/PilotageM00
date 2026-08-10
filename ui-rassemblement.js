@@ -1,6 +1,7 @@
 // ui-rassemblement.js — onglet "Rassemblement" : articles manquants groupés par date
 
 import { state, markDirty, todayISO, isoToDisplay, autoResize } from './state.js';
+import { ensureAgentEmailsLoaded, buildResponsableCell } from './responsable-field.js';
 
 function makeRassemRow() {
   return { id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), engin: '', kit: '', symbole: '', designation: '', qte: '', commentaire: '', responsable: '', recu: false, dateRecu: '' };
@@ -73,6 +74,7 @@ export function buildRassemblement() {
   var wrap = document.getElementById('rassemblementSections');
   wrap.innerHTML = '';
   updateRassemCount();
+  ensureAgentEmailsLoaded();
 
   if (state.rassemblement.length === 0) {
     wrap.innerHTML = '<div class="manquants-empty">Aucune date ajoutée. Clique sur « + Ajouter une date » pour commencer.</div>';
@@ -252,7 +254,7 @@ function buildRassemRowEl(sec, row) {
   tr.appendChild(tdComment);
   requestAnimationFrame(function () { autoResize(inpComment); });
 
-  tr.appendChild(fieldCell('responsable'));
+  tr.appendChild(buildResponsableCell(row, 'responsable', !!row.recu));
 
   var tdRecu = document.createElement('td');
   tdRecu.className = 'recu-cell';
