@@ -61,8 +61,7 @@
 
 <!-- Vue : Rassemblement (articles manquants groupés par date) -->
 <div class="view-panel" id="panelManquants">
-  <div class="rassemblement-sections" id="rassemblementSections"></div>
-  <div class="manquants-toolbar">
+  <div class="actions-toolbar-top">
     <button class="btn btn-primary" onclick="addRassemSection()">+ Ajouter une date</button>
     <button class="btn btn-ghost" id="btnToggleRecus" onclick="toggleShowRecus()">👁 Afficher les reçus</button>
     <button class="btn btn-ghost" onclick="exportManquantsCSV()">Exporter CSV</button>
@@ -70,6 +69,7 @@
     <button class="btn btn-ghost" onclick="printRassemblement()">🖨 Imprimer cette page</button>
     <button class="btn btn-primary" onclick="saveFirebase()">Sauvegarder</button>
   </div>
+  <div class="rassemblement-sections" id="rassemblementSections"></div>
 </div>
 
 <!-- Vue : Actions (remarques envoyées depuis le tableau Supermarché, ou ajoutées manuellement) -->
