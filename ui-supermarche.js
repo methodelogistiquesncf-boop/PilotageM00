@@ -116,7 +116,21 @@ function buildBody() {
     { id: 'TT', label: '3 - Toiture', data: state.S_TT }
   ];
 
-  zones.forEach(function(zone) {
+  zones.forEach(function(zone, index) {
+    
+    // 🔑 ASTUCE ULTIME : Si ce n'est pas le 1er tableau, on ferme le tbody actuel,
+    // on injecte un div d'espacement dans le DOM, et on recrée un tbody.
+    if (index > 0) {
+      var spacerDiv = document.createElement('div');
+      spacerDiv.style.height = '40px'; // L'espace vide garanti
+      tb.parentNode.insertBefore(spacerDiv, tb.nextSibling);
+      
+      var newTb = document.createElement('tbody');
+      newTb.id = 'tbody'; // On garde le même ID pour ne pas casser le reste
+      spacerDiv.parentNode.insertBefore(newTb, spacerDiv.nextSibling);
+      tb = newTb; // On redirige les prochaines insertions vers ce nouveau tbody
+    }
+
     // Titre de la zone
     var rZone = document.createElement('tr');
     var tdZone = document.createElement('td');
