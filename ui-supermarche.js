@@ -106,6 +106,12 @@ function makeInput(cls, val, placeholder, onInput) {
 function makeJourUpdater(idx) { return function (v) { state.headersData.jours[idx] = v; markDirty(); }; }
 
 function buildBody() {
+  var firstTable = document.getElementById('mainTable');
+  var wrap = firstTable.parentNode;
+
+  // 🔑 Nettoyage des tableaux et espaces créés au build précédent
+  wrap.querySelectorAll('.zone-spacer, .zone-table').forEach(function (el) { el.remove(); });
+
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
 
@@ -116,19 +122,29 @@ function buildBody() {
     { id: 'TT', label: '3 - Toiture', data: state.S_TT }
   ];
 
-  zones.forEach(function(zone, index) {
-    
-    // 🔑 ASTUCE ULTIME : Si ce n'est pas le 1er tableau, on ferme le tbody actuel,
-    // on injecte un div d'espacement dans le DOM, et on recrée un tbody.
+  var currentTbody = tb;
+
+  zones.forEach(function (zone, index) {
+
+    // 🔑 À partir de la 2ème zone : on crée un vrai espace HORS du tableau,
+    // puis on clone le tableau principal (même design, mêmes bordures)
     if (index > 0) {
-      var spacerDiv = document.createElement('div');
-      spacerDiv.style.height = '40px'; // L'espace vide garanti
-      tb.parentNode.insertBefore(spacerDiv, tb.nextSibling);
-      
-      var newTb = document.createElement('tbody');
-      newTb.id = 'tbody'; // On garde le même ID pour ne pas casser le reste
-      spacerDiv.parentNode.insertBefore(newTb, spacerDiv.nextSibling);
-      tb = newTb; // On redirige les prochaines insertions vers ce nouveau tbody
+      var lastTable = currentTbody.parentNode;
+
+      // Espace de 40px : comme il est hors du tableau, c'est la couleur
+      // de fond de la page qui apparaît, sans aucune bordure noire.
+      var spacer = document.createElement('div');
+      spacer.className = 'zone-spacer';
+      spacer.style.height = '40px';
+      wrap.insertBefore(spacer, lastTable.nextSibling);
+
+      // Clone du tableau principal (garde exactement le même CSS)
+      var newTable = firstTable.cloneNode(false);
+      newTable.classList.add('zone-table');
+      wrap.insertBefore(newTable, spacer.nextSibling);
+
+      currentTbody = document.createElement('tbody');
+      newTable.appendChild(currentTbody);
     }
 
     // Titre de la zone
@@ -142,7 +158,7 @@ function buildBody() {
     tdZone.style.fontWeight = 'bold';
     tdZone.style.fontSize = '1.1em';
     rZone.appendChild(tdZone);
-    tb.appendChild(rZone);
+    currentTbody.appendChild(rZone);
 
     // 🔑 TON CODE EXACT, mais on passe zone.data au lieu de state.S
     ENGINS_CONFIG.forEach(function (e) {
@@ -156,14 +172,14 @@ function buildBody() {
         var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
         td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
       });
-      tb.appendChild(rEngin);
+      currentTbody.appendChild(rEngin);
 
       var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
       var tdT = document.createElement('td'); tdT.className = 'label';
       tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
       for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
       state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
-      tb.appendChild(rTitle);
+      currentTbody.appendChild(rTitle);
 
       e.sections.forEach(function (s) {
         var rNote = document.createElement('tr'); rNote.className = 'row-label';
@@ -176,7 +192,7 @@ function buildBody() {
           var td = document.createElement('td'); td.className = 'data-cell synth-cell';
           td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
         });
-        tb.appendChild(rNote);
+        currentTbody.appendChild(rNote);
 
         var rScore = document.createElement('tr'); rScore.className = 'row-score';
         var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
@@ -188,7 +204,7 @@ function buildBody() {
           var td = document.createElement('td'); td.className = 'synth-cell';
           td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
         });
-        tb.appendChild(rScore);
+        currentTbody.appendChild(rScore);
       });
     });
   });
