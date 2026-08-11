@@ -108,50 +108,84 @@ function makeJourUpdater(idx) { return function (v) { state.headersData.jours[id
 function buildBody() {
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
-  ENGINS_CONFIG.forEach(function (e) {
-    var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
-    var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
-    for (var d = 0; d < D_FIXED; d++) {
-      var td = document.createElement('td'); td.className = 'loco-cell';
-      td.appendChild(makeLoco_fixed(e.id, state.colOrder[d])); rEngin.appendChild(td);
+
+  // 🔑 DÉFINITION DES 3 ZONES
+  var zones = [
+    { id: 'TP', label: '1 - Terre-plein', data: state.S },
+    { id: 'SC', label: '2 - Sous-caisse', data: state.S_SC },
+    { id: 'TT', label: '3 - Toiture', data: state.S_TT }
+  ];
+
+  zones.forEach(function(zone) {
+    // Titre de la zone
+    var rZone = document.createElement('tr');
+    var tdZone = document.createElement('td');
+    tdZone.colSpan = 1 + D_FIXED + state.synthCols.length;
+    tdZone.textContent = zone.label;
+    tdZone.style.background = '#2c3e50';
+    tdZone.style.color = 'white';
+    tdZone.style.padding = '10px';
+    tdZone.style.fontWeight = 'bold';
+    tdZone.style.fontSize = '1.1em';
+    rZone.appendChild(tdZone);
+    tb.appendChild(rZone);
+
+    // 🔑 NOUVEAU : Espacement visuel entre les tableaux (sauf après le dernier)
+    if (zone.id !== 'TT') {
+      var spacerRow = document.createElement('tr');
+      var spacerTd = document.createElement('td');
+      spacerTd.colSpan = 1 + D_FIXED + state.synthCols.length;
+      spacerTd.style.height = '40px'; // Espace de 40 pixels
+      spacerRow.appendChild(spacerTd);
+      tb.appendChild(spacerRow);
     }
-    state.synthCols.forEach(function (col) {
-      var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
-      td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
-    });
-    tb.appendChild(rEngin);
 
-    var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
-    var tdT = document.createElement('td'); tdT.className = 'label';
-    tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
-    for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
-    state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
-    tb.appendChild(rTitle);
-
-    e.sections.forEach(function (s) {
-      var rNote = document.createElement('tr'); rNote.className = 'row-label';
-      var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
-      for (var d3 = 0; d3 < D_FIXED; d3++) {
-        var td3 = document.createElement('td'); td3.className = 'data-cell';
-        td3.appendChild(makeNoteList_fixed(e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
+    // 🔑 TON CODE EXACT, mais on passe zone.data au lieu de state.S
+    ENGINS_CONFIG.forEach(function (e) {
+      var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
+      var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
+      for (var d = 0; d < D_FIXED; d++) {
+        var td = document.createElement('td'); td.className = 'loco-cell';
+        td.appendChild(makeLoco_fixed(zone.data, e.id, state.colOrder[d])); rEngin.appendChild(td);
       }
       state.synthCols.forEach(function (col) {
-        var td = document.createElement('td'); td.className = 'data-cell synth-cell';
-        td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
+        var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
+        td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
       });
-      tb.appendChild(rNote);
+      tb.appendChild(rEngin);
 
-      var rScore = document.createElement('tr'); rScore.className = 'row-score';
-      var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
-      for (var d4 = 0; d4 < D_FIXED; d4++) {
-        var td4 = document.createElement('td');
-        td4.appendChild(makeScoreInner_fixed(e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
-      }
-      state.synthCols.forEach(function (col) {
-        var td = document.createElement('td'); td.className = 'synth-cell';
-        td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
+      var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
+      var tdT = document.createElement('td'); tdT.className = 'label';
+      tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
+      for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
+      state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
+      tb.appendChild(rTitle);
+
+      e.sections.forEach(function (s) {
+        var rNote = document.createElement('tr'); rNote.className = 'row-label';
+        var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
+        for (var d3 = 0; d3 < D_FIXED; d3++) {
+          var td3 = document.createElement('td'); td3.className = 'data-cell';
+          td3.appendChild(makeNoteList_fixed(zone.data, e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
+        }
+        state.synthCols.forEach(function (col) {
+          var td = document.createElement('td'); td.className = 'data-cell synth-cell';
+          td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
+        });
+        tb.appendChild(rNote);
+
+        var rScore = document.createElement('tr'); rScore.className = 'row-score';
+        var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
+        for (var d4 = 0; d4 < D_FIXED; d4++) {
+          var td4 = document.createElement('td');
+          td4.appendChild(makeScoreInner_fixed(zone.data, e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
+        }
+        state.synthCols.forEach(function (col) {
+          var td = document.createElement('td'); td.className = 'synth-cell';
+          td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
+        });
+        tb.appendChild(rScore);
       });
-      tb.appendChild(rScore);
     });
   });
 }
