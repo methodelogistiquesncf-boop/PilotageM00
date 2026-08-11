@@ -116,7 +116,7 @@ function buildBody() {
     { id: 'TT', label: '3 - Toiture', data: state.S_TT }
   ];
 
-  zones.forEach(function(zone) {
+  zones.forEach(function(zone, index) {
     // Titre de la zone
     var rZone = document.createElement('tr');
     var tdZone = document.createElement('td');
@@ -127,18 +127,17 @@ function buildBody() {
     tdZone.style.padding = '10px';
     tdZone.style.fontWeight = 'bold';
     tdZone.style.fontSize = '1.1em';
+    
+    // 🔑 NOUVEAU : Ajouter une marge au-dessus du bandeau (sauf pour le 1er)
+    if (index > 0) {
+      tdZone.style.boxShadow = '0 -40px 0 -20px transparent'; // Astuce pour forcer l'espace
+      rZone.style.height = '40px'; // Force la hauteur de la ligne
+      tdZone.style.position = 'relative';
+      tdZone.style.top = '20px'; // Décale le bandeau vers le bas
+    }
+
     rZone.appendChild(tdZone);
     tb.appendChild(rZone);
-
-    // 🔑 NOUVEAU : Espacement visuel entre les tableaux (sauf après le dernier)
-    if (zone.id !== 'TT') {
-      var spacerRow = document.createElement('tr');
-      var spacerTd = document.createElement('td');
-      spacerTd.colSpan = 1 + D_FIXED + state.synthCols.length;
-      spacerTd.style.height = '40px'; // Espace de 40 pixels
-      spacerRow.appendChild(spacerTd);
-      tb.appendChild(spacerRow);
-    }
 
     // 🔑 TON CODE EXACT, mais on passe zone.data au lieu de state.S
     ENGINS_CONFIG.forEach(function (e) {
