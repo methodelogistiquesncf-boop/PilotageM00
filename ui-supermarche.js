@@ -117,6 +117,20 @@ function buildBody() {
   ];
 
   zones.forEach(function(zone, index) {
+    
+    // 🔑 ASTUCE ULTIME : Si ce n'est pas le 1er tableau, on ferme le tbody actuel,
+    // on injecte un div d'espacement dans le DOM, et on recrée un tbody.
+    if (index > 0) {
+      var spacerDiv = document.createElement('div');
+      spacerDiv.style.height = '40px'; // L'espace vide garanti
+      tb.parentNode.insertBefore(spacerDiv, tb.nextSibling);
+      
+      var newTb = document.createElement('tbody');
+      newTb.id = 'tbody'; // On garde le même ID pour ne pas casser le reste
+      spacerDiv.parentNode.insertBefore(newTb, spacerDiv.nextSibling);
+      tb = newTb; // On redirige les prochaines insertions vers ce nouveau tbody
+    }
+
     // Titre de la zone
     var rZone = document.createElement('tr');
     var tdZone = document.createElement('td');
@@ -127,15 +141,6 @@ function buildBody() {
     tdZone.style.padding = '10px';
     tdZone.style.fontWeight = 'bold';
     tdZone.style.fontSize = '1.1em';
-    
-    // 🔑 NOUVEAU : Ajouter une marge au-dessus du bandeau (sauf pour le 1er)
-    if (index > 0) {
-      tdZone.style.boxShadow = '0 -40px 0 -20px transparent'; // Astuce pour forcer l'espace
-      rZone.style.height = '40px'; // Force la hauteur de la ligne
-      tdZone.style.position = 'relative';
-      tdZone.style.top = '20px'; // Décale le bandeau vers le bas
-    }
-
     rZone.appendChild(tdZone);
     tb.appendChild(rZone);
 
