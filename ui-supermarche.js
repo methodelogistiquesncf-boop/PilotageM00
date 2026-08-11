@@ -117,9 +117,9 @@ function buildBody() {
 
   // 🔑 DÉFINITION DES 3 ZONES
   var zones = [
-    { id: 'TP', label: '1 - Terre-plein', data: state.S },
-    { id: 'SC', label: '2 - Sous-caisse', data: state.S_SC },
-    { id: 'TT', label: '3 - Toiture', data: state.S_TT }
+    { id: 'SC', label: 'Station Sous-caisse', data: state.S_SC },
+    { id: 'TP', label: 'Station Terre-plein', data: state.S },
+    { id: 'TT', label: 'Station Toiture', data: state.S_TT }
   ];
 
   var currentTbody = tb;
