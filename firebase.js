@@ -1,8 +1,4 @@
 // firebase.js — authentification, chargement/sauvegarde Firestore et backup localStorage
-//
-// Dépend des scripts compat Firebase (firebase-app-compat.js, firebase-auth-compat.js,
-// firebase-firestore-compat.js) chargés en <script> classiques AVANT ce module dans le HTML :
-// ils exposent la variable globale `firebase`, visible ici sans import.
 
 import { state, setState, onDirty, ENGINS_CONFIG } from './state.js';
 
@@ -30,7 +26,6 @@ export function doLogout() {
   auth.signOut().then(function () { window.location.href = 'login.html'; });
 }
 
-// onLogin() est appelé une fois l'utilisateur authentifié ET les données Firestore chargées.
 export function initAuth(onLogin) {
   firebase.initializeApp(FIREBASE_CONFIG);
   auth = firebase.auth();
@@ -46,9 +41,6 @@ export function initAuth(onLogin) {
   });
 }
 
-// Affiche "Prénom Nom" dans le badge en haut à droite si ces champs sont
-// renseignés (onglet Utilisateurs), sinon l'e-mail en repli. Appelée après
-// ensureUserDoc() et aussi depuis ui-users.js quand on modifie son propre profil.
 export function updateUserBadge() {
   var el = document.getElementById('userEmail');
   if (!el) return;
@@ -56,16 +48,6 @@ export function updateUserBadge() {
   el.textContent = '👤 ' + (fullName || state.currentUserEmail);
 }
 
-// Crée la fiche Firestore de l'utilisateur à sa toute première connexion (email,
-// rôle vide), ou met à jour sa date de dernière connexion si elle existe déjà.
-// Le tout premier utilisateur jamais connecté sur l'appli est promu Administrateur
-// automatiquement, pour amorcer la gestion des rôles sans intervention manuelle.
-//
-// Détection du "premier utilisateur" via un document sentinelle meta/bootstrap
-// plutôt qu'une requête list() sur la collection users : un nouvel utilisateur
-// n'est pas encore admin au moment de cette vérification, donc un list() serait
-// refusé par les règles de sécurité (allow list: if isAdmin()). Un get() sur un
-// document précis, lui, reste autorisé.
 async function ensureUserDoc(user) {
   var userRef = db.collection('users').doc(user.uid);
   var bootstrapRef = db.collection('meta').doc('bootstrap');
@@ -107,12 +89,6 @@ async function ensureUserDoc(user) {
   }
 }
 
-// Crée un nouveau compte (email + rôle + nom/prénom) depuis l'onglet Utilisateurs,
-// réservé aux Administrateurs. Utilise une instance Firebase secondaire temporaire pour
-// que la création du compte (createUserWithEmailAndPassword) ne déconnecte pas
-// la session de l'admin en cours — sinon la connexion active basculerait sur le
-// nouveau compte. Le mot de passe généré n'est jamais communiqué : un e-mail de
-// réinitialisation est envoyé pour que la personne définisse elle-même le sien.
 export async function createUser(email, role, prenom, nom) {
   var tempPassword = generateTempPassword();
   var secondaryApp = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_' + Date.now());
@@ -130,8 +106,6 @@ export async function createUser(email, role, prenom, nom) {
       createdBy: state.currentUserUid
     });
     await secondaryAuth.signOut();
-    // Envoyé via l'instance principale : pas besoin d'être connecté en tant que
-    // ce compte pour lui envoyer un lien de définition de mot de passe.
     await auth.sendPasswordResetEmail(email);
     return { uid: uid };
   } finally {
@@ -145,17 +119,11 @@ function generateTempPassword() {
   return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
 
-// Liste tous les profils utilisateurs (pour l'onglet Utilisateurs, réservé aux Administrateurs).
 export async function loadUsersList() {
   var snap = await db.collection('users').orderBy('email').get();
   return snap.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); });
 }
 
-// Variante tolérante utilisée pour l'autocomplétion du champ "Responsable"
-// (onglet Actions) : contrairement à loadUsersList(), on l'appelle pour tous
-// les rôles, pas seulement les Administrateurs. Les règles Firestore refusant
-// le list() sur la collection users aux non-admins, on échoue silencieusement
-// et on retourne un tableau vide plutôt que de propager l'erreur.
 export async function tryLoadUserDirectory() {
   if (!db) return [];
   try {
@@ -169,22 +137,15 @@ export async function tryLoadUserDirectory() {
   }
 }
 
-// Met à jour le rôle d'un utilisateur donné.
 export async function updateUserRole(uid, role) {
   await db.collection('users').doc(uid).update({ role: role });
   if (uid === state.currentUserUid) state.currentUserRole = role;
 }
 
-// Met à jour le prénom et/ou le nom d'un utilisateur (édition directe dans le
-// tableau de l'onglet Utilisateurs). patch ex : { prenom: 'Jean' } ou { nom: 'Dupont' }.
 export async function updateUserProfile(uid, patch) {
   await db.collection('users').doc(uid).update(patch);
 }
 
-// Supprime la fiche Firestore d'un utilisateur (son rôle et ses infos).
-// Ne supprime PAS son compte de connexion Firebase Authentication : si la
-// personne se reconnecte ensuite, sa fiche est recréée automatiquement (sans
-// rôle) par ensureUserDoc, comme pour tout nouvel utilisateur.
 export async function deleteUserDoc(uid) {
   await db.collection('users').doc(uid).delete();
 }
@@ -197,6 +158,8 @@ export async function loadFirebase() {
       var data = snap.data();
       var patch = {};
       if (data.S) patch.S = data.S;
+      if (data.S_SC) patch.S_SC = data.S_SC; // 🔑 NOUVEAU
+      if (data.S_TT) patch.S_TT = data.S_TT; // 🔑 NOUVEAU
       if (data.headersData) patch.headersData = data.headersData;
       if (data.enginLabels) patch.enginLabels = data.enginLabels;
       if (data.synthCols) patch.synthCols = data.synthCols;
@@ -235,6 +198,8 @@ export async function saveFirebase() {
 
   var payload = {
     S: state.S,
+    S_SC: state.S_SC, // 🔑 NOUVEAU
+    S_TT: state.S_TT, // 🔑 NOUVEAU
     headersData: state.headersData,
     enginLabels: state.enginLabels,
     synthCols: state.synthCols,
@@ -264,7 +229,6 @@ function scheduleAutoSave() {
   saveTimer = setTimeout(function () { saveFirebase(); }, 3000);
   setStatus('sync', 'Modifications en cours...');
 }
-// Chaque markDirty() appelé depuis les autres modules déclenche l'autosave debouncé.
 onDirty(scheduleAutoSave);
 
 export function loadLocal() {
@@ -274,6 +238,8 @@ export function loadLocal() {
     var data = JSON.parse(bk);
     var patch = {};
     if (data.S) patch.S = data.S;
+    if (data.S_SC) patch.S_SC = data.S_SC; // 🔑 NOUVEAU
+    if (data.S_TT) patch.S_TT = data.S_TT; // 🔑 NOUVEAU
     if (data.headersData) patch.headersData = data.headersData;
     if (data.enginLabels) patch.enginLabels = data.enginLabels;
     if (data.synthCols) patch.synthCols = data.synthCols;
