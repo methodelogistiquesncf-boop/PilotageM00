@@ -108,64 +108,84 @@ function makeJourUpdater(idx) { return function (v) { state.headersData.jours[id
 function buildBody() {
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
-  ENGINS_CONFIG.forEach(function (e) {
-    var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
-    var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
-    for (var d = 0; d < D_FIXED; d++) {
-      var td = document.createElement('td'); td.className = 'loco-cell';
-      td.appendChild(makeLoco_fixed(e.id, state.colOrder[d])); rEngin.appendChild(td);
-    }
-    state.synthCols.forEach(function (col) {
-      var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
-      td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
-    });
-    tb.appendChild(rEngin);
 
-    var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
-    var tdT = document.createElement('td'); tdT.className = 'label';
-    tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
-    for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
-    state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
-    tb.appendChild(rTitle);
+  // 🔑 DÉFINITION DES 3 ZONES
+  var zones = [
+    { id: 'TP', label: '1 - Terre-plein', data: state.S },
+    { id: 'SC', label: '2 - Sous-caisse', data: state.S_SC },
+    { id: 'TT', label: '3 - Toiture', data: state.S_TT }
+  ];
 
-    e.sections.forEach(function (s) {
-      var rNote = document.createElement('tr'); rNote.className = 'row-label';
-      var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
-      for (var d3 = 0; d3 < D_FIXED; d3++) {
-        var td3 = document.createElement('td'); td3.className = 'data-cell';
-        td3.appendChild(makeNoteList_fixed(e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
+  zones.forEach(function(zone) {
+    // Titre de la zone
+    var rZone = document.createElement('tr');
+    var tdZone = document.createElement('td');
+    tdZone.colSpan = 1 + D_FIXED + state.synthCols.length;
+    tdZone.textContent = zone.label;
+    tdZone.style.background = '#2c3e50';
+    tdZone.style.color = 'white';
+    tdZone.style.padding = '10px';
+    tdZone.style.fontWeight = 'bold';
+    tdZone.style.fontSize = '1.1em';
+    rZone.appendChild(tdZone);
+    tb.appendChild(rZone);
+
+    // 🔑 TON CODE EXACT, mais on passe zone.data au lieu de state.S
+    ENGINS_CONFIG.forEach(function (e) {
+      var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
+      var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
+      for (var d = 0; d < D_FIXED; d++) {
+        var td = document.createElement('td'); td.className = 'loco-cell';
+        td.appendChild(makeLoco_fixed(zone.data, e.id, state.colOrder[d])); rEngin.appendChild(td);
       }
       state.synthCols.forEach(function (col) {
-        var td = document.createElement('td'); td.className = 'data-cell synth-cell';
-        td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
+        var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
+        td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
       });
-      tb.appendChild(rNote);
+      tb.appendChild(rEngin);
 
-      var rScore = document.createElement('tr'); rScore.className = 'row-score';
-      var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
-      for (var d4 = 0; d4 < D_FIXED; d4++) {
-        var td4 = document.createElement('td');
-        td4.appendChild(makeScoreInner_fixed(e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
-      }
-      state.synthCols.forEach(function (col) {
-        var td = document.createElement('td'); td.className = 'synth-cell';
-        td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
+      var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
+      var tdT = document.createElement('td'); tdT.className = 'label';
+      tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
+      for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
+      state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
+      tb.appendChild(rTitle);
+
+      e.sections.forEach(function (s) {
+        var rNote = document.createElement('tr'); rNote.className = 'row-label';
+        var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
+        for (var d3 = 0; d3 < D_FIXED; d3++) {
+          var td3 = document.createElement('td'); td3.className = 'data-cell';
+          td3.appendChild(makeNoteList_fixed(zone.data, e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
+        }
+        state.synthCols.forEach(function (col) {
+          var td = document.createElement('td'); td.className = 'data-cell synth-cell';
+          td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
+        });
+        tb.appendChild(rNote);
+
+        var rScore = document.createElement('tr'); rScore.className = 'row-score';
+        var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
+        for (var d4 = 0; d4 < D_FIXED; d4++) {
+          var td4 = document.createElement('td');
+          td4.appendChild(makeScoreInner_fixed(zone.data, e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
+        }
+        state.synthCols.forEach(function (col) {
+          var td = document.createElement('td'); td.className = 'synth-cell';
+          td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
+        });
+        tb.appendChild(rScore);
       });
-      tb.appendChild(rScore);
     });
   });
 }
 
 // ─── Helpers DOM : colonne "fixe" vs colonne "synthèse" ───────────────────
-// Les paires *_fixed / *_synth partagent la même logique, seule la source de
-// données change. Gardées séparées (plutôt qu'un accessor générique unique)
-// pour rester proche du comportement d'origine — à fusionner dans une passe
-// suivante si besoin (ex: un helper prenant {get,set} en paramètre).
 
-function makeLoco_fixed(eid, p) {
+function makeLoco_fixed(dataObj, eid, p) {
   var inp = document.createElement('input');
-  inp.className = 'loco'; inp.type = 'text'; inp.placeholder = 'N° engin...'; inp.value = state.S[eid].loco[p];
-  (function (ei, pi) { inp.oninput = function () { state.S[ei].loco[pi] = inp.value; markDirty(); }; })(eid, p);
+  inp.className = 'loco'; inp.type = 'text'; inp.placeholder = 'N° engin...'; inp.value = dataObj[eid].loco[p];
+  (function (obj, ei, pi) { inp.oninput = function () { obj[ei].loco[pi] = inp.value; markDirty(); }; })(dataObj, eid, p);
   return inp;
 }
 function makeLoco_synth(col, eid) {
@@ -174,11 +194,7 @@ function makeLoco_synth(col, eid) {
   inp.oninput = function () { col.enginData[eid].loco = inp.value; markDirty(); };
   return inp;
 }
-// ─── Notes : liste de lignes éditables ─────────────────────────────────────
-// Chaque cellule de remarque contient désormais une petite liste de lignes
-// (au lieu d'un textarea unique), pour que chaque sujet distinct puisse être
-// envoyé individuellement vers Actions. Les anciennes notes (simple texte)
-// sont migrées en place vers une liste à une seule ligne, sans être découpées.
+
 function genId() { return 'ni_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
 
 function ensureNoteItems(obj) {
@@ -199,9 +215,6 @@ function noteToActionText(noteVal) {
   return items.map(function (it) { return (it.texte || '').trim(); }).filter(Boolean).join('\n');
 }
 
-// container : liste de lignes ; onDelete supprime l'item ; getMeta() renvoie
-// à l'instant T {engin, poste, date, jour} pour cette colonne (fonction, pas
-// valeur figée, pour rester à jour si le n° d'engin est modifié après coup).
 function buildNoteItemEl(item, onDelete, getMeta, section) {
   var row = document.createElement('div');
   row.className = 'note-item';
@@ -262,10 +275,10 @@ function buildNoteList(items, getMeta, section) {
   return container;
 }
 
-function makeNoteList_fixed(eid, s, p, d) {
-  var obj = state.S[eid][s][p];
+function makeNoteList_fixed(dataObj, eid, s, p, d) {
+  var obj = dataObj[eid][s][p];
   var items = ensureNoteItems(obj);
-  return buildNoteList(items, function () { return actionMetaFixed(eid, p, d); }, s);
+  return buildNoteList(items, function () { return actionMetaFixed(dataObj, eid, p, d); }, s);
 }
 function makeNoteList_synth(col, eid, s) {
   var obj = col.enginData[eid][s];
@@ -290,9 +303,9 @@ function enginLabelOf(eid) {
   var cfg = ENGINS_CONFIG.find(function (c) { return c.id === eid; });
   return state.enginLabels[eid] || (cfg ? cfg.defaultLabel : eid);
 }
-function actionMetaFixed(eid, p, d) {
+function actionMetaFixed(dataObj, eid, p, d) {
   return {
-    engin: state.S[eid].loco[p] || enginLabelOf(eid),
+    engin: dataObj[eid].loco[p] || enginLabelOf(eid),
     poste: enginLabelOf(eid),
     date: isoToDisplay(state.headersData.dates[d]) || '',
     jour: state.headersData.jours[d] || ''
@@ -307,9 +320,6 @@ function actionMetaSynth(col, eid) {
   };
 }
 
-// Bouton "→" au niveau de la cellule score : envoie TOUTES les lignes de
-// remarque de la cellule d'un coup (une par ligne, jointes). Complète les
-// boutons "→" individuels de chaque ligne de remarque.
 function makeActionBtn(getDot, getData) {
   var btn = document.createElement('button');
   btn.type = 'button';
@@ -320,30 +330,30 @@ function makeActionBtn(getDot, getData) {
   return btn;
 }
 
-function makeScoreInner_fixed(eid, s, p, d) {
+function makeScoreInner_fixed(dataObj, eid, s, p, d) {
   var inner = document.createElement('div'); inner.className = 'score-inner';
-  (function (ei, si, pi, di) {
-    inner.appendChild(makeDot(function () { return state.S[ei][si][pi].dot; }, function (v) { state.S[ei][si][pi].dot = v; }, 'green'));
-    inner.appendChild(makeDot(function () { return state.S[ei][si][pi].dot; }, function (v) { state.S[ei][si][pi].dot = v; }, 'red'));
+  (function (obj, ei, si, pi, di) {
+    inner.appendChild(makeDot(function () { return obj[ei][si][pi].dot; }, function (v) { obj[ei][si][pi].dot = v; }, 'green'));
+    inner.appendChild(makeDot(function () { return obj[ei][si][pi].dot; }, function (v) { obj[ei][si][pi].dot = v; }, 'red'));
     var inp = document.createElement('input');
-    inp.className = 'score'; inp.type = 'text'; inp.placeholder = '0/0'; inp.value = state.S[ei][si][pi].score;
-    inp.oninput = function () { state.S[ei][si][pi].score = inp.value; markDirty(); };
+    inp.className = 'score'; inp.type = 'text'; inp.placeholder = '0/0'; inp.value = obj[ei][si][pi].score;
+    inp.oninput = function () { obj[ei][si][pi].score = inp.value; markDirty(); };
     inner.appendChild(inp);
     inner.appendChild(makeActionBtn(
-      function () { return state.S[ei][si][pi].dot; },
+      function () { return obj[ei][si][pi].dot; },
       function () {
-        var meta = actionMetaFixed(ei, pi, di);
+        var meta = actionMetaFixed(obj, ei, pi, di);
         return {
           engin: meta.engin,
           poste: meta.poste,
           section: si,
           date: meta.date,
           jour: meta.jour,
-          texte: noteToActionText(ensureNoteItems(state.S[ei][si][pi]))
+          texte: noteToActionText(ensureNoteItems(obj[ei][si][pi]))
         };
       }
     ));
-  })(eid, s, p, d);
+  })(dataObj, eid, s, p, d);
   return inner;
 }
 function makeScoreInner_synth(col, eid, s) {
@@ -381,21 +391,31 @@ export function resetAll() {
 
 // ─── Export CSV ────────────────────────────────────────────────────────────
 export function exportCSV() {
-  var rows = [['Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
-  ENGINS_CONFIG.forEach(function (e) {
-    e.sections.forEach(function (s) {
-      for (var d = 0; d < D_FIXED; d++) {
-        var p = state.colOrder[d];
-        var c = state.S[e.id][s][p];
-        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', state.S[e.id].loco[p] || '', noteToText(c.note), c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
-      }
+  var rows = [['Zone', 'Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
+  
+  var zones = [
+    { label: 'Terre-plein', data: state.S },
+    { label: 'Sous-caisse', data: state.S_SC },
+    { label: 'Toiture', data: state.S_TT }
+  ];
+
+  zones.forEach(function(zone) {
+    ENGINS_CONFIG.forEach(function (e) {
+      e.sections.forEach(function (s) {
+        for (var d = 0; d < D_FIXED; d++) {
+          var p = state.colOrder[d];
+          var c = zone.data[e.id][s][p];
+          rows.push([zone.label, state.enginLabels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', zone.data[e.id].loco[p] || '', noteToText(c.note), c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
+        }
+      });
     });
   });
+
   state.synthCols.forEach(function (col, ci) {
     ENGINS_CONFIG.forEach(function (e) {
       e.sections.forEach(function (s) {
         var data = col.enginData[e.id][s];
-        rows.push([state.enginLabels[e.id] || e.defaultLabel, s, col.jour || 'Synthèse ' + (ci + 1), isoToDisplay(col.date) || '', col.enginData[e.id].loco || '', noteToText(data.note), data.score || '', data.dot === 'green' ? 'OK' : data.dot === 'red' ? 'NOK' : '']);
+        rows.push(['Synthèse', state.enginLabels[e.id] || e.defaultLabel, s, col.jour || 'Synthèse ' + (ci + 1), isoToDisplay(col.date) || '', col.enginData[e.id].loco || '', noteToText(data.note), data.score || '', data.dot === 'green' ? 'OK' : data.dot === 'red' ? 'NOK' : '']);
       });
     });
   });
@@ -467,8 +487,6 @@ export function renderHistTable() {
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
-  // Boutons "Supprimer" branchés par référence (plutôt que par attribut onclick="",
-  // qui ne fonctionne pas pour une fonction module non exposée sur window).
   wrap.querySelectorAll('.hist-del-btn').forEach(function (btn) {
     btn.onclick = function () { deleteHistEntry(btn.getAttribute('data-date')); };
   });
