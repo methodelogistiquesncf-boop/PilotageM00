@@ -14,6 +14,8 @@ export const ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérat
 // depuis l'extérieur : on modifie ses propriétés via setState().
 export const state = {
   S: {},
+  S_SC: {}, // 🔑 NOUVEAU : Sous-caisse
+  S_TT: {}, // 🔑 NOUVEAU : Toiture
   headersData: { dates: [], jours: [] },
   enginLabels: {},
   synthCols: [],
@@ -24,8 +26,6 @@ export const state = {
   actions: [],
   showDoneActions: false,
   // Profil de l'utilisateur connecté (rempli par ensureUserDoc dans firebase.js).
-  // Volontairement absent du payload de saveFirebase() : ce n'est pas une donnée
-  // du document "suivi/default", mais un attribut de session lié au compte connecté.
   currentUserUid: '',
   currentUserEmail: '',
   currentUserRole: '',
@@ -33,16 +33,12 @@ export const state = {
   currentUserNom: '',
 };
 
-// Remplace en bloc une ou plusieurs propriétés de state (utilisé au chargement
-// Firebase/local, quand on reçoit un objet complet depuis le serveur).
+// Remplace en bloc une ou plusieurs propriétés de state
 export function setState(partial) {
   Object.keys(partial).forEach(function (k) { state[k] = partial[k]; });
 }
 
 // ─── Notification de changement ──────────────────────────────────────────
-// Remplace les dizaines d'appels épars à scheduleAutoSave() dans l'ancien
-// code : chaque module appelle markDirty() après une modification, et
-// firebase.js s'abonne via onDirty() pour déclencher la sauvegarde.
 const dirtyListeners = [];
 export function onDirty(fn) { dirtyListeners.push(fn); }
 export function markDirty() { dirtyListeners.forEach(function (fn) { fn(); }); }
@@ -50,16 +46,24 @@ export function markDirty() { dirtyListeners.forEach(function (fn) { fn(); }); }
 // ─── Init / reset des données du tableau Supermarché ─────────────────────
 export function initState() {
   state.S = {};
+  state.S_SC = {}; 
+  state.S_TT = {}; 
   state.enginLabels = {};
+  
   ENGINS_CONFIG.forEach(function (e) {
     state.enginLabels[e.id] = e.defaultLabel;
-    state.S[e.id] = { loco: Array(D_FIXED).fill('') };
-    e.sections.forEach(function (s) {
-      state.S[e.id][s] = Array.from({ length: D_FIXED }, function () {
-        return { note: [], score: '', dot: null };
+    
+    // 🔑 On initialise les 3 zones avec la même structure
+    [state.S, state.S_SC, state.S_TT].forEach(function(dataObj) {
+      dataObj[e.id] = { loco: Array(D_FIXED).fill('') };
+      e.sections.forEach(function (s) {
+        dataObj[e.id][s] = Array.from({ length: D_FIXED }, function () {
+          return { note: [], score: '', dot: null };
+        });
       });
     });
   });
+  
   state.headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0', 'J-1', 'J-2', 'J-3'] };
   state.colOrder = [0, 1, 2, 3];
 }
@@ -91,9 +95,7 @@ export function autoResize(ta) {
   ta.style.height = ta.scrollHeight + 'px';
 }
 
-// ─── Modale de confirmation générique (remplace window.confirm) ──────────
-// Retourne une Promise<boolean> résolue selon le choix de l'utilisateur.
-// Utilise la modal #confirmOverlay présente dans suivi.html.
+// ─── Modale de confirmation générique ────────────────────────────────────
 export function showConfirm(message, opts) {
   opts = opts || {};
   return new Promise(function (resolve) {
