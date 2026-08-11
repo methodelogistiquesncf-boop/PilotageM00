@@ -424,9 +424,9 @@ export function exportCSV() {
   var rows = [['Zone', 'Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
   
   var zones = [
-    { label: 'Terre-plein', data: state.S },
-    { label: 'Sous-caisse', data: state.S_SC },
-    { label: 'Toiture', data: state.S_TT }
+    { label: 'Station Sous-caisse', data: state.S_SC },
+    { label: 'Station Terre-plein', data: state.S },
+    { label: 'Station Toiture', data: state.S_TT }
   ];
 
   zones.forEach(function(zone) {
