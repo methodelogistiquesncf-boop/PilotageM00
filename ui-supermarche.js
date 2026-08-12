@@ -8,12 +8,14 @@ import {
 import { sendToAction } from './ui-actions.js';
 
 export function build() {
-  buildHeader();
-  buildBody();
+  buildBody();    // 🔑 D'abord : crée les 3 tableaux (avec leurs lignes d'en-tête)
+  buildHeader();  // 🔑 Ensuite : remplit TOUTES les lignes de dates (synchronisées)
 }
 
-function buildHeader() {
-  var row = document.getElementById('headerRow');
+// ─── En-têtes : une ligne de dates par tableau, toutes synchronisées ───────
+// fillHeaderRow() remplit UNE ligne d'en-tête (dates + jours + colonnes synthèse).
+// Elle est utilisée pour le tableau principal ET pour chaque tableau de station.
+function fillHeaderRow(row) {
   while (row.children.length > 1) row.removeChild(row.lastChild);
 
   for (var d = 0; d < D_FIXED; d++) {
@@ -37,16 +39,18 @@ function buildHeader() {
       };
       pk.onchange = function () {
         state.headersData.dates[idx] = pk.value;
-        sp.textContent = isoToDisplay(pk.value) || '—/—';
-        pk.classList.remove('visible');
         markDirty();
+        buildHeader(); // 🔑 Changer une date met à jour TOUS les tableaux
       };
       pk.onblur = function () { pk.classList.remove('visible'); };
     })(display, picker, d);
 
     th.appendChild(display);
     th.appendChild(picker);
-    th.appendChild(makeInput('th-header-input th-j', state.headersData.jours[d], 'Jour', makeJourUpdater(d)));
+    var jourInp = makeInput('th-header-input th-j', state.headersData.jours[d], 'Jour', makeJourUpdater(d));
+    jourInp.setAttribute('data-jour-kind', 'fixed');
+    jourInp.setAttribute('data-jour-idx', String(d));
+    th.appendChild(jourInp);
     row.appendChild(th);
   }
 
@@ -71,16 +75,22 @@ function buildHeader() {
       };
       pk.onchange = function () {
         c.date = pk.value;
-        sp.textContent = isoToDisplay(pk.value) || '—/—';
-        pk.classList.remove('visible');
         markDirty();
+        buildHeader(); // 🔑 Synchronise tous les tableaux
       };
       pk.onblur = function () { pk.classList.remove('visible'); };
     })(display, picker, col);
 
     th.appendChild(display);
     th.appendChild(picker);
-    th.appendChild(makeInput('th-header-input th-j', col.jour, 'Jour', function (v) { col.jour = v; markDirty(); }));
+    var jourInp = makeInput('th-header-input th-j', col.jour, 'Jour', function (v) {
+      col.jour = v;
+      syncJourInputs('synth', col.id, v);
+      markDirty();
+    });
+    jourInp.setAttribute('data-jour-kind', 'synth');
+    jourInp.setAttribute('data-jour-idx', col.id);
+    th.appendChild(jourInp);
 
     var delBtn = document.createElement('button');
     delBtn.className = 'btn-del-col';
@@ -97,19 +107,43 @@ function buildHeader() {
   });
 }
 
+// 🔑 Reconstruit TOUTES les lignes d'en-tête (tableau principal + 3 stations)
+function buildHeader() {
+  var mainRow = document.getElementById('headerRow');
+  if (mainRow) mainRow.classList.add('header-row');
+  var rows = document.querySelectorAll('tr.header-row');
+  for (var i = 0; i < rows.length; i++) fillHeaderRow(rows[i]);
+}
+
+// 🔑 Met à jour les champs "Jour" de la même colonne dans les autres tableaux,
+// SANS reconstruire le DOM (pour ne pas perdre le focus du clavier pendant la saisie)
+function syncJourInputs(kind, idx, value) {
+  var sel = 'tr.header-row input.th-j[data-jour-kind="' + kind + '"][data-jour-idx="' + idx + '"]';
+  var inputs = document.querySelectorAll(sel);
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].value !== value) inputs[i].value = value;
+  }
+}
+
 function makeInput(cls, val, placeholder, onInput) {
   var inp = document.createElement('input');
   inp.type = 'text'; inp.className = cls; inp.placeholder = placeholder; inp.value = val || '';
   inp.oninput = function (e) { onInput(e.target.value); };
   return inp;
 }
-function makeJourUpdater(idx) { return function (v) { state.headersData.jours[idx] = v; markDirty(); }; }
+function makeJourUpdater(idx) {
+  return function (v) {
+    state.headersData.jours[idx] = v;
+    syncJourInputs('fixed', String(idx), v);
+    markDirty();
+  };
+}
 
 function buildBody() {
   var firstTable = document.getElementById('mainTable');
   var wrap = firstTable.parentNode;
 
-  // 🔑 Nettoyage des tableaux et espaces créés au build précédent
+  // Nettoyage des tableaux et espaces créés au build précédent
   wrap.querySelectorAll('.zone-spacer, .zone-table').forEach(function (el) { el.remove(); });
 
   var tb = document.getElementById('tbody');
@@ -126,25 +160,34 @@ function buildBody() {
 
   zones.forEach(function (zone, index) {
 
-    // 🔑 À partir de la 2ème zone : on crée un vrai espace HORS du tableau,
-    // puis on clone le tableau principal (même design, mêmes bordures)
+    // À partir de la 2ème zone : espace hors tableau + clone du tableau principal
     if (index > 0) {
       var lastTable = currentTbody.parentNode;
 
-      // Espace de 40px : comme il est hors du tableau, c'est la couleur
-      // de fond de la page qui apparaît, sans aucune bordure noire.
       var spacer = document.createElement('div');
       spacer.className = 'zone-spacer';
       spacer.style.height = '40px';
       wrap.insertBefore(spacer, lastTable.nextSibling);
 
-      // Clone du tableau principal (garde exactement le même CSS)
       var newTable = firstTable.cloneNode(false);
       newTable.classList.add('zone-table');
-      wrap.insertBefore(newTable, spacer.nextSibling);
 
-      currentTbody = document.createElement('tbody');
-      newTable.appendChild(currentTbody);
+      // 🔑 NOUVEAU : ligne d'en-tête (dates) pour ce tableau de station
+      var newThead = document.createElement('thead');
+      var newRow = document.createElement('tr');
+      newRow.className = 'header-row';
+      var thLabel = document.createElement('th');
+      thLabel.className = 'th-top th-label';
+      thLabel.style.width = '110px';
+      newRow.appendChild(thLabel);
+      newThead.appendChild(newRow);
+      newTable.appendChild(newThead);
+
+      var newTbody = document.createElement('tbody');
+      newTable.appendChild(newTbody);
+
+      wrap.insertBefore(newTable, spacer.nextSibling);
+      currentTbody = newTbody;
     }
 
     // Titre de la zone
@@ -422,7 +465,7 @@ export function resetAll() {
 // ─── Export CSV ────────────────────────────────────────────────────────────
 export function exportCSV() {
   var rows = [['Zone', 'Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
-  
+
   var zones = [
     { label: 'Station Sous-caisse', data: state.S_SC },
     { label: 'Station Terre-plein', data: state.S },
