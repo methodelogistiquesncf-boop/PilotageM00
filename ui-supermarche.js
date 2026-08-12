@@ -13,8 +13,6 @@ export function build() {
 }
 
 // ─── En-têtes : une ligne de dates par tableau, toutes synchronisées ───────
-// fillHeaderRow() remplit UNE ligne d'en-tête (dates + jours + colonnes synthèse).
-// Elle est utilisée pour le tableau principal ET pour chaque tableau de station.
 function fillHeaderRow(row) {
   while (row.children.length > 1) row.removeChild(row.lastChild);
 
@@ -116,7 +114,7 @@ function buildHeader() {
 }
 
 // 🔑 Met à jour les champs "Jour" de la même colonne dans les autres tableaux,
-// SANS reconstruire le DOM (pour ne pas perdre le focus du clavier pendant la saisie)
+// SANS reconstruire le DOM (pour ne pas perdre le focus du clavier)
 function syncJourInputs(kind, idx, value) {
   var sel = 'tr.header-row input.th-j[data-jour-kind="' + kind + '"][data-jour-idx="' + idx + '"]';
   var inputs = document.querySelectorAll(sel);
@@ -149,18 +147,17 @@ function buildBody() {
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
 
-  // 🔑 DÉFINITION DES 3 ZONES
+  // 🔑 DÉFINITION DES 3 ZONES (chacune avec SES données ET SES libellés)
   var zones = [
-    { id: 'SC', label: 'Station Sous-caisse', data: state.S_SC },
-    { id: 'TP', label: 'Station Terre-plein', data: state.S },
-    { id: 'TT', label: 'Station Toiture', data: state.S_TT }
+    { id: 'SC', label: 'Station Sous-caisse', data: state.S_SC, labels: state.enginLabels_SC },
+    { id: 'TP', label: 'Station Terre-plein', data: state.S, labels: state.enginLabels },
+    { id: 'TT', label: 'Station Toiture', data: state.S_TT, labels: state.enginLabels_TT }
   ];
 
   var currentTbody = tb;
 
   zones.forEach(function (zone, index) {
 
-    // À partir de la 2ème zone : espace hors tableau + clone du tableau principal
     if (index > 0) {
       var lastTable = currentTbody.parentNode;
 
@@ -172,7 +169,7 @@ function buildBody() {
       var newTable = firstTable.cloneNode(false);
       newTable.classList.add('zone-table');
 
-      // 🔑 NOUVEAU : ligne d'en-tête (dates) pour ce tableau de station
+      // Ligne d'en-tête (dates) pour ce tableau de station
       var newThead = document.createElement('thead');
       var newRow = document.createElement('tr');
       newRow.className = 'header-row';
@@ -203,7 +200,6 @@ function buildBody() {
     rZone.appendChild(tdZone);
     currentTbody.appendChild(rZone);
 
-    // 🔑 TON CODE EXACT, mais on passe zone.data au lieu de state.S
     ENGINS_CONFIG.forEach(function (e) {
       var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
       var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
@@ -219,7 +215,7 @@ function buildBody() {
 
       var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
       var tdT = document.createElement('td'); tdT.className = 'label';
-      tdT.appendChild(makeEnginLabelInput(e.id)); rTitle.appendChild(tdT);
+      tdT.appendChild(makeEnginLabelInput(zone.labels, e.id)); rTitle.appendChild(tdT); // 🔑 libellés de LA station
       for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
       state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
       currentTbody.appendChild(rTitle);
@@ -229,7 +225,7 @@ function buildBody() {
         var tdSL = document.createElement('td'); tdSL.className = 'label'; tdSL.textContent = s; rNote.appendChild(tdSL);
         for (var d3 = 0; d3 < D_FIXED; d3++) {
           var td3 = document.createElement('td'); td3.className = 'data-cell';
-          td3.appendChild(makeNoteList_fixed(zone.data, e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
+          td3.appendChild(makeNoteList_fixed(zone.labels, zone.data, e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
         }
         state.synthCols.forEach(function (col) {
           var td = document.createElement('td'); td.className = 'data-cell synth-cell';
@@ -241,7 +237,7 @@ function buildBody() {
         var tdSS = document.createElement('td'); tdSS.className = 'label'; rScore.appendChild(tdSS);
         for (var d4 = 0; d4 < D_FIXED; d4++) {
           var td4 = document.createElement('td');
-          td4.appendChild(makeScoreInner_fixed(zone.data, e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
+          td4.appendChild(makeScoreInner_fixed(zone.labels, zone.data, e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
         }
         state.synthCols.forEach(function (col) {
           var td = document.createElement('td'); td.className = 'synth-cell';
@@ -348,20 +344,23 @@ function buildNoteList(items, getMeta, section) {
   return container;
 }
 
-function makeNoteList_fixed(dataObj, eid, s, p, d) {
+// 🔑 labelsObj en premier : chaque station utilise SES libellés
+function makeNoteList_fixed(labelsObj, dataObj, eid, s, p, d) {
   var obj = dataObj[eid][s][p];
   var items = ensureNoteItems(obj);
-  return buildNoteList(items, function () { return actionMetaFixed(dataObj, eid, p, d); }, s);
+  return buildNoteList(items, function () { return actionMetaFixed(labelsObj, dataObj, eid, p, d); }, s);
 }
 function makeNoteList_synth(col, eid, s) {
   var obj = col.enginData[eid][s];
   var items = ensureNoteItems(obj);
   return buildNoteList(items, function () { return actionMetaSynth(col, eid); }, s);
 }
-function makeEnginLabelInput(eid) {
+
+// 🔑 Le champ libellé écrit dans l'objet de SA station uniquement
+function makeEnginLabelInput(labelsObj, eid) {
   var inp = document.createElement('input');
-  inp.className = 'engin-label-input'; inp.type = 'text'; inp.value = state.enginLabels[eid] || '';
-  inp.oninput = function () { state.enginLabels[eid] = inp.value; markDirty(); };
+  inp.className = 'engin-label-input'; inp.type = 'text'; inp.value = labelsObj[eid] || '';
+  inp.oninput = function () { labelsObj[eid] = inp.value; markDirty(); };
   return inp;
 }
 function makeDot(getVal, setVal, color) {
@@ -376,10 +375,13 @@ function enginLabelOf(eid) {
   var cfg = ENGINS_CONFIG.find(function (c) { return c.id === eid; });
   return state.enginLabels[eid] || (cfg ? cfg.defaultLabel : eid);
 }
-function actionMetaFixed(dataObj, eid, p, d) {
+
+// 🔑 Utilise les libellés de la station d'origine pour l'envoi vers Actions
+function actionMetaFixed(labelsObj, dataObj, eid, p, d) {
+  var lbl = labelsObj[eid] || enginLabelOf(eid);
   return {
-    engin: dataObj[eid].loco[p] || enginLabelOf(eid),
-    poste: enginLabelOf(eid),
+    engin: dataObj[eid].loco[p] || lbl,
+    poste: lbl,
     date: isoToDisplay(state.headersData.dates[d]) || '',
     jour: state.headersData.jours[d] || ''
   };
@@ -403,9 +405,9 @@ function makeActionBtn(getDot, getData) {
   return btn;
 }
 
-function makeScoreInner_fixed(dataObj, eid, s, p, d) {
+function makeScoreInner_fixed(labelsObj, dataObj, eid, s, p, d) {
   var inner = document.createElement('div'); inner.className = 'score-inner';
-  (function (obj, ei, si, pi, di) {
+  (function (lb, obj, ei, si, pi, di) {
     inner.appendChild(makeDot(function () { return obj[ei][si][pi].dot; }, function (v) { obj[ei][si][pi].dot = v; }, 'green'));
     inner.appendChild(makeDot(function () { return obj[ei][si][pi].dot; }, function (v) { obj[ei][si][pi].dot = v; }, 'red'));
     var inp = document.createElement('input');
@@ -415,7 +417,7 @@ function makeScoreInner_fixed(dataObj, eid, s, p, d) {
     inner.appendChild(makeActionBtn(
       function () { return obj[ei][si][pi].dot; },
       function () {
-        var meta = actionMetaFixed(obj, ei, pi, di);
+        var meta = actionMetaFixed(lb, obj, ei, pi, di);
         return {
           engin: meta.engin,
           poste: meta.poste,
@@ -426,7 +428,7 @@ function makeScoreInner_fixed(dataObj, eid, s, p, d) {
         };
       }
     ));
-  })(dataObj, eid, s, p, d);
+  })(labelsObj, dataObj, eid, s, p, d);
   return inner;
 }
 function makeScoreInner_synth(col, eid, s) {
@@ -467,9 +469,9 @@ export function exportCSV() {
   var rows = [['Zone', 'Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
 
   var zones = [
-    { label: 'Station Sous-caisse', data: state.S_SC },
-    { label: 'Station Terre-plein', data: state.S },
-    { label: 'Station Toiture', data: state.S_TT }
+    { label: 'Station Sous-caisse', data: state.S_SC, labels: state.enginLabels_SC },
+    { label: 'Station Terre-plein', data: state.S, labels: state.enginLabels },
+    { label: 'Station Toiture', data: state.S_TT, labels: state.enginLabels_TT }
   ];
 
   zones.forEach(function(zone) {
@@ -478,7 +480,7 @@ export function exportCSV() {
         for (var d = 0; d < D_FIXED; d++) {
           var p = state.colOrder[d];
           var c = zone.data[e.id][s][p];
-          rows.push([zone.label, state.enginLabels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', zone.data[e.id].loco[p] || '', noteToText(c.note), c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
+          rows.push([zone.label, zone.labels[e.id] || e.defaultLabel, s, state.headersData.jours[d] || 'J-' + d, isoToDisplay(state.headersData.dates[d]) || '', zone.data[e.id].loco[p] || '', noteToText(c.note), c.score || '', c.dot === 'green' ? 'OK' : c.dot === 'red' ? 'NOK' : '']);
         }
       });
     });
