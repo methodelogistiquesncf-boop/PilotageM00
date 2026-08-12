@@ -8,11 +8,10 @@ import {
 import { sendToAction } from './ui-actions.js';
 
 export function build() {
-  buildBody();    // 🔑 D'abord : crée les 3 tableaux (avec leurs lignes d'en-tête)
-  buildHeader();  // 🔑 Ensuite : remplit TOUTES les lignes de dates (synchronisées)
+  buildBody();
+  buildHeader();
 }
 
-// ─── En-têtes : une ligne de dates par tableau, toutes synchronisées ───────
 function fillHeaderRow(row) {
   while (row.children.length > 1) row.removeChild(row.lastChild);
 
@@ -38,7 +37,7 @@ function fillHeaderRow(row) {
       pk.onchange = function () {
         state.headersData.dates[idx] = pk.value;
         markDirty();
-        buildHeader(); // 🔑 Changer une date met à jour TOUS les tableaux
+        buildHeader();
       };
       pk.onblur = function () { pk.classList.remove('visible'); };
     })(display, picker, d);
@@ -74,7 +73,7 @@ function fillHeaderRow(row) {
       pk.onchange = function () {
         c.date = pk.value;
         markDirty();
-        buildHeader(); // 🔑 Synchronise tous les tableaux
+        buildHeader();
       };
       pk.onblur = function () { pk.classList.remove('visible'); };
     })(display, picker, col);
@@ -105,7 +104,6 @@ function fillHeaderRow(row) {
   });
 }
 
-// 🔑 Reconstruit TOUTES les lignes d'en-tête (tableau principal + 3 stations)
 function buildHeader() {
   var mainRow = document.getElementById('headerRow');
   if (mainRow) mainRow.classList.add('header-row');
@@ -113,8 +111,6 @@ function buildHeader() {
   for (var i = 0; i < rows.length; i++) fillHeaderRow(rows[i]);
 }
 
-// 🔑 Met à jour les champs "Jour" de la même colonne dans les autres tableaux,
-// SANS reconstruire le DOM (pour ne pas perdre le focus du clavier)
 function syncJourInputs(kind, idx, value) {
   var sel = 'tr.header-row input.th-j[data-jour-kind="' + kind + '"][data-jour-idx="' + idx + '"]';
   var inputs = document.querySelectorAll(sel);
@@ -141,13 +137,11 @@ function buildBody() {
   var firstTable = document.getElementById('mainTable');
   var wrap = firstTable.parentNode;
 
-  // Nettoyage des tableaux et espaces créés au build précédent
   wrap.querySelectorAll('.zone-spacer, .zone-table').forEach(function (el) { el.remove(); });
 
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
 
-  // 🔑 DÉFINITION DES 3 ZONES (chacune avec SES données ET SES libellés)
   var zones = [
     { id: 'SC', label: 'Station Sous-caisse', data: state.S_SC, labels: state.enginLabels_SC },
     { id: 'TP', label: 'Station Terre-plein', data: state.S, labels: state.enginLabels },
@@ -169,7 +163,6 @@ function buildBody() {
       var newTable = firstTable.cloneNode(false);
       newTable.classList.add('zone-table');
 
-      // Ligne d'en-tête (dates) pour ce tableau de station
       var newThead = document.createElement('thead');
       var newRow = document.createElement('tr');
       newRow.className = 'header-row';
@@ -187,7 +180,6 @@ function buildBody() {
       currentTbody = newTbody;
     }
 
-    // Titre de la zone
     var rZone = document.createElement('tr');
     var tdZone = document.createElement('td');
     tdZone.colSpan = 1 + D_FIXED + state.synthCols.length;
@@ -215,7 +207,7 @@ function buildBody() {
 
       var rTitle = document.createElement('tr'); rTitle.className = 'row-label';
       var tdT = document.createElement('td'); tdT.className = 'label';
-      tdT.appendChild(makeEnginLabelInput(zone.labels, e.id)); rTitle.appendChild(tdT); // 🔑 libellés de LA station
+      tdT.appendChild(makeEnginLabelInput(zone.labels, e.id)); rTitle.appendChild(tdT);
       for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
       state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
       currentTbody.appendChild(rTitle);
@@ -248,8 +240,6 @@ function buildBody() {
     });
   });
 }
-
-// ─── Helpers DOM : colonne "fixe" vs colonne "synthèse" ───────────────────
 
 function makeLoco_fixed(dataObj, eid, p) {
   var inp = document.createElement('input');
@@ -344,7 +334,6 @@ function buildNoteList(items, getMeta, section) {
   return container;
 }
 
-// 🔑 labelsObj en premier : chaque station utilise SES libellés
 function makeNoteList_fixed(labelsObj, dataObj, eid, s, p, d) {
   var obj = dataObj[eid][s][p];
   var items = ensureNoteItems(obj);
@@ -356,7 +345,6 @@ function makeNoteList_synth(col, eid, s) {
   return buildNoteList(items, function () { return actionMetaSynth(col, eid); }, s);
 }
 
-// 🔑 Le champ libellé écrit dans l'objet de SA station uniquement
 function makeEnginLabelInput(labelsObj, eid) {
   var inp = document.createElement('input');
   inp.className = 'engin-label-input'; inp.type = 'text'; inp.value = labelsObj[eid] || '';
@@ -376,7 +364,6 @@ function enginLabelOf(eid) {
   return state.enginLabels[eid] || (cfg ? cfg.defaultLabel : eid);
 }
 
-// 🔑 Utilise les libellés de la station d'origine pour l'envoi vers Actions
 function actionMetaFixed(labelsObj, dataObj, eid, p, d) {
   var lbl = labelsObj[eid] || enginLabelOf(eid);
   return {
@@ -464,7 +451,6 @@ export function resetAll() {
   initState(); state.synthCols = []; build(); markDirty();
 }
 
-// ─── Export CSV ────────────────────────────────────────────────────────────
 export function exportCSV() {
   var rows = [['Zone', 'Engin', 'Section', 'Jour', 'Date', 'N° Engin', 'Remarque', 'Score', 'Statut']];
 
@@ -506,7 +492,6 @@ function downloadCSV(rows, filename) {
   a.click(); URL.revokeObjectURL(url);
 }
 
-// ─── Modal Historique ───────────────────────────────────────────────────────
 export function openHistorique() {
   document.getElementById('histOverlay').classList.add('open');
   renderHistTable();

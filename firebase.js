@@ -158,10 +158,12 @@ export async function loadFirebase() {
       var data = snap.data();
       var patch = {};
       if (data.S) patch.S = data.S;
-      if (data.S_SC) patch.S_SC = data.S_SC; // 🔑 NOUVEAU
-      if (data.S_TT) patch.S_TT = data.S_TT; // 🔑 NOUVEAU
+      if (data.S_SC) patch.S_SC = data.S_SC;
+      if (data.S_TT) patch.S_TT = data.S_TT;
       if (data.headersData) patch.headersData = data.headersData;
       if (data.enginLabels) patch.enginLabels = data.enginLabels;
+      if (data.enginLabels_SC) patch.enginLabels_SC = data.enginLabels_SC;
+      if (data.enginLabels_TT) patch.enginLabels_TT = data.enginLabels_TT;
       if (data.synthCols) patch.synthCols = data.synthCols;
       if (data.historique) patch.historique = data.historique;
       if (data.colOrder) patch.colOrder = data.colOrder;
@@ -198,10 +200,12 @@ export async function saveFirebase() {
 
   var payload = {
     S: state.S,
-    S_SC: state.S_SC, // 🔑 NOUVEAU
-    S_TT: state.S_TT, // 🔑 NOUVEAU
+    S_SC: state.S_SC,
+    S_TT: state.S_TT,
     headersData: state.headersData,
     enginLabels: state.enginLabels,
+    enginLabels_SC: state.enginLabels_SC,
+    enginLabels_TT: state.enginLabels_TT,
     synthCols: state.synthCols,
     historique: state.historique,
     colOrder: state.colOrder,
@@ -238,10 +242,12 @@ export function loadLocal() {
     var data = JSON.parse(bk);
     var patch = {};
     if (data.S) patch.S = data.S;
-    if (data.S_SC) patch.S_SC = data.S_SC; // 🔑 NOUVEAU
-    if (data.S_TT) patch.S_TT = data.S_TT; // 🔑 NOUVEAU
+    if (data.S_SC) patch.S_SC = data.S_SC;
+    if (data.S_TT) patch.S_TT = data.S_TT;
     if (data.headersData) patch.headersData = data.headersData;
     if (data.enginLabels) patch.enginLabels = data.enginLabels;
+    if (data.enginLabels_SC) patch.enginLabels_SC = data.enginLabels_SC;
+    if (data.enginLabels_TT) patch.enginLabels_TT = data.enginLabels_TT;
     if (data.synthCols) patch.synthCols = data.synthCols;
     if (data.historique) patch.historique = data.historique;
     if (data.colOrder) patch.colOrder = data.colOrder;

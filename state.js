@@ -6,18 +6,16 @@ export const ENGINS_CONFIG = [
 ];
 export const D_FIXED = 4;
 
-// Rôles utilisateur disponibles (gestion via l'onglet "Utilisateurs", visible
-// uniquement par les comptes ayant le rôle Administrateur).
 export const ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérateur', 'Administrateur'];
 
-// Objet unique, muté en place par tous les modules. On ne le réassigne jamais
-// depuis l'extérieur : on modifie ses propriétés via setState().
 export const state = {
   S: {},
-  S_SC: {}, // 🔑 NOUVEAU : Sous-caisse
-  S_TT: {}, // 🔑 NOUVEAU : Toiture
+  S_SC: {},
+  S_TT: {},
   headersData: { dates: [], jours: [] },
   enginLabels: {},
+  enginLabels_SC: {},
+  enginLabels_TT: {},
   synthCols: [],
   colOrder: [0, 1, 2, 3],
   historique: {},
@@ -25,7 +23,6 @@ export const state = {
   showRecus: false,
   actions: [],
   showDoneActions: false,
-  // Profil de l'utilisateur connecté (rempli par ensureUserDoc dans firebase.js).
   currentUserUid: '',
   currentUserEmail: '',
   currentUserRole: '',
@@ -33,28 +30,28 @@ export const state = {
   currentUserNom: '',
 };
 
-// Remplace en bloc une ou plusieurs propriétés de state
 export function setState(partial) {
   Object.keys(partial).forEach(function (k) { state[k] = partial[k]; });
 }
 
-// ─── Notification de changement ──────────────────────────────────────────
 const dirtyListeners = [];
 export function onDirty(fn) { dirtyListeners.push(fn); }
 export function markDirty() { dirtyListeners.forEach(function (fn) { fn(); }); }
 
-// ─── Init / reset des données du tableau Supermarché ─────────────────────
 export function initState() {
   state.S = {};
-  state.S_SC = {}; 
-  state.S_TT = {}; 
+  state.S_SC = {};
+  state.S_TT = {};
   state.enginLabels = {};
-  
+  state.enginLabels_SC = {};
+  state.enginLabels_TT = {};
+
   ENGINS_CONFIG.forEach(function (e) {
-    state.enginLabels[e.id] = e.defaultLabel;
-    
-    // 🔑 On initialise les 3 zones avec la même structure
-    [state.S, state.S_SC, state.S_TT].forEach(function(dataObj) {
+    [state.enginLabels, state.enginLabels_SC, state.enginLabels_TT].forEach(function (lbl) {
+      lbl[e.id] = e.defaultLabel;
+    });
+
+    [state.S, state.S_SC, state.S_TT].forEach(function (dataObj) {
       dataObj[e.id] = { loco: Array(D_FIXED).fill('') };
       e.sections.forEach(function (s) {
         dataObj[e.id][s] = Array.from({ length: D_FIXED }, function () {
@@ -63,7 +60,7 @@ export function initState() {
       });
     });
   });
-  
+
   state.headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0', 'J-1', 'J-2', 'J-3'] };
   state.colOrder = [0, 1, 2, 3];
 }
@@ -77,7 +74,6 @@ export function makeSynthColData() {
   return col;
 }
 
-// ─── Helpers date partagés ────────────────────────────────────────────────
 export function isoToDisplay(iso) {
   if (!iso) return '';
   var parts = iso.split('-');
@@ -95,7 +91,6 @@ export function autoResize(ta) {
   ta.style.height = ta.scrollHeight + 'px';
 }
 
-// ─── Modale de confirmation générique ────────────────────────────────────
 export function showConfirm(message, opts) {
   opts = opts || {};
   return new Promise(function (resolve) {
