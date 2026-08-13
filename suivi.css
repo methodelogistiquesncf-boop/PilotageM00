@@ -946,3 +946,13 @@ table.users-table tr:hover td { background: var(--surface2); }
   .view-panel { display: none !important; }
   .view-panel.active { display: block !important; }
 }
+
+/* 🔑 Centrage horizontal des onglets et des tableaux */
+.main-tabs {
+  justify-content: center;
+  text-align: center;
+}
+#mainTable, .zone-table {
+  margin-left: auto;
+  margin-right: auto;
+}
