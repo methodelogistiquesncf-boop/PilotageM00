@@ -970,3 +970,17 @@ table.users-table tr:hover td { background: var(--surface2); }
   padding: 0;
   box-shadow: none;
 }
+
+/* 🔑 Correctif centrage onglets dans la barre du haut (priorité renforcée) */
+.topbar #mainTabs {
+  flex: 1 1 auto;
+  width: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+}
