@@ -988,6 +988,7 @@ table.users-table tr:hover td { background: var(--surface2); }
 /* 🔑 Masque la case vide en haut à gauche de chaque tableau */
 th.th-label {
   background: var(--bg); /* même couleur que le fond de page */
-  border: hidden;
+  border-style: hidden;
+  border-width: 0;              /* supprime le liseré blanc */
   border-right: 1px solid #1a1917; /* trait noir qui ferme le tableau */
 }
