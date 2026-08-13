@@ -1,6 +1,6 @@
 // firebase.js — authentification, chargement/sauvegarde Firestore et backup localStorage
 
-import { state, setState, onDirty, ENGINS_CONFIG } from './state.js';
+import { state, setState, onDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
@@ -169,7 +169,7 @@ export async function loadFirebase() {
       if (data.colOrder) patch.colOrder = data.colOrder;
       if (data.rassemblement) patch.rassemblement = data.rassemblement;
       if (data.actions) patch.actions = data.actions;
-      setState(patch);
+      setState(patch); ensureFullStructure();
       if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
       setStatus('ok', '✓ Synchronisé');
     } else {
@@ -253,7 +253,7 @@ export function loadLocal() {
     if (data.colOrder) patch.colOrder = data.colOrder;
     if (data.rassemblement) patch.rassemblement = data.rassemblement;
     if (data.actions) patch.actions = data.actions;
-    setState(patch);
+    setState(patch); ensureFullStructure();
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
   } catch (e) { console.error(e); }
 }

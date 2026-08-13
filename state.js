@@ -3,6 +3,8 @@
 export const ENGINS_CONFIG = [
   { id: 'p18', defaultLabel: 'V16 P18', sections: ['APPROS', 'PIECES DEPOSEES'] },
   { id: 'p26', defaultLabel: 'V16 P26', sections: ['APPROS', 'PIECES DEPOSEES'] },
+  { id: 'e3', defaultLabel: 'ENGIN 3', sections: ['APPROS', 'PIECES DEPOSEES'] },
+  { id: 'e4', defaultLabel: 'ENGIN 4', sections: ['APPROS', 'PIECES DEPOSEES'] },
 ];
 export const D_FIXED = 4;
 
@@ -63,6 +65,39 @@ export function initState() {
 
   state.headersData = { dates: Array(D_FIXED).fill(''), jours: ['J0', 'J-1', 'J-2', 'J-3'] };
   state.colOrder = [0, 1, 2, 3];
+}
+
+// 🔑 Complète la structure si des engins ont été ajoutés à ENGINS_CONFIG
+// après une sauvegarde ancienne (évite tout crash au chargement).
+export function ensureFullStructure() {
+  [state.S, state.S_SC, state.S_TT].forEach(function (dataObj) {
+    if (!dataObj) return;
+    ENGINS_CONFIG.forEach(function (e) {
+      if (!dataObj[e.id]) dataObj[e.id] = { loco: Array(D_FIXED).fill('') };
+      if (!Array.isArray(dataObj[e.id].loco)) dataObj[e.id].loco = Array(D_FIXED).fill('');
+      e.sections.forEach(function (s) {
+        if (!dataObj[e.id][s]) {
+          dataObj[e.id][s] = Array.from({ length: D_FIXED }, function () {
+            return { note: [], score: '', dot: null };
+          });
+        }
+      });
+    });
+  });
+
+  [state.enginLabels, state.enginLabels_SC, state.enginLabels_TT].forEach(function (lbl) {
+    if (!lbl) return;
+    ENGINS_CONFIG.forEach(function (e) { if (!lbl[e.id]) lbl[e.id] = e.defaultLabel; });
+  });
+
+  (state.synthCols || []).forEach(function (col) {
+    ENGINS_CONFIG.forEach(function (e) {
+      if (!col.enginData[e.id]) {
+        col.enginData[e.id] = { loco: '' };
+        e.sections.forEach(function (s) { col.enginData[e.id][s] = { note: [], dot: null, score: '' }; });
+      }
+    });
+  });
 }
 
 export function makeSynthColData() {
