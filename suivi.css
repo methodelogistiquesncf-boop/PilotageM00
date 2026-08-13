@@ -956,3 +956,17 @@ table.users-table tr:hover td { background: var(--surface2); }
   margin-left: auto;
   margin-right: auto;
 }
+
+/* 🔑 Onglets dans la barre du haut, centrés entre statut et utilisateur */
+.topbar { display: flex; align-items: center; }
+.topbar .main-tabs {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+}

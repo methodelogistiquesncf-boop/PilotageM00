@@ -17,14 +17,7 @@
     <input type="date" id="dateJour">
   </div>
   <span id="fbStatus" class="sync">⏳ Connexion...</span>
-  <div id="userBadge" style="display:none">
-    <span id="userEmail"></span>
-    <button id="btnLogout" onclick="doLogout()">Déconnexion</button>
-  </div>
-  <button class="btn-print btn" onclick="window.print()">Imprimer</button>
-</div>
-
-<!-- Onglets principaux -->
+  <!-- Onglets principaux -->
 <div class="main-tabs" id="mainTabs">
   <button class="main-tab active" id="tabViewSuivi" onclick="switchMainTab('suivi')">Supermarché</button>
   <button class="main-tab" id="tabViewManquants" onclick="switchMainTab('manquants')">
@@ -35,6 +28,12 @@
   </button>
   <button class="main-tab" id="tabViewUsers" style="display:none" onclick="switchMainTab('users')">Utilisateurs</button>
   <button class="main-tab" id="tabViewAide" onclick="switchMainTab('aide')">Aide</button>
+</div>
+  <div id="userBadge" style="display:none">
+    <span id="userEmail"></span>
+    <button id="btnLogout" onclick="doLogout()">Déconnexion</button>
+  </div>
+  <button class="btn-print btn" onclick="window.print()">Imprimer</button>
 </div>
 
 <!-- Vue : Supermarché -->
