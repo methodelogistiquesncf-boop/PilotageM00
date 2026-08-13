@@ -202,9 +202,9 @@ function buildRassemSectionEl(sec) {
     '<col style="width:10%">' +  // Symbole
     '<col style="width:18%">' +  // Désignation
     '<col style="width:5%">'  +  // Qté (réduite)
-    '<col style="width:25%">' +  // Commentaire (élargie)
+    '<col style="width:27%">' +  // Commentaire (élargie)
     '<col style="width:12%">' +  // Responsable
-    '<col style="width:6%">'  +  // Reçu
+    '<col style="width:4%">'  +  // Reçu
     '<col style="width:2%">';    // ✕
   table.appendChild(colgroup);
 
