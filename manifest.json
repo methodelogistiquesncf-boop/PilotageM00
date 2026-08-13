@@ -1,0 +1,15 @@
+{
+  "name": "Pilotage M00",
+  "short_name": "Pilotage M00",
+  "description": "Suivi de production et maintenance : Supermarché, Rassemblement, Actions.",
+  "lang": "fr",
+  "start_url": "./suivi.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0f0f2",
+  "theme_color": "#1a4fa0",
+  "icons": [
+    { "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
