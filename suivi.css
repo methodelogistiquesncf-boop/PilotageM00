@@ -984,3 +984,9 @@ table.users-table tr:hover td { background: var(--surface2); }
   padding: 0;
   box-shadow: none;
 }
+
+/* 🔑 Masque la case vide en haut à gauche de chaque tableau */
+th.th-label {
+  visibility: hidden;
+  border: hidden;
+}
