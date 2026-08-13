@@ -193,6 +193,21 @@ function buildRassemSectionEl(sec) {
 
   var table = document.createElement('table');
   table.className = 'manquants-table';
+
+  // 🔑 Largeurs des colonnes : Qté réduite, Commentaire élargie
+  var colgroup = document.createElement('colgroup');
+  colgroup.innerHTML =
+    '<col style="width:10%">' +  // Engin
+    '<col style="width:12%">' +  // Kit
+    '<col style="width:10%">' +  // Symbole
+    '<col style="width:18%">' +  // Désignation
+    '<col style="width:5%">'  +  // Qté (réduite)
+    '<col style="width:25%">' +  // Commentaire (élargie)
+    '<col style="width:12%">' +  // Responsable
+    '<col style="width:6%">'  +  // Reçu
+    '<col style="width:2%">';    // ✕
+  table.appendChild(colgroup);
+
   var thead = document.createElement('thead');
   thead.innerHTML = '<tr><th>Engin</th><th>Kit</th><th>Symbole</th><th>Désignation</th><th>Qté</th><th>Commentaire</th><th>Responsable</th><th>Reçu</th><th></th></tr>';
   table.appendChild(thead);
