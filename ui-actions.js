@@ -169,6 +169,22 @@ export function buildActions() {
 
   var table = document.createElement('table');
   table.className = 'actions-table';
+
+  // 🔑 Largeurs de colonnes optimisées
+  var colgroup = document.createElement('colgroup');
+  colgroup.innerHTML =
+    '<col style="width:7%">'  +  // Engin
+    '<col style="width:8%">'  +  // Poste
+    '<col style="width:10%">' +  // Section
+    '<col style="width:5%">'  +  // Date
+    '<col style="width:21%">' +  // Action
+    '<col style="width:21%">' +  // Commentaire
+    '<col style="width:10%">' +  // Responsable
+    '<col style="width:10%">' +  // Échéance
+    '<col style="width:5%">'  +  // Fait
+    '<col style="width:3%">';    // ✕
+  table.appendChild(colgroup);
+
   var thead = document.createElement('thead');
   thead.innerHTML = '<tr><th>Engin</th><th>Poste</th><th>Section</th><th>Date</th>' +
     '<th>Action</th><th>Commentaire</th><th>Responsable</th><th>Échéance</th><th>Fait</th><th></th></tr>';
