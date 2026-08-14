@@ -166,3 +166,14 @@
     '.station-vert{border:1px solid #000000 !important;}';
   document.head.appendChild(st);
 })();
+
+/* ===== Ligne noire garantie au-dessus des bandeaux ===== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent =
+    '.station-bleu,.station-jaune,.station-vert{' +
+    'border:1px solid #000 !important;' +
+    'box-shadow:0 -2px 0 0 #000 !important;' +
+    '}';
+  document.head.appendChild(st);
+})();
