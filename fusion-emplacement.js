@@ -115,8 +115,8 @@
     }
     var w = [];
     for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
-    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.1) + 'px';
-    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.2) + 'px';
+    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.4) + 'px';
+    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.6) + 'px';
     table.dataset.rasTuned = '1';
   }
 
@@ -163,8 +163,8 @@
     }
     var w = [];
     for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
-    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.1) + 'px';
-    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.2) + 'px';
+    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.4) + 'px';
+    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.6) + 'px';
     table.dataset.rasTuned = '1';
   }
 
