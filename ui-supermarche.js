@@ -279,7 +279,6 @@ function buildNoteItemEl(item, onDelete, getMeta, section) {
   row.className = 'note-item';
 
   var kitInp = document.createElement('textarea'); kitInp.rows = 1;
-  kitInp.type = 'text';
   kitInp.className = 'note-kit';
   kitInp.placeholder = 'KIT';
   kitInp.value = item.kit || '';
@@ -287,7 +286,6 @@ function buildNoteItemEl(item, onDelete, getMeta, section) {
   row.appendChild(kitInp);
 
   var symInp = document.createElement('textarea'); symInp.rows = 1;
-  symInp.type = 'text';
   symInp.className = 'note-sym';
   symInp.placeholder = 'SYMBOLE';
   symInp.value = item.symbole || '';
