@@ -224,3 +224,72 @@
     document.addEventListener('DOMContentLoaded', applyAll);
   } else { applyAll(); }
 })();
+
+/* ===== Actions : ACTION renommée KIT + nouvelle colonne SYMBOLE ===== */
+(function () {
+  function findActionHeader(table) {
+    for (var i = 0; i < table.rows.length; i++) {
+      var r = table.rows[i];
+      for (var c = 0; c < r.cells.length; c++) {
+        var t = (r.cells[c].textContent || '').trim().toUpperCase();
+        if (t === 'ACTION' || t === 'ACTIONS') return { row: r, idx: c };
+      }
+    }
+    return null;
+  }
+
+  function hasSymbole(table) {
+    for (var i = 0; i < table.rows.length; i++) {
+      var r = table.rows[i];
+      for (var c = 0; c < r.cells.length; c++) {
+        if ((r.cells[c].textContent || '').trim().toUpperCase() === 'SYMBOLE') return true;
+      }
+    }
+    return false;
+  }
+
+  function fixTable(table) {
+    var h = findActionHeader(table);
+    if (!h) return;                /* pas de colonne ACTION (ou déjà transformé) */
+    if (hasSymbole(table)) return; /* sécurité */
+
+    /* 1) Renomme ACTION -> KIT */
+    h.row.cells[h.idx].textContent = 'KIT';
+
+    /* 2) Insère l'en-tête SYMBOLE juste à côté */
+    var ref = h.row.cells[h.idx];
+    var newH;
+    if (ref.tagName === 'TH') {
+      newH = document.createElement('th');
+      newH.textContent = 'SYMBOLE';
+      if (ref.nextSibling) ref.parentNode.insertBefore(newH, ref.nextSibling);
+      else ref.parentNode.appendChild(newH);
+    } else {
+      newH = h.row.insertCell(h.idx + 1);
+      newH.textContent = 'SYMBOLE';
+    }
+    newH.className = ref.className;
+
+    /* 3) Ajoute une cellule vide à toutes les autres lignes (alignement) */
+    for (var i = 0; i < table.rows.length; i++) {
+      var r = table.rows[i];
+      if (r === h.row) continue;
+      if (r.cells.length === 1 && r.cells[0].colSpan > 1) { r.cells[0].colSpan += 1; continue; }
+      if (r.cells.length < h.row.cells.length) {
+        var nc = r.insertCell(Math.min(h.idx + 1, r.cells.length));
+        nc.className = (r.cells[h.idx] ? r.cells[h.idx].className : '');
+      }
+    }
+  }
+
+  function run() {
+    var tables = document.querySelectorAll('table');
+    for (var t = 0; t < tables.length; t++) fixTable(tables[t]);
+  }
+
+  var obs4 = new MutationObserver(function () { run(); });
+  obs4.observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(run, 800);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
