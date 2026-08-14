@@ -1,4 +1,4 @@
-/* fusion-emplacement.js — v5 : gère les onglets cachés */
+/* fusion-emplacement.js — v6 : resize uniquement RAS + jamais hors de la carte */
 (function () {
   'use strict';
 
@@ -10,7 +10,9 @@
     '.station-bleu{background:#6666ff !important;color:#ffffff !important;}' +
     '.station-jaune{background:#ffff33 !important;color:#111827 !important;}' +
     '.station-vert{background:#00a300 !important;color:#ffffff !important;}' +
-    '.station-bleu,.station-jaune,.station-vert{border:1px solid #000 !important;box-shadow:0 -2px 0 0 #000 !important;}';
+    '.station-bleu,.station-jaune,.station-vert{border:1px solid #000 !important;box-shadow:0 -2px 0 0 #000 !important;}' +
+    '.col-resize-handle{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:9;}' +
+    '.col-resize-handle:hover,.col-resize-handle.active{background:rgba(0,0,0,.3);}';
   document.head.appendChild(style);
 
   var LABELS = ['ENGIN', 'APPROS', 'PIECES DEPOSEES', 'PIÈCES DÉPOSÉES'];
@@ -33,6 +35,28 @@
       if (cellText(row.cells[i]) !== '') return false;
     }
     return true;
+  }
+
+  function firstMultiRow(table) {
+    for (var i = 0; i < table.rows.length; i++) {
+      if (table.rows[i].cells.length > 2) return table.rows[i];
+    }
+    return null;
+  }
+
+  function isDateRow(r) {
+    for (var c = 0; c < r.cells.length; c++) {
+      var t = (r.cells[c].textContent || '').trim();
+      if (/\d{2}\/\d{2}/.test(t) || /^J-\d+$/.test(t) || /^J\d+$/.test(t)) return true;
+    }
+    return false;
+  }
+
+  function isRasTable(table) {
+    var r = firstMultiRow(table);
+    if (!r || r.cells.length < 2) return false;
+    return (r.cells[0].textContent || '').trim().toUpperCase() === 'ENGIN' &&
+           (r.cells[1].textContent || '').trim().toUpperCase().indexOf('KIT') !== -1;
   }
 
   /* ----- Fusion ENGIN + bandeaux stations ----- */
@@ -66,184 +90,87 @@
     }
   }
 
-  /* ----- Largeurs des colonnes ----- */
-  function firstMultiRow(table) {
-    for (var i = 0; i < table.rows.length; i++) {
-      if (table.rows[i].cells.length > 2) return table.rows[i];
-    }
-    return null;
-  }
-
-  function isDateRow(r) {
-    for (var c = 0; c < r.cells.length; c++) {
-      var t = (r.cells[c].textContent || '').trim();
-      if (/\d{2}\/\d{2}/.test(t) || /^J-\d+$/.test(t) || /^J\d+$/.test(t)) return true;
-    }
-    return false;
-  }
-
-  /* Supermarché : +30 % sur les colonnes de dates seulement */
+  /* ----- Supermarché : +30 % sur les colonnes de dates ----- */
   function widenDates(table) {
     if (table.dataset.wide) return;
     var r = firstMultiRow(table);
     if (!r || !isDateRow(r)) return;
-    if (r.getBoundingClientRect().width === 0) return; /* onglet caché */
+    if (r.getBoundingClientRect().width === 0) return;
     var w = [];
     for (var c = 0; c < r.cells.length; c++) w.push(r.cells[c].getBoundingClientRect().width);
     for (c = 1; c < r.cells.length; c++) r.cells[c].style.minWidth = Math.round(w[c] * 1.3) + 'px';
     table.dataset.wide = '1';
   }
 
-  /* Rassemblement : SYMBOLE +10 %, QTÉ +20 % */
-  function tuneRas(table) {
-    if (table.dataset.rasTuned) return;
-    var header = null;
-    for (var i = 0; i < table.rows.length; i++) {
-      var r = table.rows[i];
-      if (!r.cells || r.cells.length < 3) continue;
-      var c0 = (r.cells[0].textContent || '').trim().toUpperCase();
-      var c1 = (r.cells[1].textContent || '').trim().toUpperCase();
-      if (c0 === 'ENGIN' && c1.indexOf('KIT') !== -1) { header = r; break; }
-    }
-    if (!header) return;
-    if (header.getBoundingClientRect().width === 0) return; /* onglet caché */
-    var idxSym = -1, idxQte = -1, c;
-    for (c = 0; c < header.cells.length; c++) {
-      var txt = (header.cells[c].textContent || '').trim().toUpperCase();
-      if (txt.indexOf('SYMBOLE') !== -1) idxSym = c;
-      if (txt.indexOf('QT') !== -1) idxQte = c;
-    }
-    var w = [];
-    for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
-    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.4) + 'px';
-    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.6) + 'px';
-    table.dataset.rasTuned = '1';
+  /* ----- Largeur disponible dans la carte ----- */
+  function availWidth(table) {
+    var el = table.parentElement;
+    if (!el) return 10000;
+    var cs = getComputedStyle(el);
+    var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    return el.clientWidth - pad;
   }
 
-  function applyAll() {
-    var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) {
-      processTable(tables[t]);
-      widenDates(tables[t]);
-      tuneRas(tables[t]);
-    }
-  }
-
-  /* Surveille aussi les changements d'onglets (class "active") */
-  var obs = new MutationObserver(function () { applyAll(); });
-  obs.observe(document.documentElement, {
-    childList: true, subtree: true,
-    attributes: false
-  });
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyAll);
-  } else { applyAll(); }
-})();
-
-/* ===== Largeurs Rassemblement : vérification périodique douce ===== */
-(function () {
-  function tune(table) {
-    if (table.dataset.rasTuned) return;
-    var header = null;
-    for (var i = 0; i < table.rows.length; i++) {
-      var r = table.rows[i];
-      if (!r.cells || r.cells.length < 3) continue;
-      var c0 = (r.cells[0].textContent || '').trim().toUpperCase();
-      var c1 = (r.cells[1].textContent || '').trim().toUpperCase();
-      if (c0 === 'ENGIN' && c1.indexOf('KIT') !== -1) { header = r; break; }
-    }
-    if (!header) return;
-    if (header.getBoundingClientRect().width === 0) return; /* onglet caché */
-    var idxSym = -1, idxQte = -1, c;
-    for (c = 0; c < header.cells.length; c++) {
-      var txt = (header.cells[c].textContent || '').trim().toUpperCase();
-      if (txt.indexOf('SYMBOLE') !== -1) idxSym = c;
-      if (txt.indexOf('QT') !== -1) idxQte = c;
-    }
-    var w = [];
-    for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
-    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.4) + 'px';
-    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.6) + 'px';
-    table.dataset.rasTuned = '1';
-  }
-
-  setInterval(function () {
-    var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) tune(tables[t]);
-  }, 600);
-})();
-
-/* ===== Redimensionnement manuel des colonnes (glisser) + mémoire par utilisateur ===== */
-(function () {
-  var css = document.createElement('style');
-  css.textContent =
-    '.col-resize-handle{position:absolute;top:0;right:-3px;width:7px;height:100%;' +
-    'cursor:col-resize;user-select:none;z-index:9;}' +
-    '.col-resize-handle:hover,.col-resize-handle.active{background:rgba(0,0,0,.3);}';
-  document.head.appendChild(css);
-
-  function firstMultiRow(table) {
-    for (var i = 0; i < table.rows.length; i++) {
-      if (table.rows[i].cells.length > 2) return table.rows[i];
-    }
-    return null;
-  }
-
-  function tableKey(table) {
-    var r = firstMultiRow(table);
-    if (!r) return null;
-    var txt = [];
-    for (var c = 0; c < r.cells.length; c++) txt.push((r.cells[c].textContent || '').trim().toUpperCase());
-    var j = txt.join('|');
-    if (/\d{2}\/\d{2}/.test(j)) return 'cols-supermarche';
-    if (j.indexOf('KIT') !== -1) return 'cols-rassemblement';
-    return null;
-  }
-
-  function setColWidth(table, idx, w) {
+  function setRasColWidth(table, idx, w) {
     var cols = table.querySelectorAll('col');
-    if (cols.length > idx) cols[idx].style.width = w + 'px';
+    if (cols.length > idx) cols[idx].style.width = (w === '' ? '' : w + 'px');
     var r = firstMultiRow(table);
     if (r && r.cells[idx]) {
-      r.cells[idx].style.width = w + 'px';
-      r.cells[idx].style.minWidth = w + 'px';
+      r.cells[idx].style.width = (w === '' ? '' : w + 'px');
+      r.cells[idx].style.minWidth = (w === '' ? '' : w + 'px');
     }
   }
 
-  function restore(table) {
-    var key = tableKey(table);
-    if (!key) return;
-    try {
-      var saved = localStorage.getItem(key);
-      if (!saved) return;
-      var widths = JSON.parse(saved);
-      for (var c = 0; c < widths.length; c++) {
-        if (widths[c] > 30) setColWidth(table, c, widths[c]);
-      }
-    } catch (e) {}
+  function clearRasWidths(table) {
+    var r = firstMultiRow(table);
+    var cols = table.querySelectorAll('col');
+    for (var c = 0; c < cols.length; c++) cols[c].style.width = '';
+    if (r) for (c = 0; c < r.cells.length; c++) {
+      r.cells[c].style.width = '';
+      r.cells[c].style.minWidth = '';
+    }
   }
 
-  function save(table) {
-    var key = tableKey(table);
+  function restoreRas(table) {
+    try {
+      var saved = localStorage.getItem('cols-rassemblement');
+      if (!saved) return false;
+      var widths = JSON.parse(saved);
+      var r = firstMultiRow(table);
+      if (!r) return false;
+      for (var c = 0; c < widths.length && c < r.cells.length; c++) {
+        if (widths[c] > 30) setRasColWidth(table, c, widths[c]);
+      }
+      /* petit écran : si ça déborde de la carte, on revient à l'auto */
+      if (table.getBoundingClientRect().width > availWidth(table) + 4) {
+        clearRasWidths(table);
+        return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function saveRas(table) {
     var r = firstMultiRow(table);
-    if (!key || !r) return;
+    if (!r) return;
     try {
       var widths = [];
       for (var c = 0; c < r.cells.length; c++) {
         widths.push(Math.round(r.cells[c].getBoundingClientRect().width));
       }
-      localStorage.setItem(key, JSON.stringify(widths));
+      localStorage.setItem('cols-rassemblement', JSON.stringify(widths));
     } catch (e) {}
   }
 
+  /* ----- Poignées de resize : RASSEMBLEMENT uniquement ----- */
   function makeResizable(table) {
     if (table.dataset.resizable) return;
+    if (!isRasTable(table)) return;               /* PAS sur Supermarché */
     var r = firstMultiRow(table);
     if (!r) return;
-    if (r.getBoundingClientRect().width === 0) return; /* onglet caché */
+    if (r.getBoundingClientRect().width === 0) return;
     table.dataset.resizable = '1';
-    restore(table);
+    restoreRas(table);
 
     Array.prototype.forEach.call(r.cells, function (cell, idx) {
       cell.style.position = 'relative';
@@ -255,15 +182,18 @@
         h.classList.add('active');
         var startX = e.pageX;
         var startW = cell.getBoundingClientRect().width;
+        var avail = availWidth(table);
         function move(ev) {
           var w = Math.max(40, startW + (ev.pageX - startX));
-          setColWidth(table, idx, w);
+          var projected = table.getBoundingClientRect().width - startW + w;
+          if (projected > avail) w = Math.max(40, w - (projected - avail)); /* bloqué au bord de la carte */
+          setRasColWidth(table, idx, w);
         }
         function up() {
           h.classList.remove('active');
           document.removeEventListener('mousemove', move);
           document.removeEventListener('mouseup', up);
-          save(table);
+          saveRas(table);
         }
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);
@@ -271,11 +201,20 @@
     });
   }
 
-  function run() {
+  function applyAll() {
     var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) makeResizable(tables[t]);
+    for (var t = 0; t < tables.length; t++) {
+      processTable(tables[t]);
+      widenDates(tables[t]);
+      makeResizable(tables[t]);
+    }
   }
-  setInterval(run, 800);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
-  else run();
+
+  var obs = new MutationObserver(function () { applyAll(); });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(applyAll, 800); /* pour les onglets cachés */
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyAll);
+  } else { applyAll(); }
 })();
