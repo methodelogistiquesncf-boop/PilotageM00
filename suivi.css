@@ -993,16 +993,14 @@ th.th-label {
   border-right: 1px solid #1a1917; /* trait noir qui ferme le tableau */
 }
 
-/* ===== Champs KIT et SYMBOLE empilés verticalement ===== */
-.note-item{flex-wrap:wrap;}
-.note-item .note-kit{flex:1 1 100%;margin:0 0 4px;padding:4px 8px;border:1px solid #c9ccd2;border-radius:6px;font-size:13px;}
-.note-item .note-sym{flex:1;padding:4px 8px;border:1px solid #c9ccd2;border-radius:6px;font-size:13px;}
-
-/* ===== KIT/SYMBOLE : à droite avant les boutons, colonne non élargie,
-   le champ grandit verticalement si le texte dépasse ===== */
-.note-item{justify-content:flex-end;}
-.note-item .note-kit{flex:1 1 100%;width:auto;max-width:230px;margin:0 0 4px auto;resize:none;overflow:hidden;box-sizing:border-box;}
-.note-item .note-sym{flex:0 1 230px;max-width:230px;resize:none;overflow:hidden;box-sizing:border-box;}
-
-/* Boutons → × alignés sur la ligne SYMBOLE (en bas) */
-.note-item .note-item-actions{top:auto;bottom:0;transform:none;}
+/* ===== Champs KIT / SYMBOLE : schéma final ===== */
+.note-list{display:flex;flex-direction:column;gap:6px;align-items:stretch;}
+.note-list .btn-add-line{align-self:flex-start;}
+.note-item{display:flex;flex-direction:column;align-items:flex-end;gap:4px;position:relative;padding-right:58px;}
+.note-item .note-kit,
+.note-item .note-sym{
+  display:block;flex:none;width:100%;max-width:260px;
+  padding:4px 8px;border:1px solid #c9ccd2;border-radius:6px;
+  font-size:13px;font-family:inherit;resize:none;overflow:hidden;box-sizing:border-box;
+}
+.note-item .note-item-actions{position:absolute;right:0;bottom:0;display:flex;gap:4px;margin:0;}
