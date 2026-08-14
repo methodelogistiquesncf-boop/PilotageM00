@@ -133,10 +133,43 @@
   var obs = new MutationObserver(function () { applyAll(); });
   obs.observe(document.documentElement, {
     childList: true, subtree: true,
-    attributes: true, attributeFilter: ['class']
+    attributes: false
   });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', applyAll);
   } else { applyAll(); }
+})();
+
+/* ===== Largeurs Rassemblement : vérification périodique douce ===== */
+(function () {
+  function tune(table) {
+    if (table.dataset.rasTuned) return;
+    var header = null;
+    for (var i = 0; i < table.rows.length; i++) {
+      var r = table.rows[i];
+      if (!r.cells || r.cells.length < 3) continue;
+      var c0 = (r.cells[0].textContent || '').trim().toUpperCase();
+      var c1 = (r.cells[1].textContent || '').trim().toUpperCase();
+      if (c0 === 'ENGIN' && c1.indexOf('KIT') !== -1) { header = r; break; }
+    }
+    if (!header) return;
+    if (header.getBoundingClientRect().width === 0) return; /* onglet caché */
+    var idxSym = -1, idxQte = -1, c;
+    for (c = 0; c < header.cells.length; c++) {
+      var txt = (header.cells[c].textContent || '').trim().toUpperCase();
+      if (txt.indexOf('SYMBOLE') !== -1) idxSym = c;
+      if (txt.indexOf('QT') !== -1) idxQte = c;
+    }
+    var w = [];
+    for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
+    if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.1) + 'px';
+    if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.2) + 'px';
+    table.dataset.rasTuned = '1';
+  }
+
+  setInterval(function () {
+    var tables = document.querySelectorAll('table');
+    for (var t = 0; t < tables.length; t++) tune(tables[t]);
+  }, 600);
 })();
