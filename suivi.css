@@ -992,3 +992,8 @@ th.th-label {
   border-width: 0;              /* supprime le liseré blanc */
   border-right: 1px solid #1a1917; /* trait noir qui ferme le tableau */
 }
+
+/* ===== Champs KIT et SYMBOLE empilés verticalement ===== */
+.note-item{flex-wrap:wrap;}
+.note-item .note-kit{flex:1 1 100%;margin:0 0 4px;padding:4px 8px;border:1px solid #c9ccd2;border-radius:6px;font-size:13px;}
+.note-item .note-sym{flex:1;padding:4px 8px;border:1px solid #c9ccd2;border-radius:6px;font-size:13px;}
