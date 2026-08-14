@@ -103,7 +103,7 @@
 /* ===== Bandeau Terre-plein en vert ===== */
 (function () {
   var st = document.createElement('style');
-  st.textContent = '.station-vert{background:#90ee90 !important;color:#111827 !important;}';
+  st.textContent = '.station-vert{background:#00a300 !important;color:#ffffff !important;}';
   document.head.appendChild(st);
 
   function tag() {
@@ -132,8 +132,8 @@
 (function () {
   var st = document.createElement('style');
   st.textContent =
-    '.station-bleu{background:#7b68ee !important;color:#ffffff !important;}' +
-    '.station-jaune{background:#ffe066 !important;color:#111827 !important;}';
+    '.station-bleu{background:#6666ff !important;color:#ffffff !important;}' +
+    '.station-jaune{background:#ffff33 !important;color:#111827 !important;}';
   document.head.appendChild(st);
 
   function tag() {
