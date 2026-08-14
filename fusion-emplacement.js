@@ -1,4 +1,4 @@
-/* fusion-emplacement.js — v6 : resize uniquement RAS + jamais hors de la carte */
+/* fusion-emplacement.js — v7 : plus de rétrécissement au clic */
 (function () {
   'use strict';
 
@@ -59,7 +59,6 @@
            (r.cells[1].textContent || '').trim().toUpperCase().indexOf('KIT') !== -1;
   }
 
-  /* ----- Fusion ENGIN + bandeaux stations ----- */
   function processTable(table) {
     var rows = table.rows;
     for (var i = 0; i < rows.length; i++) {
@@ -90,19 +89,23 @@
     }
   }
 
-  /* ----- Supermarché : +30 % sur les colonnes de dates ----- */
+  /* ----- Supermarché : +30 % mémorisé, réappliqué après chaque reconstruction ----- */
   function widenDates(table) {
-    if (table.dataset.wide) return;
     var r = firstMultiRow(table);
     if (!r || !isDateRow(r)) return;
     if (r.getBoundingClientRect().width === 0) return;
-    var w = [];
-    for (var c = 0; c < r.cells.length; c++) w.push(r.cells[c].getBoundingClientRect().width);
-    for (c = 1; c < r.cells.length; c++) r.cells[c].style.minWidth = Math.round(w[c] * 1.3) + 'px';
-    table.dataset.wide = '1';
+    if (!table.dataset.baseW) {
+      var w = [];
+      for (var c = 0; c < r.cells.length; c++) w.push(Math.round(r.cells[c].getBoundingClientRect().width));
+      table.dataset.baseW = JSON.stringify(w);
+    }
+    var base = JSON.parse(table.dataset.baseW);
+    for (c = 1; c < r.cells.length && c < base.length; c++) {
+      var target = Math.round(base[c] * 1.3) + 'px';
+      if (r.cells[c].style.minWidth !== target) r.cells[c].style.minWidth = target;
+    }
   }
 
-  /* ----- Largeur disponible dans la carte ----- */
   function availWidth(table) {
     var el = table.parentElement;
     if (!el) return 10000;
@@ -141,7 +144,6 @@
       for (var c = 0; c < widths.length && c < r.cells.length; c++) {
         if (widths[c] > 30) setRasColWidth(table, c, widths[c]);
       }
-      /* petit écran : si ça déborde de la carte, on revient à l'auto */
       if (table.getBoundingClientRect().width > availWidth(table) + 4) {
         clearRasWidths(table);
         return false;
@@ -162,10 +164,9 @@
     } catch (e) {}
   }
 
-  /* ----- Poignées de resize : RASSEMBLEMENT uniquement ----- */
   function makeResizable(table) {
     if (table.dataset.resizable) return;
-    if (!isRasTable(table)) return;               /* PAS sur Supermarché */
+    if (!isRasTable(table)) return;
     var r = firstMultiRow(table);
     if (!r) return;
     if (r.getBoundingClientRect().width === 0) return;
@@ -186,7 +187,7 @@
         function move(ev) {
           var w = Math.max(40, startW + (ev.pageX - startX));
           var projected = table.getBoundingClientRect().width - startW + w;
-          if (projected > avail) w = Math.max(40, w - (projected - avail)); /* bloqué au bord de la carte */
+          if (projected > avail) w = Math.max(40, w - (projected - avail));
           setRasColWidth(table, idx, w);
         }
         function up() {
@@ -207,12 +208,17 @@
       processTable(tables[t]);
       widenDates(tables[t]);
       makeResizable(tables[t]);
+      /* Rassemblement : réapplique les tailles mémorisées si l'appli a reconstruit */
+      if (tables[t].dataset.resizable) {
+        var rr = firstMultiRow(tables[t]);
+        if (rr && rr.cells[0] && rr.cells[0].style.width === '') restoreRas(tables[t]);
+      }
     }
   }
 
   var obs = new MutationObserver(function () { applyAll(); });
   obs.observe(document.documentElement, { childList: true, subtree: true });
-  setInterval(applyAll, 800); /* pour les onglets cachés */
+  setInterval(applyAll, 800);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', applyAll);
