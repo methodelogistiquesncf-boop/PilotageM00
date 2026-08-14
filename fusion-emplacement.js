@@ -293,3 +293,101 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
 })();
+
+/* ===== Supermarché : + ligne = KIT + SYMBOLE (sans remarque), envoi vers Actions ===== */
+(function () {
+  var css = document.createElement('style');
+  css.textContent =
+    '.kit-field,.sym-field{display:block;width:110px;margin:0 0 4px;padding:2px 6px;' +
+    'font-size:12px;border:1px solid #bbb;border-radius:4px;}';
+  document.head.appendChild(css);
+
+  /* 1) Remplace visuellement la remarque par KIT + SYMBOLE */
+  function enhanceLines() {
+    var tas = document.querySelectorAll('#panelSuivi table textarea');
+    for (var i = 0; i < tas.length; i++) {
+      var ta = tas[i];
+      if (ta.dataset.kitDone) continue;
+      ta.dataset.kitDone = '1';
+      var kit = document.createElement('input');
+      kit.className = 'kit-field'; kit.placeholder = 'KIT';
+      var sym = document.createElement('input');
+      sym.className = 'sym-field'; sym.placeholder = 'SYMBOLE';
+      ta.parentNode.insertBefore(kit, ta);
+      ta.parentNode.insertBefore(sym, ta);
+      ta.style.display = 'none'; /* remarque masquée */
+    }
+  }
+
+  /* 2) À l'appui sur la flèche : met KIT§§SYMBOLE dans le transport caché */
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!btn || (btn.textContent || '').indexOf('→') === -1) return;
+    var node = btn.parentElement, found = null;
+    while (node && node.tagName !== 'TD' && node.tagName !== 'TABLE') {
+      if (node.querySelector('textarea') && node.querySelector('.kit-field')) { found = node; break; }
+      node = node.parentElement;
+    }
+    if (!found) return;
+    var ta = found.querySelector('textarea');
+    var kit = found.querySelector('.kit-field');
+    var sym = found.querySelector('.sym-field');
+    ta.value = (kit ? kit.value : '') + '§§' + (sym ? sym.value : '');
+    try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) {}
+  }, true);
+
+  /* 3) Dans Actions : éclate le transport vers les colonnes KIT et SYMBOLE */
+  function setCell(row, idx, value) {
+    var cell = row.cells[idx];
+    if (!cell) return;
+    var inp = cell.querySelector('input, textarea');
+    if (inp) {
+      inp.value = value;
+      try { inp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+    } else {
+      cell.textContent = value;
+    }
+  }
+
+  function fixActionsRows() {
+    var tables = document.querySelectorAll('table');
+    for (var t = 0; t < tables.length; t++) {
+      var table = tables[t];
+      var idxKit = -1, idxSym = -1;
+      for (var i = 0; i < table.rows.length; i++) {
+        var r = table.rows[i];
+        for (var c = 0; c < r.cells.length; c++) {
+          var txt = (r.cells[c].textContent || '').trim().toUpperCase();
+          if (txt === 'KIT') idxKit = c;
+          if (txt === 'SYMBOLE') idxSym = c;
+        }
+        if (idxKit !== -1) break;
+      }
+      if (idxKit === -1 || idxSym === -1) continue;
+
+      for (i = 0; i < table.rows.length; i++) {
+        var row = table.rows[i];
+        if (row.dataset.payloadDone) continue;
+        for (c = 0; c < row.cells.length; c++) {
+          var cell = row.cells[c];
+          var inp = cell.querySelector('input, textarea');
+          var val = inp ? inp.value : cell.textContent;
+          if ((val || '').indexOf('§§') === -1) continue;
+          var parts = (val || '').split('§§');
+          setCell(row, idxKit, parts[0] || '');
+          setCell(row, idxSym, parts.slice(1).join('') || '');
+          if (inp) inp.value = ''; else cell.textContent = '';
+          row.dataset.payloadDone = '1';
+          break;
+        }
+      }
+    }
+  }
+
+  function run() { enhanceLines(); fixActionsRows(); }
+  var obs5 = new MutationObserver(function () { run(); });
+  obs5.observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(run, 800);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
