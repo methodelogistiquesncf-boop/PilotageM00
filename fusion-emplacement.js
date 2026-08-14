@@ -99,3 +99,31 @@
   obs.observe(document.documentElement, { childList: true, subtree: true });
   tag();
 })();
+
+/* ===== Bandeau Terre-plein en vert ===== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '.station-vert{background:#90ee90 !important;color:#111827 !important;}';
+  document.head.appendChild(st);
+
+  function tag() {
+    document.querySelectorAll('table').forEach(function (tb) {
+      Array.prototype.forEach.call(tb.rows, function (r) {
+        if (r.cells.length === 1 && r.cells[0].colSpan > 1) {
+          var t = (r.cells[0].textContent || '').toUpperCase();
+          if (t.indexOf('TERRE-PLEIN') !== -1) {
+            r.cells[0].classList.add('station-vert');
+          }
+        }
+      });
+    });
+  }
+
+  var t = null;
+  var obs = new MutationObserver(function () {
+    if (t) clearTimeout(t);
+    t = setTimeout(tag, 250);
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  tag();
+})();
