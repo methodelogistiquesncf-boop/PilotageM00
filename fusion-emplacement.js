@@ -156,3 +156,13 @@
   obs.observe(document.documentElement, { childList: true, subtree: true });
   tag();
 })();
+
+/* ===== Bordures des bandeaux stations ===== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent =
+    '.station-bleu{border:1px solid #3333cc !important;}' +
+    '.station-jaune{border:1px solid #b3b300 !important;}' +
+    '.station-vert{border:1px solid #006600 !important;}';
+  document.head.appendChild(st);
+})();
