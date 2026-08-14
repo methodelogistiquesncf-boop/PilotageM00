@@ -3,12 +3,12 @@
 import { state, setState, onDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
-  authDomain: "pilotagem00.firebaseapp.com",
-  projectId: "pilotagem00",
-  storageBucket: "pilotagem00.firebasestorage.app",
-  messagingSenderId: "455481915450",
-  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
+  apiKey: "AIzaSyDIOc6PJ42tmuEejKxph3bPKbgBJGWM-aw",
+  authDomain: "pilotagem00-recette.firebaseapp.com",
+  projectId: "pilotagem00-recette",
+  storageBucket: "pilotagem00-recette.firebasestorage.app",
+  messagingSenderId: "848268615763",
+  appId: "1:848268615763:web:757d9dd5a0e3c3b28a26a6"
 };
 const FIRESTORE_DOC = "suivi/default";
 
