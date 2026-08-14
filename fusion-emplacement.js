@@ -5,7 +5,7 @@
   var style = document.createElement('style');
   style.textContent =
     'td.empl-fusion{white-space:nowrap;}' +
-    'td.empl-fusion input,td.empl-fusion textarea{width:140px !important;margin-right:8px;}' ;
+    'td.empl-fusion input,td.empl-fusion textarea{width:100px !important;margin-right:8px;}' ;
   document.head.appendChild(style);
 
   var LABELS = ['ENGIN', 'APPROS', 'PIECES DEPOSEES', 'PIÈCES DÉPOSÉES'];
