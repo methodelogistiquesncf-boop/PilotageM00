@@ -1,8 +1,7 @@
-/* fusion-emplacement.js — v4 : application immédiate, sans flash */
+/* fusion-emplacement.js — v5 : gère les onglets cachés */
 (function () {
   'use strict';
 
-  /* ---------- Styles ---------- */
   var style = document.createElement('style');
   style.textContent =
     'td.empl-fusion{white-space:nowrap;}' +
@@ -36,6 +35,7 @@
     return true;
   }
 
+  /* ----- Fusion ENGIN + bandeaux stations ----- */
   function processTable(table) {
     var rows = table.rows;
     for (var i = 0; i < rows.length; i++) {
@@ -43,7 +43,6 @@
       if (!row.cells || !row.cells[0]) continue;
       var first = row.cells[0];
 
-      /* Bandeaux stations : fins + colorés + liseré noir */
       if (row.cells.length === 1 && first.colSpan > 1) {
         var t = norm(first.textContent);
         first.classList.add('station-fine');
@@ -53,7 +52,6 @@
         continue;
       }
 
-      /* Fusion champ emplacement + ENGIN dans la même case */
       if (norm(first.textContent) !== 'ENGIN') continue;
       if (row.dataset.emplDone) continue;
       var next = rows[i + 1];
@@ -68,62 +66,37 @@
     }
   }
 
-  function processAll() {
-    var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) processTable(tables[t]);
-  }
-
-  /* IMMÉDIAT : appliqué avant même que l'écran ne s'affiche */
-  var obs = new MutationObserver(function () { processAll(); });
-  obs.observe(document.documentElement, { childList: true, subtree: true });
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', processAll);
-  } else {
-    processAll();
-  }
-})();
-
-/* ===== Colonnes de dates élargies de 30 % ===== */
-(function () {
-  function widen(table) {
-    if (table.dataset.wide) return;
-    var r = null;
+  /* ----- Largeurs des colonnes ----- */
+  function firstMultiRow(table) {
     for (var i = 0; i < table.rows.length; i++) {
-      if (table.rows[i].cells.length > 2) { r = table.rows[i]; break; }
+      if (table.rows[i].cells.length > 2) return table.rows[i];
     }
-    if (!r) return;
+    return null;
+  }
 
-    /* 1) mesurer les largeurs actuelles */
-    var w = [];
+  function isDateRow(r) {
     for (var c = 0; c < r.cells.length; c++) {
-      w.push(r.cells[c].getBoundingClientRect().width);
+      var t = (r.cells[c].textContent || '').trim();
+      if (/\d{2}\/\d{2}/.test(t) || /^J-\d+$/.test(t) || /^J\d+$/.test(t)) return true;
     }
-    /* 2) +30 % uniquement sur les colonnes de dates (pas la 1ère colonne) */
-    for (c = 1; c < r.cells.length; c++) {
-      r.cells[c].style.minWidth = Math.round(w[c] * 1.3) + 'px';
-    }
+    return false;
+  }
+
+  /* Supermarché : +30 % sur les colonnes de dates seulement */
+  function widenDates(table) {
+    if (table.dataset.wide) return;
+    var r = firstMultiRow(table);
+    if (!r || !isDateRow(r)) return;
+    if (r.getBoundingClientRect().width === 0) return; /* onglet caché */
+    var w = [];
+    for (var c = 0; c < r.cells.length; c++) w.push(r.cells[c].getBoundingClientRect().width);
+    for (c = 1; c < r.cells.length; c++) r.cells[c].style.minWidth = Math.round(w[c] * 1.3) + 'px';
     table.dataset.wide = '1';
   }
 
-  function widenAll() {
-    var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) widen(tables[t]);
-  }
-
-  var obs2 = new MutationObserver(function () { widenAll(); });
-  obs2.observe(document.documentElement, { childList: true, subtree: true });
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', widenAll);
-  } else { widenAll(); }
-})();
-
-/* ===== Rassemblement : SYMBOLE +10 %, QTÉ +20 % ===== */
-(function () {
-  function tune(table) {
+  /* Rassemblement : SYMBOLE +10 %, QTÉ +20 % */
+  function tuneRas(table) {
     if (table.dataset.rasTuned) return;
-
-    /* Trouver la ligne d'en-têtes (ENGIN | KIT | SYMBOLE…) */
     var header = null;
     for (var i = 0; i < table.rows.length; i++) {
       var r = table.rows[i];
@@ -133,38 +106,37 @@
       if (c0 === 'ENGIN' && c1.indexOf('KIT') !== -1) { header = r; break; }
     }
     if (!header) return;
-    table.dataset.rasTuned = '1';
-
-    /* Annule le +30 % générique sur ce tableau */
-    for (var c = 0; c < header.cells.length; c++) header.cells[c].style.minWidth = '';
-
-    /* Repérer les colonnes SYMBOLE et QTÉ */
-    var idxSym = -1, idxQte = -1;
+    if (header.getBoundingClientRect().width === 0) return; /* onglet caché */
+    var idxSym = -1, idxQte = -1, c;
     for (c = 0; c < header.cells.length; c++) {
       var txt = (header.cells[c].textContent || '').trim().toUpperCase();
       if (txt.indexOf('SYMBOLE') !== -1) idxSym = c;
       if (txt.indexOf('QT') !== -1) idxQte = c;
     }
-
-    /* Mesurer les largeurs naturelles */
     var w = [];
-    for (c = 0; c < header.cells.length; c++) {
-      w.push(header.cells[c].getBoundingClientRect().width);
-    }
-
-    /* Appliquer +10 % / +20 % */
+    for (c = 0; c < header.cells.length; c++) w.push(header.cells[c].getBoundingClientRect().width);
     if (idxSym >= 0) header.cells[idxSym].style.minWidth = Math.round(w[idxSym] * 1.1) + 'px';
     if (idxQte >= 0) header.cells[idxQte].style.minWidth = Math.round(w[idxQte] * 1.2) + 'px';
+    table.dataset.rasTuned = '1';
   }
 
-  function tuneAll() {
+  function applyAll() {
     var tables = document.querySelectorAll('table');
-    for (var t = 0; t < tables.length; t++) tune(tables[t]);
+    for (var t = 0; t < tables.length; t++) {
+      processTable(tables[t]);
+      widenDates(tables[t]);
+      tuneRas(tables[t]);
+    }
   }
 
-  var obs3 = new MutationObserver(function () { tuneAll(); });
-  obs3.observe(document.documentElement, { childList: true, subtree: true });
+  /* Surveille aussi les changements d'onglets (class "active") */
+  var obs = new MutationObserver(function () { applyAll(); });
+  obs.observe(document.documentElement, {
+    childList: true, subtree: true,
+    attributes: true, attributeFilter: ['class']
+  });
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tuneAll);
-  } else { tuneAll(); }
+    document.addEventListener('DOMContentLoaded', applyAll);
+  } else { applyAll(); }
 })();
