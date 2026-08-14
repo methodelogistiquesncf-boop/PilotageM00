@@ -83,3 +83,37 @@
     processAll();
   }
 })();
+
+/* ===== Colonnes de dates élargies de 30 % ===== */
+(function () {
+  function widen(table) {
+    if (table.dataset.wide) return;
+    var r = null;
+    for (var i = 0; i < table.rows.length; i++) {
+      if (table.rows[i].cells.length > 2) { r = table.rows[i]; break; }
+    }
+    if (!r) return;
+
+    /* 1) mesurer les largeurs actuelles */
+    var w = [];
+    for (var c = 0; c < r.cells.length; c++) {
+      w.push(r.cells[c].getBoundingClientRect().width);
+    }
+    /* 2) +30 % uniquement sur les colonnes de dates (pas la 1ère colonne) */
+    for (c = 1; c < r.cells.length; c++) {
+      r.cells[c].style.minWidth = Math.round(w[c] * 1.3) + 'px';
+    }
+    table.dataset.wide = '1';
+  }
+
+  function widenAll() {
+    var tables = document.querySelectorAll('table');
+    for (var t = 0; t < tables.length; t++) widen(tables[t]);
+  }
+
+  var obs2 = new MutationObserver(function () { widenAll(); });
+  obs2.observe(document.documentElement, { childList: true, subtree: true });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', widenAll);
+  } else { widenAll(); }
+})();
