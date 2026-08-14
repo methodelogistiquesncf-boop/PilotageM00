@@ -173,3 +173,109 @@
     for (var t = 0; t < tables.length; t++) tune(tables[t]);
   }, 600);
 })();
+
+/* ===== Redimensionnement manuel des colonnes (glisser) + mémoire par utilisateur ===== */
+(function () {
+  var css = document.createElement('style');
+  css.textContent =
+    '.col-resize-handle{position:absolute;top:0;right:-3px;width:7px;height:100%;' +
+    'cursor:col-resize;user-select:none;z-index:9;}' +
+    '.col-resize-handle:hover,.col-resize-handle.active{background:rgba(0,0,0,.3);}';
+  document.head.appendChild(css);
+
+  function firstMultiRow(table) {
+    for (var i = 0; i < table.rows.length; i++) {
+      if (table.rows[i].cells.length > 2) return table.rows[i];
+    }
+    return null;
+  }
+
+  function tableKey(table) {
+    var r = firstMultiRow(table);
+    if (!r) return null;
+    var txt = [];
+    for (var c = 0; c < r.cells.length; c++) txt.push((r.cells[c].textContent || '').trim().toUpperCase());
+    var j = txt.join('|');
+    if (/\d{2}\/\d{2}/.test(j)) return 'cols-supermarche';
+    if (j.indexOf('KIT') !== -1) return 'cols-rassemblement';
+    return null;
+  }
+
+  function setColWidth(table, idx, w) {
+    var cols = table.querySelectorAll('col');
+    if (cols.length > idx) cols[idx].style.width = w + 'px';
+    var r = firstMultiRow(table);
+    if (r && r.cells[idx]) {
+      r.cells[idx].style.width = w + 'px';
+      r.cells[idx].style.minWidth = w + 'px';
+    }
+  }
+
+  function restore(table) {
+    var key = tableKey(table);
+    if (!key) return;
+    try {
+      var saved = localStorage.getItem(key);
+      if (!saved) return;
+      var widths = JSON.parse(saved);
+      for (var c = 0; c < widths.length; c++) {
+        if (widths[c] > 30) setColWidth(table, c, widths[c]);
+      }
+    } catch (e) {}
+  }
+
+  function save(table) {
+    var key = tableKey(table);
+    var r = firstMultiRow(table);
+    if (!key || !r) return;
+    try {
+      var widths = [];
+      for (var c = 0; c < r.cells.length; c++) {
+        widths.push(Math.round(r.cells[c].getBoundingClientRect().width));
+      }
+      localStorage.setItem(key, JSON.stringify(widths));
+    } catch (e) {}
+  }
+
+  function makeResizable(table) {
+    if (table.dataset.resizable) return;
+    var r = firstMultiRow(table);
+    if (!r) return;
+    if (r.getBoundingClientRect().width === 0) return; /* onglet caché */
+    table.dataset.resizable = '1';
+    restore(table);
+
+    Array.prototype.forEach.call(r.cells, function (cell, idx) {
+      cell.style.position = 'relative';
+      var h = document.createElement('div');
+      h.className = 'col-resize-handle';
+      cell.appendChild(h);
+      h.addEventListener('mousedown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        h.classList.add('active');
+        var startX = e.pageX;
+        var startW = cell.getBoundingClientRect().width;
+        function move(ev) {
+          var w = Math.max(40, startW + (ev.pageX - startX));
+          setColWidth(table, idx, w);
+        }
+        function up() {
+          h.classList.remove('active');
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+          save(table);
+        }
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      });
+    });
+  }
+
+  function run() {
+    var tables = document.querySelectorAll('table');
+    for (var t = 0; t < tables.length; t++) makeResizable(tables[t]);
+  }
+  setInterval(run, 800);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
