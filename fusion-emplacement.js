@@ -1,18 +1,17 @@
-/* fusion-emplacement.js — v2 : gère les champs <input> */
+/* fusion-emplacement.js — v3 */
 (function () {
   'use strict';
 
   var style = document.createElement('style');
   style.textContent =
-    '.engin-label{font-weight:700;color:#111827;margin-left:10px;' +
-    'font-size:12px;text-transform:uppercase;}' +
-    'td.empl-fusion{white-space:nowrap;}';
+    'td.empl-fusion{white-space:nowrap;}' +
+    'td.empl-fusion input,td.empl-fusion textarea{width:auto !important;margin-right:8px;}' ;
   document.head.appendChild(style);
 
   var LABELS = ['ENGIN', 'APPROS', 'PIECES DEPOSEES', 'PIÈCES DÉPOSÉES'];
   function norm(t) { return (t || '').trim().toUpperCase().replace(/\s+/g, ' '); }
 
-  /* Texte visible d'une case, Y COMPRIS la valeur d'un champ <input> */
+  /* Texte visible d'une case, y compris la valeur d'un <input> */
   function cellText(cell) {
     var t = (cell.textContent || '').trim();
     if (t) return t;
@@ -23,9 +22,9 @@
 
   function isEmplRow(row) {
     if (!row.cells || row.cells.length < 2) return false;
-    var firstTxt = cellText(row.cells[0]);
-    if (!firstTxt) return false;
-    if (LABELS.indexOf(norm(firstTxt)) !== -1) return false;
+    var f = cellText(row.cells[0]);
+    if (!f) return false;
+    if (LABELS.indexOf(norm(f)) !== -1) return false;
     for (var i = 1; i < row.cells.length; i++) {
       if (cellText(row.cells[i]) !== '') return false;
     }
@@ -39,23 +38,20 @@
       if (!row.cells || !row.cells[0]) continue;
       var first = row.cells[0];
       if (norm(first.textContent) !== 'ENGIN') continue;
-      if (first.dataset.emplDone) continue;
-      first.dataset.emplDone = '1';
-
+      if (row.dataset.emplDone) continue;
       var next = rows[i + 1];
       if (!next || !isEmplRow(next)) continue;
 
-      /* Déplace le champ éditable (nœud vivant => garde valeur + événements) */
-      var src = next.cells[0];
+      row.dataset.emplDone = '1';
       first.classList.add('empl-fusion');
-      first.textContent = '';
-      while (src.firstChild) first.appendChild(src.firstChild);
 
-      /* "ENGIN" reste en information non éditable */
-      var lbl = document.createElement('span');
-      lbl.className = 'engin-label';
-      lbl.textContent = 'ENGIN';
-      first.appendChild(lbl);
+      /* Déplace le champ éditable AVANT le texte ENGIN (même case) */
+      var src = next.cells[0];
+      var nodes = [];
+      while (src.firstChild) nodes.push(src.removeChild(src.firstChild));
+      for (var k = 0; k < nodes.length; k++) {
+        first.insertBefore(nodes[k], first.firstChild);
+      }
 
       /* Supprime la ligne qui resterait blanche */
       next.remove();
