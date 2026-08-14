@@ -127,3 +127,32 @@
   obs.observe(document.documentElement, { childList: true, subtree: true });
   tag();
 })();
+
+/* ===== Bandeaux : Sous-caisse bleu, Toiture jaune ===== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent =
+    '.station-bleu{background:#7b68ee !important;color:#ffffff !important;}' +
+    '.station-jaune{background:#ffe066 !important;color:#111827 !important;}';
+  document.head.appendChild(st);
+
+  function tag() {
+    document.querySelectorAll('table').forEach(function (tb) {
+      Array.prototype.forEach.call(tb.rows, function (r) {
+        if (r.cells.length === 1 && r.cells[0].colSpan > 1) {
+          var t = (r.cells[0].textContent || '').toUpperCase();
+          if (t.indexOf('SOUS-CAISSE') !== -1) r.cells[0].classList.add('station-bleu');
+          if (t.indexOf('TOITURE') !== -1) r.cells[0].classList.add('station-jaune');
+        }
+      });
+    });
+  }
+
+  var t = null;
+  var obs = new MutationObserver(function () {
+    if (t) clearTimeout(t);
+    t = setTimeout(tag, 250);
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  tag();
+})();
