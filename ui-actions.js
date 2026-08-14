@@ -35,7 +35,8 @@ function makeActionItem(data) {
     poste: data.poste || '',
     section: data.section || '',
     date: data.date || '',
-    texte: data.texte || '',
+    kit: data.kit || '',
+    symbole: data.symbole || '',
     commentaire: data.commentaire || '',
     responsable: '',
     echeance: '',
@@ -48,13 +49,13 @@ function makeActionItem(data) {
 
 // Appelée depuis ui-supermarche.js par les boutons "→" (par ligne ou global cellule).
 export function sendToAction(data) {
-  if (!data.texte || !data.texte.trim()) return;
+  if ((!data.kit || !data.kit.trim()) && (!data.symbole || !data.symbole.trim())) return;
 
   // Anti-doublon : si une action identique et non faite existe déjà, on ne
   // recrée pas de ligne (utile si on reclique par erreur).
   var doublon = state.actions.find(function (a) {
     return !a.done && a.engin === data.engin && a.section === data.section &&
-      a.date === data.date && a.texte === data.texte;
+      a.date === data.date && a.kit === data.kit && a.symbole === data.symbole;
   });
   if (doublon) { buildActions(); return; }
 
@@ -177,8 +178,9 @@ export function buildActions() {
     '<col style="width:8%">'  +  // Poste
     '<col style="width:10%">' +  // Section
     '<col style="width:5%">'  +  // Date
-    '<col style="width:21%">' +  // Action
-    '<col style="width:21%">' +  // Commentaire
+    '<col style="width:12%">' +  // KIT
+    '<col style="width:12%">' +  // SYMBOLE
+    '<col style="width:18%">' +  // Commentaire
     '<col style="width:10%">' +  // Responsable
     '<col style="width:10%">' +  // Échéance
     '<col style="width:5%">'  +  // Fait
@@ -187,7 +189,7 @@ export function buildActions() {
 
   var thead = document.createElement('thead');
   thead.innerHTML = '<tr><th>Engin</th><th>Poste</th><th>Section</th><th>Date</th>' +
-    '<th>Action</th><th>Commentaire</th><th>Responsable</th><th>Échéance</th><th>Fait</th><th></th></tr>';
+    '<th>KIT</th><th>SYMBOLE</th><th>Commentaire</th><th>Responsable</th><th>Échéance</th><th>Fait</th><th></th></tr>';
   table.appendChild(thead);
 
   var tbody = document.createElement('tbody');
@@ -244,7 +246,8 @@ function buildActionRow(a) {
   tr.appendChild(textInputCell(a, 'section', 'Section...', null, true));
 
   tr.appendChild(textInputCell(a, 'date', 'jj/mm...', null, true));
-  tr.appendChild(textareaCell(a, 'texte', 'Action...', 'action-input action-texte-input', true));
+  tr.appendChild(textInputCell(a, 'kit', 'KIT...', 'action-input action-kit-input', true));
+  tr.appendChild(textInputCell(a, 'symbole', 'SYMBOLE...', 'action-input action-symbole-input', true));
   tr.appendChild(textareaCell(a, 'commentaire', 'Commentaire...'));
 
   tr.appendChild(buildResponsableCell(a, 'responsable', !!a.done));

@@ -278,13 +278,21 @@ function buildNoteItemEl(item, onDelete, getMeta, section) {
   var row = document.createElement('div');
   row.className = 'note-item';
 
-  var ta = document.createElement('textarea');
-  ta.className = 'note-line';
-  ta.placeholder = 'Remarque...';
-  ta.value = item.texte || '';
-  ta.oninput = function () { item.texte = ta.value; autoResize(ta); markDirty(); };
-  requestAnimationFrame(function () { autoResize(ta); });
-  row.appendChild(ta);
+  var kitInp = document.createElement('input');
+  kitInp.type = 'text';
+  kitInp.className = 'note-kit';
+  kitInp.placeholder = 'KIT';
+  kitInp.value = item.kit || '';
+  kitInp.oninput = function () { item.kit = kitInp.value; markDirty(); };
+  row.appendChild(kitInp);
+
+  var symInp = document.createElement('input');
+  symInp.type = 'text';
+  symInp.className = 'note-sym';
+  symInp.placeholder = 'SYMBOLE';
+  symInp.value = item.symbole || '';
+  symInp.oninput = function () { item.symbole = symInp.value; markDirty(); };
+  row.appendChild(symInp);
 
   var actions = document.createElement('div');
   actions.className = 'note-item-actions';
@@ -294,7 +302,7 @@ function buildNoteItemEl(item, onDelete, getMeta, section) {
   sendBtn.title = 'Envoyer cette ligne vers Actions';
   sendBtn.onclick = function () {
     var meta = getMeta();
-    sendToAction({ engin: meta.engin, poste: meta.poste, section: section, date: meta.date, jour: meta.jour, texte: item.texte || '' });
+    sendToAction({ engin: meta.engin, poste: meta.poste, section: section, date: meta.date, jour: meta.jour, kit: item.kit || '', symbole: item.symbole || '' });
   };
   actions.appendChild(sendBtn);
 
@@ -405,13 +413,17 @@ function makeScoreInner_fixed(labelsObj, dataObj, eid, s, p, d) {
       function () { return obj[ei][si][pi].dot; },
       function () {
         var meta = actionMetaFixed(lb, obj, ei, pi, di);
+        var items = ensureNoteItems(obj[ei][si][pi]);
+        var kitAll = items.map(function(it) { return (it.kit || '').trim(); }).filter(Boolean).join('\n');
+        var symAll = items.map(function(it) { return (it.symbole || '').trim(); }).filter(Boolean).join('\n');
         return {
           engin: meta.engin,
           poste: meta.poste,
           section: si,
           date: meta.date,
           jour: meta.jour,
-          texte: noteToActionText(ensureNoteItems(obj[ei][si][pi]))
+          kit: kitAll,
+          symbole: symAll
         };
       }
     ));
