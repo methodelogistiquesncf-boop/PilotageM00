@@ -278,20 +278,20 @@ function buildNoteItemEl(item, onDelete, getMeta, section) {
   var row = document.createElement('div');
   row.className = 'note-item';
 
-  var kitInp = document.createElement('input');
+  var kitInp = document.createElement('textarea'); kitInp.rows = 1;
   kitInp.type = 'text';
   kitInp.className = 'note-kit';
   kitInp.placeholder = 'KIT';
   kitInp.value = item.kit || '';
-  kitInp.oninput = function () { item.kit = kitInp.value; markDirty(); };
+  kitInp.oninput = function () { item.kit = kitInp.value; autoResize(kitInp); markDirty(); }; requestAnimationFrame(function () { autoResize(kitInp); });
   row.appendChild(kitInp);
 
-  var symInp = document.createElement('input');
+  var symInp = document.createElement('textarea'); symInp.rows = 1;
   symInp.type = 'text';
   symInp.className = 'note-sym';
   symInp.placeholder = 'SYMBOLE';
   symInp.value = item.symbole || '';
-  symInp.oninput = function () { item.symbole = symInp.value; markDirty(); };
+  symInp.oninput = function () { item.symbole = symInp.value; autoResize(symInp); markDirty(); }; requestAnimationFrame(function () { autoResize(symInp); });
   row.appendChild(symInp);
 
   var actions = document.createElement('div');
