@@ -1003,3 +1003,6 @@ th.th-label {
 .note-item{justify-content:flex-end;}
 .note-item .note-kit{flex:1 1 100%;width:auto;max-width:230px;margin:0 0 4px auto;resize:none;overflow:hidden;box-sizing:border-box;}
 .note-item .note-sym{flex:0 1 230px;max-width:230px;resize:none;overflow:hidden;box-sizing:border-box;}
+
+/* Boutons → × alignés sur la ligne SYMBOLE (en bas) */
+.note-item .note-item-actions{top:auto;bottom:0;transform:none;}
