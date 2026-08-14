@@ -74,3 +74,28 @@
     document.addEventListener('DOMContentLoaded', processAll);
   } else { processAll(); }
 })();
+
+/* ===== Bandeau station plus fin ===== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '.station-fine{padding-top:2px !important;padding-bottom:2px !important;height:auto !important;}';
+  document.head.appendChild(st);
+
+  function tag() {
+    document.querySelectorAll('table').forEach(function (tb) {
+      Array.prototype.forEach.call(tb.rows, function (r) {
+        if (r.cells.length === 1 && r.cells[0].colSpan > 1) {
+          r.cells[0].classList.add('station-fine');
+        }
+      });
+    });
+  }
+
+  var t = null;
+  var obs = new MutationObserver(function () {
+    if (t) clearTimeout(t);
+    t = setTimeout(tag, 250);
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  tag();
+})();
