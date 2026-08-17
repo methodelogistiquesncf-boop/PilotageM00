@@ -41,11 +41,13 @@
     <h1>Pilotage M00</h1>
     <button class="subtitle version-link" id="appVersionBtn" onclick="openVersions()" title="Historique des versions">…</button>
   </div>
-  <div class="date-box">
+  <div class="date-status-col">
+    <div class="date-box">
     <label for="dateJour">Date du jour :</label>
     <input type="date" id="dateJour">
   </div>
-  <span id="fbStatus" class="sync">⏳ Connexion...</span>
+    <span id="fbStatus" class="sync">⏳ Connexion...</span>
+  </div>
   <!-- Onglets principaux -->
 <div class="main-tabs" id="mainTabs">
   <button class="main-tab active" id="tabViewSuivi" onclick="switchMainTab('suivi')">Supermarché</button>
