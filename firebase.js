@@ -1,5 +1,4 @@
-// firebase.js — v2 : split Firestore (historique + actions en collections séparées)
-// + purge automatique des données anciennes + backup localStorage
+// firebase.js — v3 : temps réel (onSnapshot) + split Firestore + purge auto
 
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
 
@@ -18,6 +17,11 @@ let saveTimer = null;
 let auth = null;
 let loadedActionIds = [];
 let loadedHistDates = [];
+let dirty = false;
+let pendingApply = false;
+let lastLocalSavedAt = '';
+let rtStarted = false;
+let remoteTimer = null;
 
 function setStatus(type, msg) {
   var el = document.getElementById('fbStatus');
@@ -152,7 +156,7 @@ export async function deleteUserDoc(uid) {
   await db.collection('users').doc(uid).delete();
 }
 
-// ─── Purge automatique des données anciennes ────────────────────────────────
+// ─── Purge automatique ──────────────────────────────────────────────────────
 function isoDaysAgo(n) {
   var d = new Date(); d.setDate(d.getDate() - n);
   return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
@@ -186,41 +190,59 @@ function purgeOldData() {
   }
 }
 
-// ─── Chargement (3 lectures parallèles : courant + historique + actions) ────
+// ─── Lecture complète (boot + refresh temps réel) ───────────────────────────
+async function fetchAll() {
+  var parts = FIRESTORE_DOC.split('/');
+  var snap = await db.collection(parts[0]).doc(parts[1]).get();
+  var patch = {};
+  var dateJourSaved = '';
+  var savedAt = '';
+  if (snap.exists) {
+    var data = snap.data() || {};
+    ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement'].forEach(function (k) {
+      if (data[k] !== undefined) patch[k] = data[k];
+    });
+    dateJourSaved = data.dateJour || '';
+    savedAt = data.savedAt || '';
+  }
+  var hist = {};
+  var histSnap = await db.collection('historique').get();
+  histSnap.forEach(function (d) { hist[d.id] = d.data(); });
+
+  var acts = [];
+  var actIds = [];
+  var actSnap = await db.collection('actions').get();
+  actSnap.forEach(function (d) {
+    var a = d.data() || {};
+    if (!a.id) a.id = d.id;
+    acts.push(a); actIds.push(d.id);
+  });
+
+  return { patch: patch, dateJourSaved: dateJourSaved, savedAt: savedAt, hist: hist, acts: acts, actIds: actIds };
+}
+
+function applyFetched(r) {
+  setState(r.patch);
+  state.historique = r.hist;
+  loadedHistDates = Object.keys(r.hist);
+  state.actions = r.acts;
+  loadedActionIds = r.actIds;
+  ensureFullStructure();
+  if (r.dateJourSaved) document.getElementById('dateJour').value = r.dateJourSaved;
+  lastLocalSavedAt = r.savedAt;
+}
+
+function rebuildUI() {
+  if (typeof window.rebuildAllViews === 'function') window.rebuildAllViews();
+}
+
 export async function loadFirebase() {
   try {
-    var parts = FIRESTORE_DOC.split('/');
-    var snap = await db.collection(parts[0]).doc(parts[1]).get();
-    var patch = {};
-    var dateJourSaved = '';
-    if (snap.exists) {
-      var data = snap.data() || {};
-      ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement'].forEach(function (k) {
-        if (data[k] !== undefined) patch[k] = data[k];
-      });
-      dateJourSaved = data.dateJour || '';
-    }
-
-    state.historique = {};
-    loadedHistDates = [];
-    var histSnap = await db.collection('historique').get();
-    histSnap.forEach(function (d) { state.historique[d.id] = d.data(); loadedHistDates.push(d.id); });
-
-    state.actions = [];
-    loadedActionIds = [];
-    var actSnap = await db.collection('actions').get();
-    actSnap.forEach(function (d) {
-      var a = d.data() || {};
-      if (!a.id) a.id = d.id;
-      state.actions.push(a);
-      loadedActionIds.push(d.id);
-    });
-
-    setState(patch);
-    ensureFullStructure();
+    var r = await fetchAll();
+    applyFetched(r);
     purgeOldData();
-    if (dateJourSaved) document.getElementById('dateJour').value = dateJourSaved;
     setStatus('ok', '✓ Synchronisé');
+    startRealtime();
   } catch (e) {
     setStatus('err', 'Erreur lecture Firebase');
     console.error(e);
@@ -228,7 +250,48 @@ export async function loadFirebase() {
   }
 }
 
-// ─── Sauvegarde (courant + historique du jour + sync actions) ───────────────
+// ─── Temps réel ─────────────────────────────────────────────────────────────
+function startRealtime() {
+  if (rtStarted || !db) return;
+  rtStarted = true;
+
+  db.collection('suivi').doc('default').onSnapshot(function (snap) {
+    if (!snap.exists) return;
+    var data = snap.data() || {};
+    if (data.savedAt && data.savedAt === lastLocalSavedAt) return; // ma propre écriture
+    handleRemote();
+  }, function (e) { console.error('RT suivi :', e); });
+
+  db.collection('historique').onSnapshot(function () {
+    handleRemote();
+  }, function (e) { console.error('RT historique :', e); });
+
+  db.collection('actions').onSnapshot(function () {
+    handleRemote();
+  }, function (e) { console.error('RT actions :', e); });
+}
+
+function handleRemote() {
+  if (dirty) {
+    // 🔑 protection : on attend que l'utilisateur sauvegarde ses saisies en cours
+    pendingApply = true;
+    setStatus('sync', '🔄 Modifs collègues reçues — application après ta sauvegarde');
+    return;
+  }
+  clearTimeout(remoteTimer);
+  remoteTimer = setTimeout(refreshFromServer, 400);
+}
+
+async function refreshFromServer() {
+  try {
+    var r = await fetchAll();
+    applyFetched(r);
+    rebuildUI();
+    setStatus('ok', '✓ Synchronisé (temps réel)');
+  } catch (e) { console.error(e); }
+}
+
+// ─── Sauvegarde ─────────────────────────────────────────────────────────────
 export async function saveFirebase() {
   var dateJour = document.getElementById('dateJour').value;
 
@@ -259,9 +322,9 @@ export async function saveFirebase() {
   if (!db) { setStatus('err', 'Firebase non connecté'); return; }
   try {
     setStatus('sync', 'Sauvegarde...');
+    var savedAt = new Date().toISOString();
     var parts = FIRESTORE_DOC.split('/');
 
-    // 1) Document courant (taille bornée : plus d'historique ni d'actions dedans)
     await db.collection(parts[0]).doc(parts[1]).set({
       S: state.S, S_SC: state.S_SC, S_TT: state.S_TT,
       headersData: state.headersData,
@@ -270,18 +333,16 @@ export async function saveFirebase() {
       colOrder: state.colOrder,
       rassemblement: state.rassemblement,
       dateJour: dateJour,
-      savedAt: new Date().toISOString()
+      savedAt: savedAt
     });
+    lastLocalSavedAt = savedAt;
 
-    // 2) Historique du jour (1 doc par date)
     if (dateJour && state.historique[dateJour]) {
       await db.collection('historique').doc(dateJour).set(state.historique[dateJour]);
     }
 
-    // 3) Sync des actions (écritures + suppressions)
     await syncActions();
 
-    // 4) Suppressions d'historique (purge ou bouton Supprimer du modal)
     var currentDates = Object.keys(state.historique);
     for (var i = 0; i < loadedHistDates.length; i++) {
       if (currentDates.indexOf(loadedHistDates[i]) === -1) {
@@ -290,7 +351,13 @@ export async function saveFirebase() {
     }
     loadedHistDates = currentDates;
 
+    dirty = false;
     setStatus('ok', '✓ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR'));
+
+    if (pendingApply) {
+      pendingApply = false;
+      refreshFromServer();
+    }
   } catch (e) {
     setStatus('err', 'Erreur sauvegarde');
     console.error(e);
@@ -315,6 +382,7 @@ async function syncActions() {
 }
 
 function scheduleAutoSave() {
+  dirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(function () { saveFirebase(); }, 3000);
   setStatus('sync', 'Modifications en cours...');

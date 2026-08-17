@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.17-4",
+    "date": "2026-08-17T11:25:43",
+    "message": "feat: temps réel onSnapshot (synchro multi-postes en direct)"
+  },
+  {
     "version": "v2026.08.17-3",
     "date": "2026-08-17T10:33:24",
     "message": "refactor: split Firestore (historique + actions séparés) + purge auto"

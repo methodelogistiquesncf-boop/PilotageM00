@@ -1,6 +1,4 @@
-// main.js — boot de l'application : auth, wiring des handlers, et exposition
-// sur window des fonctions référencées par les onclick="" du HTML existant
-// (le HTML n'a volontairement pas été réécrit, pour limiter le risque de régression).
+// main.js — boot de l'application + reconstruction des vues pour le temps réel
 
 import { initState, state, markDirty } from './state.js';
 import { initAuth, doLogout, saveFirebase } from './firebase.js';
@@ -17,7 +15,6 @@ import { openStats, closeStats, switchStatsTab } from './stats.js';
 import { buildActions, toggleShowDoneActions, exportActionsCSV, addManualAction } from './ui-actions.js';
 import { buildUsers } from './ui-users.js';
 
-// ─── Onglets principaux (Supermarché / Rassemblement / Actions / Utilisateurs / Aide) ──
 function switchMainTab(tab) {
   document.getElementById('tabViewSuivi').classList.toggle('active', tab === 'suivi');
   document.getElementById('tabViewManquants').classList.toggle('active', tab === 'manquants');
@@ -33,7 +30,16 @@ function switchMainTab(tab) {
   if (tab === 'users') buildUsers();
 }
 
-// ─── Fonctions exposées sur window pour les onclick="" du HTML ──────────────
+// 🔑 Temps réel : appelé par firebase.js quand des données collègues arrivent
+window.rebuildAllViews = function () {
+  build();
+  buildRassemblement();
+  buildActions();
+  if (state.currentUserRole === 'Administrateur' &&
+      document.getElementById('panelUsers').classList.contains('active')) buildUsers();
+  if (document.getElementById('histOverlay').classList.contains('open')) renderHistTable();
+};
+
 Object.assign(window, {
   switchMainTab,
   doLogout,
@@ -61,19 +67,14 @@ Object.assign(window, {
   addManualAction,
 });
 
-// ─── Fermeture des modals au clic sur l'overlay ──────────────────────────────
 ['histOverlay', 'chartOverlay', 'statsOverlay'].forEach(function (id) {
   document.getElementById(id).addEventListener('click', function (e) {
     if (e.target === this) this.classList.remove('open');
   });
 });
 
-// Changer la date du jour doit déclencher la sauvegarde automatique comme
-// n'importe quelle autre modification — sinon rien ne se sauvegarde tant
-// qu'on ne touche pas une autre case ensuite (ou qu'on clique "Sauvegarder").
 document.getElementById('dateJour').addEventListener('change', function () { markDirty(); });
 
-// ─── Boot ─────────────────────────────────────────────────────────────────
 function finishBoot() {
   build();
   buildRassemblement();
