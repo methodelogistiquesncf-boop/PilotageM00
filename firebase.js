@@ -1,6 +1,7 @@
-// firebase.js — authentification, chargement/sauvegarde Firestore et backup localStorage
+// firebase.js — v2 : split Firestore (historique + actions en collections séparées)
+// + purge automatique des données anciennes + backup localStorage
 
-import { state, setState, onDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
+import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDIOc6PJ42tmuEejKxph3bPKbgBJGWM-aw",
@@ -15,6 +16,8 @@ const FIRESTORE_DOC = "suivi/default";
 let db = null;
 let saveTimer = null;
 let auth = null;
+let loadedActionIds = [];
+let loadedHistDates = [];
 
 function setStatus(type, msg) {
   var el = document.getElementById('fbStatus');
@@ -31,7 +34,6 @@ export function initAuth(onLogin) {
   auth = firebase.auth();
   auth.onAuthStateChanged(function (user) {
     if (!user) { window.location.href = 'login.html'; return; }
-    document.getElementById('userEmail').textContent = '👤 ' + user.email;
     document.getElementById('userBadge').style.display = 'flex';
     db = firebase.firestore();
     setStatus('sync', 'Chargement...');
@@ -150,31 +152,75 @@ export async function deleteUserDoc(uid) {
   await db.collection('users').doc(uid).delete();
 }
 
+// ─── Purge automatique des données anciennes ────────────────────────────────
+function isoDaysAgo(n) {
+  var d = new Date(); d.setDate(d.getDate() - n);
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+
+function purgeOldData() {
+  var changed = false;
+  var cut90 = isoDaysAgo(90);
+  var cut540 = isoDaysAgo(540);
+
+  var nAct = state.actions.length;
+  state.actions = state.actions.filter(function (a) {
+    return !(a.done && (a.doneAt || '').slice(0, 10) && (a.doneAt || '').slice(0, 10) < cut90);
+  });
+  if (state.actions.length !== nAct) changed = true;
+
+  Object.keys(state.historique).forEach(function (d) {
+    if (d < cut540) { delete state.historique[d]; changed = true; }
+  });
+
+  var nRas = state.rassemblement.length;
+  state.rassemblement = state.rassemblement.filter(function (sec) {
+    var allRecu = sec.rows && sec.rows.length > 0 && sec.rows.every(function (r) { return r.recu; });
+    return !(allRecu && sec.date && sec.date < cut90);
+  });
+  if (state.rassemblement.length !== nRas) changed = true;
+
+  if (changed) {
+    console.info('🧹 Purge automatique des données anciennes effectuée');
+    markDirty();
+  }
+}
+
+// ─── Chargement (3 lectures parallèles : courant + historique + actions) ────
 export async function loadFirebase() {
   try {
     var parts = FIRESTORE_DOC.split('/');
     var snap = await db.collection(parts[0]).doc(parts[1]).get();
+    var patch = {};
+    var dateJourSaved = '';
     if (snap.exists) {
-      var data = snap.data();
-      var patch = {};
-      if (data.S) patch.S = data.S;
-      if (data.S_SC) patch.S_SC = data.S_SC;
-      if (data.S_TT) patch.S_TT = data.S_TT;
-      if (data.headersData) patch.headersData = data.headersData;
-      if (data.enginLabels) patch.enginLabels = data.enginLabels;
-      if (data.enginLabels_SC) patch.enginLabels_SC = data.enginLabels_SC;
-      if (data.enginLabels_TT) patch.enginLabels_TT = data.enginLabels_TT;
-      if (data.synthCols) patch.synthCols = data.synthCols;
-      if (data.historique) patch.historique = data.historique;
-      if (data.colOrder) patch.colOrder = data.colOrder;
-      if (data.rassemblement) patch.rassemblement = data.rassemblement;
-      if (data.actions) patch.actions = data.actions;
-      setState(patch); ensureFullStructure();
-      if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
-      setStatus('ok', '✓ Synchronisé');
-    } else {
-      setStatus('ok', 'Nouveau document');
+      var data = snap.data() || {};
+      ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement'].forEach(function (k) {
+        if (data[k] !== undefined) patch[k] = data[k];
+      });
+      dateJourSaved = data.dateJour || '';
     }
+
+    state.historique = {};
+    loadedHistDates = [];
+    var histSnap = await db.collection('historique').get();
+    histSnap.forEach(function (d) { state.historique[d.id] = d.data(); loadedHistDates.push(d.id); });
+
+    state.actions = [];
+    loadedActionIds = [];
+    var actSnap = await db.collection('actions').get();
+    actSnap.forEach(function (d) {
+      var a = d.data() || {};
+      if (!a.id) a.id = d.id;
+      state.actions.push(a);
+      loadedActionIds.push(d.id);
+    });
+
+    setState(patch);
+    ensureFullStructure();
+    purgeOldData();
+    if (dateJourSaved) document.getElementById('dateJour').value = dateJourSaved;
+    setStatus('ok', '✓ Synchronisé');
   } catch (e) {
     setStatus('err', 'Erreur lecture Firebase');
     console.error(e);
@@ -182,6 +228,7 @@ export async function loadFirebase() {
   }
 }
 
+// ─── Sauvegarde (courant + historique du jour + sync actions) ───────────────
 export async function saveFirebase() {
   var dateJour = document.getElementById('dateJour').value;
 
@@ -198,34 +245,73 @@ export async function saveFirebase() {
     state.historique[dateJour] = entree;
   }
 
-  var payload = {
-    S: state.S,
-    S_SC: state.S_SC,
-    S_TT: state.S_TT,
-    headersData: state.headersData,
-    enginLabels: state.enginLabels,
-    enginLabels_SC: state.enginLabels_SC,
-    enginLabels_TT: state.enginLabels_TT,
-    synthCols: state.synthCols,
-    historique: state.historique,
-    colOrder: state.colOrder,
-    rassemblement: state.rassemblement,
-    actions: state.actions,
-    dateJour: dateJour,
-    savedAt: new Date().toISOString()
-  };
-  localStorage.setItem('sp_backup', JSON.stringify(payload));
+  try {
+    localStorage.setItem('sp_backup', JSON.stringify({
+      S: state.S, S_SC: state.S_SC, S_TT: state.S_TT,
+      headersData: state.headersData,
+      enginLabels: state.enginLabels, enginLabels_SC: state.enginLabels_SC, enginLabels_TT: state.enginLabels_TT,
+      synthCols: state.synthCols, historique: state.historique,
+      colOrder: state.colOrder, rassemblement: state.rassemblement, actions: state.actions,
+      dateJour: dateJour, savedAt: new Date().toISOString()
+    }));
+  } catch (e) {}
 
   if (!db) { setStatus('err', 'Firebase non connecté'); return; }
   try {
     setStatus('sync', 'Sauvegarde...');
     var parts = FIRESTORE_DOC.split('/');
-    await db.collection(parts[0]).doc(parts[1]).set(payload);
+
+    // 1) Document courant (taille bornée : plus d'historique ni d'actions dedans)
+    await db.collection(parts[0]).doc(parts[1]).set({
+      S: state.S, S_SC: state.S_SC, S_TT: state.S_TT,
+      headersData: state.headersData,
+      enginLabels: state.enginLabels, enginLabels_SC: state.enginLabels_SC, enginLabels_TT: state.enginLabels_TT,
+      synthCols: state.synthCols,
+      colOrder: state.colOrder,
+      rassemblement: state.rassemblement,
+      dateJour: dateJour,
+      savedAt: new Date().toISOString()
+    });
+
+    // 2) Historique du jour (1 doc par date)
+    if (dateJour && state.historique[dateJour]) {
+      await db.collection('historique').doc(dateJour).set(state.historique[dateJour]);
+    }
+
+    // 3) Sync des actions (écritures + suppressions)
+    await syncActions();
+
+    // 4) Suppressions d'historique (purge ou bouton Supprimer du modal)
+    var currentDates = Object.keys(state.historique);
+    for (var i = 0; i < loadedHistDates.length; i++) {
+      if (currentDates.indexOf(loadedHistDates[i]) === -1) {
+        await db.collection('historique').doc(loadedHistDates[i]).delete();
+      }
+    }
+    loadedHistDates = currentDates;
+
     setStatus('ok', '✓ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR'));
   } catch (e) {
     setStatus('err', 'Erreur sauvegarde');
     console.error(e);
   }
+}
+
+async function syncActions() {
+  var currentIds = {};
+  state.actions.forEach(function (a) { if (a.id) currentIds[a.id] = true; });
+  var ops = [];
+  loadedActionIds.forEach(function (id) { if (!currentIds[id]) ops.push({ del: id }); });
+  state.actions.forEach(function (a) { if (a.id) ops.push({ set: a }); });
+  for (var s = 0; s < ops.length; s += 450) {
+    var batch = db.batch();
+    ops.slice(s, s + 450).forEach(function (op) {
+      if (op.del) batch.delete(db.collection('actions').doc(op.del));
+      else batch.set(db.collection('actions').doc(op.set.id), op.set);
+    });
+    await batch.commit();
+  }
+  loadedActionIds = Object.keys(currentIds);
 }
 
 function scheduleAutoSave() {
@@ -241,18 +327,9 @@ export function loadLocal() {
     if (!bk) return;
     var data = JSON.parse(bk);
     var patch = {};
-    if (data.S) patch.S = data.S;
-    if (data.S_SC) patch.S_SC = data.S_SC;
-    if (data.S_TT) patch.S_TT = data.S_TT;
-    if (data.headersData) patch.headersData = data.headersData;
-    if (data.enginLabels) patch.enginLabels = data.enginLabels;
-    if (data.enginLabels_SC) patch.enginLabels_SC = data.enginLabels_SC;
-    if (data.enginLabels_TT) patch.enginLabels_TT = data.enginLabels_TT;
-    if (data.synthCols) patch.synthCols = data.synthCols;
-    if (data.historique) patch.historique = data.historique;
-    if (data.colOrder) patch.colOrder = data.colOrder;
-    if (data.rassemblement) patch.rassemblement = data.rassemblement;
-    if (data.actions) patch.actions = data.actions;
+    ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'historique', 'colOrder', 'rassemblement', 'actions'].forEach(function (k) {
+      if (data[k] !== undefined) patch[k] = data[k];
+    });
     setState(patch); ensureFullStructure();
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
   } catch (e) { console.error(e); }
