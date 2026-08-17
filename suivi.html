@@ -13,7 +13,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      var vEl = document.getElementById('appVersion');
+      var vEl = document.getElementById('appVersionBtn');
       if (vEl && window.APP_VERSION) vEl.textContent = window.APP_VERSION;
 
       var hadController = !!navigator.serviceWorker.controller;
@@ -256,5 +256,52 @@
 <script type="module" src="main.js"></script>
 <script src="recette.js"></script>
 <script src="fusion-emplacement.js"></script>
+
+<!-- Modal Historique des versions -->
+<div class="modal-overlay" id="versionsOverlay">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeVersions()">&#x2715;</button>
+    <h2>📦 Historique des versions</h2>
+    <div id="versionsList" class="versions-list"></div>
+  </div>
+</div>
+<style>
+  .version-link { background:none; border:none; cursor:pointer; font-size:13px; color:var(--accent); font-weight:700; padding:0; font-family:inherit; }
+  .version-link:hover { text-decoration:underline; }
+  .versions-list { display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; }
+  .version-entry { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; background:var(--surface2); }
+  .version-entry.current { border-color:var(--accent); background:var(--accent-light); }
+  .version-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .version-tag { font-weight:700; color:var(--text); }
+  .version-current { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--accent); }
+  .version-date { margin-left:auto; font-size:12px; color:var(--muted); }
+  .version-msg { font-size:13px; color:var(--text); }
+</style>
+<script>
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function openVersions() {
+    var hist = window.APP_HISTORY || [];
+    var cur = window.APP_VERSION || 'dev';
+    var list = document.getElementById('versionsList');
+    if (!hist.length) {
+      list.innerHTML = '<p style="color:var(--muted)">Aucun historique disponible.</p>';
+    } else {
+      list.innerHTML = hist.map(function (h) {
+        var d = h.date ? new Date(h.date) : null;
+        var ds = d ? d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+        return '<div class="version-entry' + (h.version === cur ? ' current' : '') + '">' +
+          '<div class="version-head"><span class="version-tag">' + esc(h.version) + '</span>' +
+          (h.version === cur ? '<span class="version-current">actuelle</span>' : '') +
+          '<span class="version-date">' + ds + '</span></div>' +
+          '<div class="version-msg">' + esc(h.message || '') + '</div></div>';
+      }).join('');
+    }
+    document.getElementById('versionsOverlay').classList.add('open');
+  }
+  function closeVersions() { document.getElementById('versionsOverlay').classList.remove('open'); }
+  document.getElementById('versionsOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeVersions();
+  });
+</script>
 </body>
 </html>
