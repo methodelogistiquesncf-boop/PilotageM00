@@ -1,56 +1,45 @@
-// sw.js — Service Worker Pilotage M00 (PWA)
-var CACHE = 'pilotage-m00-v1';
-var APP_SHELL = [
-  'login.html',
-  'suivi.html',
-  'suivi.css',
-  'main.js',
-  'state.js',
-  'firebase.js',
-  'ui-supermarche.js',
-  'ui-rassemblement.js',
-  'ui-actions.js',
-  'ui-users.js',
-  'stats.js',
-  'chart.js',
-  'responsable-field.js',
-  'manifest.json',
-  'icons/logo.svg'
+/* sw.js — Service worker : versionning, mise à jour auto, mode hors-ligne */
+importScripts('version.js');
+
+var VERSION = self.APP_VERSION || 'dev';
+var CACHE_NAME = 'pilotage-m00-' + VERSION;
+
+var CORE = [
+  'suivi.html', 'login.html',
+  'manifest.json', 'icons/logo.svg',
+  'suivi.css', 'version.js',
+  'main.js', 'state.js', 'firebase.js', 'chart.js', 'stats.js',
+  'ui-supermarche.js', 'ui-rassemblement.js', 'ui-actions.js', 'ui-users.js',
+  'responsable-field.js', 'recette.js', 'fusion-emplacement.js'
 ];
 
-self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (cache) { return cache.addAll(APP_SHELL); }));
-  self.skipWaiting();
+self.addEventListener('install', function (event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(function (cache) { return cache.addAll(CORE); })
+      .then(function () { return self.skipWaiting(); })
+  );
 });
 
-self.addEventListener('activate', function (e) {
-  e.waitUntil(
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+      return Promise.all(keys.filter(function (k) { return k !== CACHE_NAME; })
+                               .map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
 });
 
-// Réseau d'abord (toujours à jour), cache en secours (hors-ligne)
-self.addEventListener('fetch', function (e) {
-  var req = e.request;
-  if (req.method !== 'GET') return;
-  var url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-
-  e.respondWith(
-    fetch(req).then(function (response) {
-      if (response && response.ok) {
-        var clone = response.clone();
-        caches.open(CACHE).then(function (cache) { cache.put(req, clone); });
-      }
-      return response;
+self.addEventListener('fetch', function (event) {
+  if (event.request.method !== 'GET') return;
+  /* 🔑 Network-first : toujours la dernière version en ligne, cache hors-ligne */
+  event.respondWith(
+    fetch(event.request, { cache: 'no-store' }).then(function (res) {
+      var clone = res.clone();
+      caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, clone); });
+      return res;
     }).catch(function () {
-      return caches.match(req).then(function (cached) {
-        if (cached) return cached;
-        if (req.mode === 'navigate') return caches.match('suivi.html');
-        return Response.error();
-      });
+      return caches.match(event.request);
     })
   );
 });

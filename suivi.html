@@ -9,10 +9,28 @@
 <meta name="theme-color" content="#1a4fa0">
 <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
 <link rel="apple-touch-icon" href="icons/logo.svg">
+<script src="version.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function (e) { console.error('SW :', e); });
+      var vEl = document.getElementById('appVersion');
+      if (vEl && window.APP_VERSION) vEl.textContent = window.APP_VERSION;
+
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloading = false;
+
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        setInterval(function () { reg.update(); }, 60000);
+      }).catch(function (e) { console.error('SW :', e); });
+
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloading) return;
+        reloading = true;
+        var go = function () { window.location.reload(); };
+        if (typeof window.saveFirebase === 'function') {
+          Promise.resolve(window.saveFirebase()).then(go).catch(go);
+        } else { go(); }
+      });
     });
   }
 </script>
