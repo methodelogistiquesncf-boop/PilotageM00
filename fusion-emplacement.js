@@ -1,4 +1,4 @@
-/* fusion-emplacement.js — v7 : plus de rétrécissement au clic */
+/* fusion-emplacement.js — v9 : resize Rassemblement sans débordement + message d'aide */
 (function () {
   'use strict';
 
@@ -12,7 +12,11 @@
     '.station-vert{background:#00a300 !important;color:#ffffff !important;}' +
     '.station-bleu,.station-jaune,.station-vert{border:1px solid #000 !important;box-shadow:0 -2px 0 0 #000 !important;}' +
     '.col-resize-handle{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:9;}' +
-    '.col-resize-handle:hover,.col-resize-handle.active{background:rgba(0,0,0,.3);}';
+    '.col-resize-handle:hover,.col-resize-handle.active{background:rgba(0,0,0,.3);}' +
+    '.ras-resize-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);' +
+    'background:#111827;color:#fff;font-size:12px;font-weight:600;padding:8px 16px;border-radius:20px;' +
+    'opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.25);}' +
+    '.ras-resize-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}';
   document.head.appendChild(style);
 
   var LABELS = ['ENGIN', 'APPROS', 'PIECES DEPOSEES', 'PIÈCES DÉPOSÉES'];
@@ -114,6 +118,20 @@
     return el.clientWidth - pad;
   }
 
+  /* ----- Message d'aide (toast) ----- */
+  var toastEl = null, toastTimer = null;
+  function showToast(msg) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'ras-resize-toast';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2000);
+  }
+
   function setRasColWidth(table, idx, w) {
     var cols = table.querySelectorAll('col');
     if (cols.length > idx) cols[idx].style.width = (w === '' ? '' : w + 'px');
@@ -132,24 +150,7 @@
       r.cells[c].style.width = '';
       r.cells[c].style.minWidth = '';
     }
-  }
-
-  function restoreRas(table) {
-    try {
-      var saved = localStorage.getItem('cols-rassemblement');
-      if (!saved) return false;
-      var widths = JSON.parse(saved);
-      var r = firstMultiRow(table);
-      if (!r) return false;
-      for (var c = 0; c < widths.length && c < r.cells.length; c++) {
-        if (widths[c] > 30) setRasColWidth(table, c, widths[c]);
-      }
-      if (table.getBoundingClientRect().width > availWidth(table) + 4) {
-        clearRasWidths(table);
-        return false;
-      }
-      return true;
-    } catch (e) { return false; }
+    table.style.width = '';
   }
 
   function saveRas(table) {
@@ -162,6 +163,21 @@
       }
       localStorage.setItem('cols-rassemblement', JSON.stringify(widths));
     } catch (e) {}
+  }
+
+  function restoreRas(table) {
+    try {
+      var savedRaw = localStorage.getItem('cols-rassemblement');
+      if (!savedRaw) return false;
+      var saved = JSON.parse(savedRaw);
+      var widths = Array.isArray(saved) ? saved : (saved.cols || []);
+      var r = firstMultiRow(table);
+      if (!r) return false;
+      for (var c = 0; c < widths.length && c < r.cells.length; c++) {
+        if (widths[c] > 30) setRasColWidth(table, c, widths[c]);
+      }
+      return true;
+    } catch (e) { return false; }
   }
 
   function makeResizable(table) {
@@ -184,11 +200,20 @@
         var startX = e.pageX;
         var startW = cell.getBoundingClientRect().width;
         var avail = availWidth(table);
+        var warned = false;
         function move(ev) {
           var w = Math.max(40, startW + (ev.pageX - startX));
-          var projected = table.getBoundingClientRect().width - startW + w;
-          if (projected > avail) w = Math.max(40, w - (projected - avail));
           setRasColWidth(table, idx, w);
+          /* 🔑 v9 : si le tableau déborde du conteneur, on rétrécit au max possible */
+          var tw = table.getBoundingClientRect().width;
+          if (tw > avail + 2) {
+            w = Math.max(40, w - (tw - avail));
+            setRasColWidth(table, idx, w);
+            if (!warned) {
+              warned = true;
+              showToast('⚠️ Place maximale atteinte — réduisez d\u2019autres colonnes pour agrandir celle-ci');
+            }
+          }
         }
         function up() {
           h.classList.remove('active');
