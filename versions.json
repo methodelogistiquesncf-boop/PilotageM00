@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-10",
+    "date": "2026-08-18T11:33:38",
+    "message": "fix: suppression définitive du trait parasite (rangée hors tableau)"
+  },
+  {
     "version": "v2026.08.18-9",
     "date": "2026-08-18T11:33:30",
     "message": "fix: suppression définitive du trait parasite (rangée hors tableau)"
