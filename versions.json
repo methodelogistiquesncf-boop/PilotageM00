@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-1",
+    "date": "2026-08-18T06:56:13",
+    "message": "ui: suppression du texte ENGIN dans le supermarché"
+  },
+  {
     "version": "v2026.08.17-4",
     "date": "2026-08-17T11:25:43",
     "message": "feat: temps réel onSnapshot (synchro multi-postes en direct)"

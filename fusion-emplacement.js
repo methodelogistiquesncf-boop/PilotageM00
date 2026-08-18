@@ -79,7 +79,7 @@
         continue;
       }
 
-      if (norm(first.textContent) !== 'ENGIN') continue;
+      if (!row.classList.contains('row-engin') && norm(first.textContent) !== 'ENGIN') continue;
       if (row.dataset.emplDone) continue;
       var next = rows[i + 1];
       if (!next || !isEmplRow(next)) continue;

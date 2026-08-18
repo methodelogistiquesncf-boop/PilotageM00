@@ -194,7 +194,7 @@ function buildBody() {
 
     ENGINS_CONFIG.forEach(function (e) {
       var rEngin = document.createElement('tr'); rEngin.className = 'row-engin';
-      var tdLbl = document.createElement('td'); tdLbl.textContent = 'ENGIN'; rEngin.appendChild(tdLbl);
+      var tdLbl = document.createElement('td'); rEngin.appendChild(tdLbl);
       for (var d = 0; d < D_FIXED; d++) {
         var td = document.createElement('td'); td.className = 'loco-cell';
         td.appendChild(makeLoco_fixed(zone.data, e.id, state.colOrder[d])); rEngin.appendChild(td);
