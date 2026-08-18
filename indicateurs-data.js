@@ -44,7 +44,7 @@ function toast(msg) {
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3000);
+  toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 7000);
 }
 
 export async function recordJourPoint(kind, idx, j) {
