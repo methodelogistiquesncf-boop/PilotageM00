@@ -14,6 +14,7 @@ import {
 import { openStats, closeStats, switchStatsTab } from './stats.js';
 import { buildActions, toggleShowDoneActions, exportActionsCSV, addManualAction } from './ui-actions.js';
 import { buildUsers } from './ui-users.js';
+import { buildRolesAdmin } from './ui-roles.js';
 
 function switchMainTab(tab) {
   document.getElementById('tabViewSuivi').classList.toggle('active', tab === 'suivi');
@@ -27,7 +28,7 @@ function switchMainTab(tab) {
   document.getElementById('panelUsers').classList.toggle('active', tab === 'users');
   document.getElementById('panelAide').classList.toggle('active', tab === 'aide');
   if (tab === 'actions') buildActions();
-  if (tab === 'users') buildUsers();
+  if (tab === 'users') { buildUsers(); buildRolesAdmin(); }
 }
 
 // 🔑 Temps réel : appelé par firebase.js quand des données collègues arrivent

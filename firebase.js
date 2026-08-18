@@ -1,6 +1,6 @@
 // firebase.js — v3 : temps réel (onSnapshot) + split Firestore + purge auto
 
-import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure } from './state.js';
+import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles } from './state.js';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDIOc6PJ42tmuEejKxph3bPKbgBJGWM-aw",
@@ -201,7 +201,7 @@ async function fetchAll() {
   var savedAt = '';
   if (snap.exists) {
     var data = snap.data() || {};
-    ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement'].forEach(function (k) {
+    ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement', 'customRoles'].forEach(function (k) {
       if (data[k] !== undefined) patch[k] = data[k];
     });
     dateJourSaved = data.dateJour || '';
@@ -230,6 +230,7 @@ function applyFetched(r) {
   state.actions = r.acts;
   loadedActionIds = r.actIds;
   ensureFullStructure();
+  setCustomRoles(state.customRoles || []);
   if (r.dateJourSaved) document.getElementById('dateJour').value = r.dateJourSaved;
   lastLocalSavedAt = r.savedAt;
 }
@@ -334,6 +335,7 @@ export async function saveFirebase() {
       synthCols: state.synthCols,
       colOrder: state.colOrder,
       rassemblement: state.rassemblement,
+      customRoles: state.customRoles || [],
       dateJour: dateJour,
       savedAt: savedAt
     });

@@ -8,7 +8,13 @@ export const ENGINS_CONFIG = [
 ];
 export const D_FIXED = 4;
 
-export const ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérateur', 'Administrateur'];
+export const BASE_ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérateur', 'Administrateur'];
+export const ROLES = BASE_ROLES.slice();
+export function setCustomRoles(list) {
+  ROLES.length = 0;
+  BASE_ROLES.forEach(function (r) { ROLES.push(r); });
+  (list || []).forEach(function (r) { if (ROLES.indexOf(r) === -1) ROLES.push(r); });
+}
 
 export const state = {
   S: {},
@@ -25,6 +31,7 @@ export const state = {
   showRecus: false,
   actions: [],
   showDoneActions: false,
+  customRoles: [],
   currentUserUid: '',
   currentUserEmail: '',
   currentUserRole: '',
