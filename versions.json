@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-5",
+    "date": "2026-08-18T09:56:52",
+    "message": "perf: affichage accéléré de la page Indicateurs"
+  },
+  {
     "version": "v2026.08.18-4",
     "date": "2026-08-18T09:50:27",
     "message": "ui: affichage franc de la page Indicateurs (anti-flash)"
