@@ -112,44 +112,70 @@ function buildHeader() {
   for (var i = 0; i < rows.length; i++) fillHeaderRow(rows[i]);
 }
 
-// 🔥 Rangée de boutons J-0 / J-3 au-dessus des colonnes de dates
-// (raccordement à une fonction ultérieurement via data-kind / data-idx / data-j)
+// 🔥 Boutons J-0 / J-3 : barre FLOTTANTE au-dessus du tableau,
+// alignée sur les colonnes de dates (hors tableau → zéro impact layout).
+// Raccordement ultérieur via data-kind / data-idx / data-j.
 function buildJourButtonsRow() {
-  var thead = document.querySelector('#mainTable thead');
-  if (!thead) return;
-  thead.parentNode.classList.add('has-jbtns');
-  var row = document.getElementById('jourBtnRow');
-  if (!row) {
-    row = document.createElement('tr');
-    row.id = 'jourBtnRow';
-    row.className = 'row-jbtns';
-    thead.insertBefore(row, thead.firstChild);
+  var table = document.getElementById('mainTable');
+  var wrap = table ? table.parentNode : null;
+  if (!wrap) return;
+
+  // nettoie l'ancienne version (rangée dans le tableau)
+  var oldRow = document.getElementById('jourBtnRow');
+  if (oldRow) oldRow.remove();
+  table.classList.remove('has-jbtns');
+
+  var bar = document.getElementById('jbtnsBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'jbtnsBar';
+    bar.className = 'jbtns-bar';
+    wrap.insertBefore(bar, table);
   }
-  while (row.firstChild) row.removeChild(row.firstChild);
+  bar.innerHTML = '';
 
-  var th0 = document.createElement('th');
-  th0.className = 'th-top th-label';
-  th0.style.width = '110px';
-  row.appendChild(th0);
+  var cols = [];
+  for (var d = 0; d < D_FIXED; d++) cols.push({ kind: 'fixed', idx: d });
+  state.synthCols.forEach(function (c) { cols.push({ kind: 'synth', idx: c.id }); });
 
-  function addBtnCell(kind, idx) {
-    var th = document.createElement('th');
-    th.className = 'th-top th-jbtns';
+  cols.forEach(function (c) {
+    var g = document.createElement('div');
+    g.className = 'jbtns-group';
     var b0 = document.createElement('button');
     b0.type = 'button'; b0.className = 'btn-j0'; b0.textContent = 'J-0';
     b0.title = 'Action J-0 (à raccorder)';
-    b0.setAttribute('data-kind', kind); b0.setAttribute('data-idx', String(idx)); b0.setAttribute('data-j', '0');
+    b0.setAttribute('data-kind', c.kind); b0.setAttribute('data-idx', String(c.idx)); b0.setAttribute('data-j', '0');
     var b3 = document.createElement('button');
     b3.type = 'button'; b3.className = 'btn-j3'; b3.textContent = 'J-3';
     b3.title = 'Action J-3 (à raccorder)';
-    b3.setAttribute('data-kind', kind); b3.setAttribute('data-idx', String(idx)); b3.setAttribute('data-j', '3');
-    th.appendChild(b0); th.appendChild(b3);
-    row.appendChild(th);
-  }
+    b3.setAttribute('data-kind', c.kind); b3.setAttribute('data-idx', String(c.idx)); b3.setAttribute('data-j', '3');
+    g.appendChild(b0); g.appendChild(b3);
+    bar.appendChild(g);
+  });
 
-  for (var d = 0; d < D_FIXED; d++) addBtnCell('fixed', d);
-  state.synthCols.forEach(function (col) { addBtnCell('synth', col.id); });
+  positionJourButtons();
+  requestAnimationFrame(positionJourButtons);
+  if (!window.__jbtnRO && typeof ResizeObserver !== 'undefined') {
+    window.__jbtnRO = new ResizeObserver(function () { positionJourButtons(); });
+    window.__jbtnRO.observe(table);
+  }
 }
+
+function positionJourButtons() {
+  var bar = document.getElementById('jbtnsBar');
+  var headerRow = document.getElementById('headerRow');
+  if (!bar || !headerRow) return;
+  var barRect = bar.getBoundingClientRect();
+  var groups = bar.querySelectorAll('.jbtns-group');
+  var cells = headerRow.cells;
+  var gi = 0;
+  for (var c = 1; c < cells.length && gi < groups.length; c++, gi++) {
+    var r = cells[c].getBoundingClientRect();
+    groups[gi].style.left = (r.left - barRect.left) + 'px';
+    groups[gi].style.width = r.width + 'px';
+  }
+}
+window.addEventListener('resize', positionJourButtons);
 
 function syncJourInputs(kind, idx, value) {
   var sel = 'tr.header-row input.th-j[data-jour-kind="' + kind + '"][data-jour-idx="' + idx + '"]';
