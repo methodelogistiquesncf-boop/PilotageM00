@@ -127,59 +127,79 @@
   <div class="aide-wrap">
 
     <div class="aide-section">
-      <h3>🛒 Onglet Supermarché</h3>
-      <p>Le tableau principal, un bloc par engin (P18, P26...). Chaque bloc contient une ligne "N° engin" puis une section par type de suivi (APPROS, PIÈCES DÉPOSÉES). Les colonnes correspondent aux 4 derniers jours (J0 à J-3, dates modifiables en cliquant dessus) et, si besoin, à des colonnes de synthèse ajoutées manuellement.</p>
+      <h3>🖥️ Barre du haut & navigation</h3>
       <ul>
-        <li><strong>Remarques</strong> — une ou plusieurs lignes de texte par case. « + ligne » en ajoute une, ✕ en supprime une. Le bouton <strong>→</strong> sur une ligne (ou sur toute la cellule, à côté du score) envoie le texte vers l'onglet <strong>Actions</strong> pour en faire un suivi avec responsable et échéance.</li>
-        <li><strong>Points OK / NOK</strong> — les deux ronds à gauche du score marquent l'état : vert = conforme, rouge = non conforme (cliquer à nouveau désactive). Un score sur fond rouge dans les Actions signale une remarque liée à un point NOK.</li>
-        <li><strong>Score</strong> — champ libre au format <code>0/0</code>, utilisé aussi dans les graphiques de taux de réalisation.</li>
-        <li><strong>+ Ajouter colonne synthèse</strong> — crée une colonne supplémentaire (ex. bilan de semaine), supprimable individuellement via son bouton "✕ Supprimer".</li>
-        <li><strong>Historique</strong> — chaque sauvegarde archive l'état du jour ; la modal Historique permet de consulter/filtrer par date et de supprimer une entrée.</li>
-        <li><strong>Graphiques</strong> — évolution du taux de réalisation par section (APPROS / PIÈCES DÉPOSÉES), en vue courante (4 jours) ou sur tout l'historique.</li>
-        <li><strong>Exporter CSV / Réinitialiser</strong> — export du tableau du jour ; réinitialiser vide le tableau courant (l'historique n'est pas touché).</li>
+        <li><strong>Version (sous le titre)</strong> — un clic affiche l’historique des mises à jour (numéro, date, contenu). Les nouvelles versions arrivent automatiquement sur tous les postes : l’application sauvegarde vos saisies en cours puis se recharge toute seule.</li>
+        <li><strong>Date du jour</strong> — référence partagée du tableau ; la modifier déclenche une sauvegarde.</li>
+        <li><strong>Statut</strong> — « Modifications en cours… » puis « ✓ Sauvegardé » ; « ✓ Synchronisé (temps réel) » quand les données des collègues sont reçues.</li>
+        <li><strong>Onglets</strong> — Supermarché, Rassemblement, Actions, Indicateurs (page dédiée), Utilisateurs (administrateurs), Aide.</li>
+        <li><strong>Déconnexion / Imprimer</strong> — à droite de la barre.</li>
+      </ul>
+    </div>
+
+    <div class="aide-section">
+      <h3>🛒 Onglet Supermarché</h3>
+      <p>Un tableau par station : Sous-caisse (bleu), Terre-plein (vert), Toiture (jaune). Chaque station liste les engins (libellés modifiables) avec, pour chaque jour (J0 à J-3), le n° d’engin et les sections APPROS / PIÈCES DÉPOSÉES.</p>
+      <ul>
+        <li><strong>Dates & jours</strong> — cliquer sur une date en tête de colonne pour la modifier ; le libellé J0 / J-1… est éditable.</li>
+        <li><strong>Lignes de remarque</strong> — APPROS : champs KIT + SYMBOLE ; PIÈCES DÉPOSÉES : champ KIT uniquement. « + ligne » ajoute, ✕ supprime.</li>
+        <li><strong>Bouton → d’une ligne</strong> — envoie cette ligne (KIT / SYMBOLE) vers l’onglet Actions.</li>
+        <li><strong>Points OK / NOK</strong> — ronds vert / rouge à gauche du score ; recliquer désactive.</li>
+        <li><strong>Score</strong> — champ libre au format 0/0, utilisé pour les taux de réalisation.</li>
+        <li><strong>Bouton → à côté du score</strong> — envoie toute la cellule (toutes ses lignes) vers Actions.</li>
+        <li><strong>Boutons J-0 / J-3</strong> — verts et oranges au-dessus des colonnes de dates (fonction à venir).</li>
       </ul>
     </div>
 
     <div class="aide-section">
       <h3>📦 Onglet Rassemblement</h3>
-      <p>Suivi des articles manquants, regroupés par date (« + Ajouter une date »). Dans chaque section : une ligne par article manquant (engin, kit, symbole, désignation, quantité, commentaire).</p>
+      <p>Suivi des articles manquants, groupés par date (« + Ajouter une date »). Chaque ligne : engin, KIT, SYMBOLE, désignation, quantité, commentaire, responsable, reçu.</p>
       <ul>
-        <li><strong>Reçu</strong> — cocher la case marque l'article comme reçu (la ligne grise, date d'arrivée horodatée). « Afficher les reçus » permet de les faire réapparaître.</li>
-        <li>Une date dont tous les articles sont reçus est masquée automatiquement de la vue par défaut.</li>
-        <li><strong>Statistiques</strong> — vue globale, délais moyens de réception, répartition par engin, cadence et top des articles les plus fréquemment manquants.</li>
+        <li><strong>Reçu</strong> — cocher grise la ligne et horodate l’arrivée ; « Afficher les reçus » pour les revoir. Une date entièrement reçue est masquée automatiquement.</li>
+        <li><strong>Responsable</strong> — saisie libre avec suggestions (rôles, noms des utilisateurs, noms déjà utilisés) ; navigation ↑ / ↓ et Entrée.</li>
+        <li><strong>Largeur des colonnes</strong> — tirer la poignée en bord de colonne ; si la place manque, un message invite à réduire d’autres colonnes. Les largeurs sont mémorisées.</li>
+        <li><strong>Statistiques</strong> — vue globale, délais, par engin, cadence, top des articles manquants.</li>
         <li><strong>Exporter CSV / Imprimer cette page</strong> — export ou impression de la liste actuelle.</li>
       </ul>
     </div>
 
     <div class="aide-section">
       <h3>✅ Onglet Actions</h3>
-      <p>Liste des remarques envoyées depuis le tableau Supermarché (bouton →), ou ajoutées manuellement via « + Ajouter une action ». Chaque action envoyée depuis le Supermarché est une copie figée de la remarque au moment de l'envoi : elle ne disparaît donc pas si la case d'origine est réutilisée le lendemain.</p>
+      <p>Une action est une copie figée de la remarque envoyée depuis le Supermarché (ou créée manuellement via « + Ajouter une action »). Elle survit à la réutilisation de la case d’origine.</p>
       <ul>
-        <li><strong>+ Ajouter une action</strong> — crée une ligne vide en haut de la liste, entièrement modifiable (engin, poste, section, date, action, commentaire, responsable, échéance).</li>
-        <li><strong>Commentaire</strong> — champ libre pour toute précision complémentaire à l'action elle-même.</li>
-        <li><strong>Responsable</strong> — champ libre avec suggestions : les 5 rôles (avec le badge « Rôle »), le prénom + nom des comptes de l'onglet Utilisateurs (ou leur e-mail si pas encore renseigné), ainsi que les noms déjà utilisés dans d'autres actions. Taper simplement filtre la liste ; on peut aussi naviguer avec les flèches ↑ / ↓ et valider avec Entrée — mais rien n'empêche de saisir un nom qui n'y figure pas.</li>
-        <li><strong>Échéance</strong> — éditable directement dans le tableau. Une échéance dépassée sans que l'action soit faite est surlignée « En retard ».</li>
-        <li><strong>Filtres</strong> — par poste et par section, en haut de l'onglet.</li>
-        <li><strong>Fait</strong> — coche l'action comme terminée (elle passe en grisé/barré). « Afficher les faites » permet de les revoir.</li>
-        <li><strong>Suppression (✕)</strong> — une confirmation est toujours demandée avant de supprimer une action, l'opération étant définitive.</li>
-        <li><strong>Exporter CSV</strong> — export de toutes les actions avec leur statut.</li>
+        <li><strong>Champs</strong> — engin, poste, section, date, KIT, SYMBOLE, commentaire, responsable, échéance. Les actions envoyées depuis le Supermarché ont KIT / SYMBOLE verrouillés.</li>
+        <li><strong>Échéance dépassée</strong> — si l’action n’est pas faite, la ligne est surlignée « En retard ».</li>
+        <li><strong>Fait</strong> — coche l’action terminée (grisée / barrée) ; « Afficher les faites » pour les revoir.</li>
+        <li><strong>Filtres</strong> — par poste et par section en haut de l’onglet.</li>
+        <li><strong>✕ Suppression</strong> — confirmation obligatoire, opération définitive.</li>
+        <li><strong>Anti-doublon</strong> — un second envoi identique non fait ne crée pas de ligne supplémentaire.</li>
       </ul>
+    </div>
+
+    <div class="aide-section">
+      <h3>📊 Onglet Indicateurs</h3>
+      <p>Ouvre une page dédiée avec exactement la même barre du haut. Le contenu des indicateurs sera défini prochainement.</p>
     </div>
 
     <div class="aide-section">
       <h3>👥 Onglet Utilisateurs <span class="aide-admin-tag">réservé aux Administrateurs</span></h3>
-      <p>Liste des comptes qui se sont déjà connectés à l'application, avec prénom, nom, rôle et date de dernière connexion. Un utilisateur n'apparaît dans cette liste qu'après sa toute première connexion — inutile de chercher à l'ajouter avant (sauf via « + Ajouter un utilisateur », voir plus bas).</p>
       <ul>
-        <li><strong>Prénom / Nom</strong> — éditables directement dans le tableau ; la sauvegarde se fait automatiquement dès qu'on quitte le champ (ou en appuyant sur Entrée). Ces noms alimentent aussi les suggestions du champ Responsable dans l'onglet Actions.</li>
-        <li><strong>Rôle</strong> — menu déroulant (Approvisionneur, Ordonnanceur, Responsable, Opérateur, Administrateur), modifiable à tout moment. Se retirer soi-même le rôle Administrateur fait immédiatement disparaître l'onglet Utilisateurs.</li>
-        <li><strong>+ Ajouter un utilisateur</strong> — crée un compte (prénom, nom, e-mail, rôle) sans jamais communiquer de mot de passe : la personne reçoit un e-mail pour définir le sien.</li>
-        <li><strong>✕</strong> — supprime la fiche d'un utilisateur (pas son compte de connexion). Impossible de supprimer sa propre fiche.</li>
+        <li><strong>Comptes</strong> — un utilisateur apparaît après sa première connexion. Prénom / nom éditables ; ils alimentent les suggestions du champ Responsable.</li>
+        <li><strong>+ Ajouter un utilisateur</strong> — crée le compte sans mot de passe : la personne reçoit un e-mail pour définir le sien.</li>
+        <li><strong>Rôle</strong> — menu déroulant ; impossible de supprimer sa propre fiche.</li>
+        <li><strong>🎭 Gestion des rôles</strong> — créer des rôles personnalisés et supprimer n’importe quel rôle (standard ou personnalisé). Si des personnes ont ce rôle, une confirmation le précise : leur rôle est alors effacé et doit être réaffecté. Supprimer « Administrateur » affiche un avertissement spécifique.</li>
       </ul>
     </div>
 
     <div class="aide-section">
-      <h3>💾 Sauvegarde</h3>
-      <p>Toute modification déclenche une sauvegarde automatique après quelques secondes (indicateur « Modifications en cours... » puis « ✓ Synchronisé » en haut à droite). Le bouton <strong>Sauvegarder</strong> force un enregistrement immédiat. Les données sont stockées sur Firebase et partagées entre tous les utilisateurs connectés ; une copie de secours est aussi conservée localement dans le navigateur.</p>
+      <h3>💾 Sauvegarde, temps réel & versions</h3>
+      <ul>
+        <li><strong>Sauvegarde automatique</strong> — quelques secondes après chaque modification ; les boutons « Sauvegarder » forcent l’enregistrement immédiat.</li>
+        <li><strong>Double stockage</strong> — base Firebase partagée entre tous les utilisateurs + copie de secours locale dans le navigateur.</li>
+        <li><strong>Temps réel</strong> — les modifications des collègues arrivent sans recharger la page. Si vous avez des saisies non sauvegardées, elles sont appliquées juste après votre sauvegarde (message « 🔄 Modifs collègues reçues… »).</li>
+        <li><strong>Versions</strong> — cliquer sur la version sous le titre pour le détail des mises à jour ; le déploiement est automatique sur tous les postes.</li>
+        <li><strong>Nettoyage automatique</strong> — actions faites > 90 jours, historique > 18 mois et rassemblements soldés > 90 jours sont purgés automatiquement.</li>
+      </ul>
     </div>
 
   </div>
