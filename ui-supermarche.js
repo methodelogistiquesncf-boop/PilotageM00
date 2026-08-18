@@ -120,6 +120,17 @@ function buildJourButtonsRow() {
   var wrap = table ? table.parentNode : null;
   if (!wrap) return;
 
+  // 🔒 Styles injectés ici (garantis, indépendants de suivi.css)
+  if (!document.getElementById('jbtnsStyle')) {
+    var st = document.createElement('style');
+    st.id = 'jbtnsStyle';
+    st.textContent =
+      '.jbtns-bar{position:relative;height:34px;}' +
+      '.jbtns-group{position:absolute;top:2px;display:flex;gap:6px;justify-content:center;}' +
+      '@media print{.jbtns-bar{display:none;}}';
+    document.head.appendChild(st);
+  }
+
   // nettoie l'ancienne version (rangée dans le tableau)
   var oldRow = document.getElementById('jourBtnRow');
   if (oldRow) oldRow.remove();

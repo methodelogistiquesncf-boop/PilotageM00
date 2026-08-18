@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-12",
+    "date": "2026-08-18T11:40:57",
+    "message": "fix: boutons J-0/J-3 réalignés (styles injectés par le JS)"
+  },
+  {
     "version": "v2026.08.18-11",
     "date": "2026-08-18T11:35:50",
     "message": "fix: suppression du trait noir (bordure haute du tableau)"
