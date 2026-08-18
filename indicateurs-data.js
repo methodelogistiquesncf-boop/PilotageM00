@@ -37,7 +37,7 @@ function toast(msg) {
   if (!document.getElementById('indToastStyle')) {
     var st = document.createElement('style');
     st.id = 'indToastStyle';
-    st.textContent = '.ind-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:#111827;color:#fff;font-size:12px;font-weight:600;padding:8px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:pre-line;text-align:center;max-width:80%;}';
+    st.textContent = '.ind-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:#111827;color:#fff;font-size:12px;font-weight:600;padding:8px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:pre-line;text-align:center;max-width:80%;}.ind-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}';
     document.head.appendChild(st);
   }
   if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'ind-toast'; document.body.appendChild(toastEl); }
