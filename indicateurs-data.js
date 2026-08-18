@@ -65,6 +65,15 @@ export async function recordJourPoint(kind, idx, j) {
   var jours = doc.jours || {};
   var entry = jours[dayKey] || { appro: {}, pieces: {} };
 
+  // 🔒 Chronologie : J-3 doit toujours être enregistré AVANT J-0
+  if (j === '0') {
+    var hasJ3 = (entry.appro && entry.appro.j3 !== undefined) || (entry.pieces && entry.pieces.j3 !== undefined);
+    if (!hasJ3) {
+      toast('⚠️ Les valeurs J-3 du ' + dayKey + ' ' + monthLabel(monthKey) + " n'ont pas été sauvegardées.\nEnregistrez d'abord le point J-3 (bouton orange).");
+      return;
+    }
+  }
+
   var newVals = {
     appro: computeColPct(p, 'APPROS'),
     pieces: computeColPct(p, 'PIECES DEPOSEES')
