@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-2",
+    "date": "2026-08-18T08:21:06",
+    "message": "chore: page Indicateurs vierge (contenu à venir)"
+  },
+  {
     "version": "v2026.08.18-1",
     "date": "2026-08-18T06:56:13",
     "message": "ui: suppression du texte ENGIN dans le supermarché"
