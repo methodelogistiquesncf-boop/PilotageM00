@@ -1014,3 +1014,17 @@ th.th-label {
 #appVersionBtn { min-width: 112px; text-align: left; }
 .main-tab .badge-count[style*="display:none"],
 .main-tab .badge-count[style*="display: none"] { display: inline-block !important; visibility: hidden; }
+
+/* ─── Boutons J-0 / J-3 au-dessus des colonnes de dates ─── */
+tr.row-jbtns th { background: var(--bg); border: none; padding: 2px 4px 6px; text-align: center; }
+.btn-j0, .btn-j3 {
+  min-width: 44px; padding: 4px 10px; margin: 0 3px;
+  border: none; border-radius: 5px; cursor: pointer;
+  font-family: inherit; font-size: 11px; font-weight: 800; letter-spacing: .03em;
+  color: #fff; transition: transform .1s, filter .1s;
+}
+.btn-j0 { background: #22a050; }
+.btn-j3 { background: #f97316; }
+.btn-j0:hover, .btn-j3:hover { filter: brightness(1.1); }
+.btn-j0:active, .btn-j3:active { transform: scale(.95); }
+@media print { tr.row-jbtns { display: none; } }

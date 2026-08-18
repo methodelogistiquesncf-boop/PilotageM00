@@ -10,6 +10,7 @@ import { sendToAction } from './ui-actions.js';
 export function build() {
   buildBody();
   buildHeader();
+  buildJourButtonsRow();
 }
 
 function fillHeaderRow(row) {
@@ -109,6 +110,44 @@ function buildHeader() {
   if (mainRow) mainRow.classList.add('header-row');
   var rows = document.querySelectorAll('tr.header-row');
   for (var i = 0; i < rows.length; i++) fillHeaderRow(rows[i]);
+}
+
+// 🔥 Rangée de boutons J-0 / J-3 au-dessus des colonnes de dates
+// (raccordement à une fonction ultérieurement via data-kind / data-idx / data-j)
+function buildJourButtonsRow() {
+  var thead = document.querySelector('#mainTable thead');
+  if (!thead) return;
+  var row = document.getElementById('jourBtnRow');
+  if (!row) {
+    row = document.createElement('tr');
+    row.id = 'jourBtnRow';
+    row.className = 'row-jbtns';
+    thead.insertBefore(row, thead.firstChild);
+  }
+  while (row.firstChild) row.removeChild(row.firstChild);
+
+  var th0 = document.createElement('th');
+  th0.className = 'th-top th-label';
+  th0.style.width = '110px';
+  row.appendChild(th0);
+
+  function addBtnCell(kind, idx) {
+    var th = document.createElement('th');
+    th.className = 'th-top th-jbtns';
+    var b0 = document.createElement('button');
+    b0.type = 'button'; b0.className = 'btn-j0'; b0.textContent = 'J-0';
+    b0.title = 'Action J-0 (à raccorder)';
+    b0.setAttribute('data-kind', kind); b0.setAttribute('data-idx', String(idx)); b0.setAttribute('data-j', '0');
+    var b3 = document.createElement('button');
+    b3.type = 'button'; b3.className = 'btn-j3'; b3.textContent = 'J-3';
+    b3.title = 'Action J-3 (à raccorder)';
+    b3.setAttribute('data-kind', kind); b3.setAttribute('data-idx', String(idx)); b3.setAttribute('data-j', '3');
+    th.appendChild(b0); th.appendChild(b3);
+    row.appendChild(th);
+  }
+
+  for (var d = 0; d < D_FIXED; d++) addBtnCell('fixed', d);
+  state.synthCols.forEach(function (col) { addBtnCell('synth', col.id); });
 }
 
 function syncJourInputs(kind, idx, value) {

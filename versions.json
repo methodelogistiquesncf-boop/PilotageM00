@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-7",
+    "date": "2026-08-18T10:13:38",
+    "message": "feat: boutons J-0 / J-3 au-dessus des colonnes de dates (à raccorder)"
+  },
+  {
     "version": "v2026.08.18-6",
     "date": "2026-08-18T10:01:58",
     "message": "perf: topbar 100% stable (espaces réservés)"

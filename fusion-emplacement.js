@@ -43,7 +43,7 @@
 
   function firstMultiRow(table) {
     for (var i = 0; i < table.rows.length; i++) {
-      if (table.rows[i].cells.length > 2) return table.rows[i];
+      if (table.rows[i].cells.length > 2 && !table.rows[i].classList.contains('row-jbtns')) return table.rows[i];
     }
     return null;
   }
