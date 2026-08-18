@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
-"""deploy.py v3 — UNE version par jour : les push de la même journée sont
-consolidés dans la même entrée (messages accumulés avec • ).
-Usage : python3 deploy.py "message de la mise à jour"
+"""deploy.py v4 — UNE version par jour + messages lisibles pour les utilisateurs.
+Les préfixes techniques (feat:/fix:/ui:…) restent dans le commit git
+mais sont retirés de l'historique affiché dans l'application.
+Usage : python3 deploy.py "feat: message"
 """
-import json, subprocess, sys
+import json, re, subprocess, sys
 from pathlib import Path
 from datetime import datetime, date
+
+PREFIX = re.compile(r'^(feat|fix|ui|perf|chore|refactor|docs|style|test|build|ci)\s*:\s*', re.I)
+
+def clean(msg):
+    parts = [PREFIX.sub('', m.strip()) for m in (msg or '').split(' • ')]
+    return ' • '.join(p for p in parts if p)
 
 def main():
     msg = sys.argv[1] if len(sys.argv) > 1 else "mise à jour"
     vfile = Path.cwd() / 'version.js'
     hfile = Path.cwd() / 'versions.json'
     if not vfile.exists():
-        print("❌ version.js introuvable — lancez d'abord setup-versionning.py"); sys.exit(1)
+        print("❌ version.js introuvable"); sys.exit(1)
 
     history = json.loads(hfile.read_text(encoding='utf-8')) if hfile.exists() else []
     d = date.today()
     day = f"v{d.year}.{d.month:02d}.{d.day:02d}"
     now = datetime.now().isoformat(timespec='seconds')
+    clean_msg = clean(msg)
 
     if history and history[0]['version'] == day:
         entry = history[0]
-        if msg not in entry['message']:
-            entry['message'] = (entry['message'] + ' • ' + msg) if entry['message'] else msg
+        if clean_msg and clean_msg not in entry['message']:
+            entry['message'] = (entry['message'] + ' • ' + clean_msg) if entry['message'] else clean_msg
         entry['date'] = now
         print(f"🔢 Version du jour consolidée : {day}")
     else:
-        history.insert(0, {'version': day, 'date': now, 'message': msg})
+        history.insert(0, {'version': day, 'date': now, 'message': clean_msg})
         print(f"🔢 Nouvelle version : {day}")
 
     history = history[:30]
