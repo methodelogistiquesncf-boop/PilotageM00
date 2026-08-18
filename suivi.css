@@ -1034,3 +1034,4 @@ table.has-jbtns { border-top: 2px solid transparent; }
 
 /* ─── Suppression de la bordure haute du tableau (zone des boutons J-0/J-3) ─── */
 #mainTable { border-top: none; }
+#confirmMessage { white-space: pre-line; }

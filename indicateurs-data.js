@@ -13,6 +13,12 @@ function parseScore(str) {
 }
 function fmt(v) { return (typeof v === 'number') ? String(v).replace('.', ',') + ' %' : '—'; }
 
+var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function monthLabel(key) {
+  var p = String(key).split('-');
+  return (MOIS_FR[parseInt(p[1], 10) - 1] || p[1]) + ' ' + p[0];
+}
+
 // 🔑 % = somme(num) / somme(den) × 100 sur les 3 stations × 4 engins de la colonne
 export function computeColPct(p, section) {
   var num = 0, den = 0;
@@ -66,10 +72,12 @@ export async function recordJourPoint(kind, idx, j) {
 
   var existing = (entry.appro && entry.appro[line] !== undefined) || (entry.pieces && entry.pieces[line] !== undefined);
   if (existing) {
+    var lblLine = (line === 'j0') ? 'J-0' : 'J-3';
     var ok = await showConfirm(
-      'Une valeur existe déjà pour le ' + dayKey + ' :\n' +
-      'APPROS ' + line.toUpperCase() + ' : ' + fmt(entry.appro[line]) + ' → ' + fmt(newVals.appro) + '\n' +
-      'PIÈCES ' + line.toUpperCase() + ' : ' + fmt(entry.pieces[line]) + ' → ' + fmt(newVals.pieces) + '\n\nRemplacer par les nouvelles valeurs ?',
+      'Une valeur existe déjà pour le ' + dayKey + ' ' + monthLabel(monthKey) + ' :\n' +
+      'APPROS (' + lblLine + ') : ' + fmt(entry.appro[line]) + ' → ' + fmt(newVals.appro) + '\n' +
+      'PIÈCES DÉPOSÉES (' + lblLine + ') : ' + fmt(entry.pieces[line]) + ' → ' + fmt(newVals.pieces) + '\n\n' +
+      'Remplacer par les nouvelles valeurs ?',
       { title: 'Confirmer le remplacement', okLabel: 'Remplacer' }
     );
     if (!ok) return;
