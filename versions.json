@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-4",
+    "date": "2026-08-18T09:50:27",
+    "message": "ui: affichage franc de la page Indicateurs (anti-flash)"
+  },
+  {
     "version": "v2026.08.18-3",
     "date": "2026-08-18T08:24:52",
     "message": "fix: onglet Indicateurs visible dans le menu"

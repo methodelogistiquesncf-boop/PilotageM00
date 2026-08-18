@@ -31,8 +31,10 @@
     });
   }
 </script>
+<style>body{opacity:0}body.ready{opacity:1;transition:opacity .18s ease}</style>
 </head>
 <body>
+<script>setTimeout(function(){document.body.classList.add('ready');},1500);</script>
 <div class="topbar">
   <div>
     <h1>Pilotage M00</h1>

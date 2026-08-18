@@ -7,4 +7,5 @@ window.saveFirebase = saveFirebase;
 
 initAuth(function () {
   document.getElementById('tabViewUsers').style.display = state.currentUserRole === 'Administrateur' ? '' : 'none';
+  document.body.classList.add('ready');
 });
