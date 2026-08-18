@@ -235,3 +235,113 @@ initAuth(function () {
   }
   setup();
 })();
+
+// ─── Exports CSV + PNG de la page Indicateurs ───
+(function () {
+  function selKey() {
+    var sel = document.getElementById('indicMonthSelect');
+    return sel && sel.value ? sel.value : currentMonthKey();
+  }
+  function daysIn(key) {
+    return new Date(parseInt(key.slice(0, 4), 10), parseInt(key.slice(5, 7), 10), 0).getDate();
+  }
+  function num(v) { return typeof v === 'number' ? String(v).replace('.', ',') : ''; }
+  function fileMonth(key) {
+    return monthLabel(key).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
+  }
+  function download(hrefOrBlob, name, isUrl) {
+    var a = document.createElement('a');
+    if (isUrl) a.href = hrefOrBlob; else a.href = URL.createObjectURL(hrefOrBlob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    if (!isUrl) setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  // ── CSV : Date | Appro J-0 | Appro J-3 | Pièces J-0 | Pièces J-3 ──
+  function exportIndicCSV() {
+    var key = selKey();
+    var p = key.split('-');
+    var jours = (indicData[key] && indicData[key].jours) || {};
+    var rows = [['Date', 'Appro J-0', 'Appro J-3', 'Pièces J-0', 'Pièces J-3']];
+    for (var d = 1; d <= daysIn(key); d++) {
+      var e = jours[String(d)];
+      var a0 = e && e.appro ? e.appro.j0 : undefined;
+      var a3 = e && e.appro ? e.appro.j3 : undefined;
+      var q0 = e && e.pieces ? e.pieces.j0 : undefined;
+      var q3 = e && e.pieces ? e.pieces.j3 : undefined;
+      if (a0 === undefined && a3 === undefined && q0 === undefined && q3 === undefined) continue;
+      rows.push([
+        ('0' + d).slice(-2) + '/' + p[1] + '/' + p[0],
+        num(a0), num(a3), num(q0), num(q3)
+      ]);
+    }
+    var csv = '\ufeff' + rows.map(function (r) {
+      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';');
+    }).join('\n');
+    download(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'indicateurs_' + fileMonth(key) + '.csv', false);
+  }
+
+  // ── PNG : en-tête + 2 graphiques empilés + pied de page ──
+  function exportIndicPNG() {
+    var key = selKey();
+    var c1 = document.getElementById('chartAppros');
+    var c2 = document.getElementById('chartPieces');
+    if (!c1 || !c2) return;
+    var dpr = window.devicePixelRatio || 1;
+    var padX = 24, headerH = 58, titleH = 30, gap = 18, footerH = 40, chartH = 300;
+    var w = Math.max(c1.clientWidth, c2.clientWidth) + padX * 2;
+    var totalH = headerH + titleH + chartH + gap + titleH + chartH + footerH;
+
+    var off = document.createElement('canvas');
+    off.width = Math.round(w * dpr); off.height = Math.round(totalH * dpr);
+    var ctx = off.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, totalH);
+
+    var now = new Date();
+    var when = 'le ' + now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    var lbl = monthLabel(key); lbl = lbl.charAt(0).toUpperCase() + lbl.slice(1);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#111827'; ctx.font = '700 20px system-ui, sans-serif';
+    ctx.fillText('Indicateurs — ' + lbl, padX, 32);
+    ctx.fillStyle = '#6b7280'; ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText('Export ' + when, padX, 50);
+
+    var y = headerH;
+    ctx.fillStyle = '#1a4fa0'; ctx.font = '700 14px system-ui, sans-serif';
+    ctx.fillText('APPROS — taux du mois', padX, y + 18);
+    y += titleH;
+    ctx.drawImage(c1, padX, y, c1.clientWidth, chartH);
+    ctx.strokeStyle = '#d1d5db'; ctx.strokeRect(padX + .5, y + .5, c1.clientWidth - 1, chartH - 1);
+    y += chartH + gap;
+
+    ctx.fillStyle = '#1a4fa0';
+    ctx.fillText('PIÈCES DÉPOSÉES — taux du mois', padX, y + 18);
+    y += titleH;
+    ctx.drawImage(c2, padX, y, c2.clientWidth, chartH);
+    ctx.strokeStyle = '#d1d5db'; ctx.strokeRect(padX + .5, y + .5, c2.clientWidth - 1, chartH - 1);
+
+    ctx.fillStyle = '#9ca3af'; ctx.font = '11px system-ui, sans-serif';
+    ctx.fillText('Pilotage M00 — exporté ' + when, padX, totalH - 14);
+
+    var name = 'indicateurs_' + fileMonth(key) + '.png';
+    if (off.toBlob) off.toBlob(function (b) { download(b, name, false); }, 'image/png');
+    else download(off.toDataURL('image/png'), name, true);
+  }
+
+  // ── Boutons à côté du sélecteur de mois ──
+  var sel = document.getElementById('indicMonthSelect');
+  if (sel && !document.getElementById('btnIndicCSV')) {
+    var bar = sel.parentNode;
+    var b1 = document.createElement('button');
+    b1.id = 'btnIndicCSV'; b1.className = 'btn btn-ghost'; b1.textContent = '📥 Export CSV';
+    b1.title = 'Télécharger les données du mois (Excel)';
+    b1.onclick = exportIndicCSV;
+    var b2 = document.createElement('button');
+    b2.id = 'btnIndicPNG'; b2.className = 'btn btn-ghost'; b2.textContent = '🖼️ Export PNG';
+    b2.title = 'Télécharger l’image des 2 graphiques';
+    b2.onclick = exportIndicPNG;
+    bar.appendChild(b1); bar.appendChild(b2);
+  }
+})();
