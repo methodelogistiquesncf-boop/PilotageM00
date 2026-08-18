@@ -1,4 +1,4 @@
-// indicateurs.js — page Indicateurs : graphiques mensuels APPROS / PIÈCES DÉPOSÉES
+// indicateurs.js — page Indicateurs : graphiques mensuels + bulles au survol
 import { state } from './state.js';
 import { initAuth, doLogout, saveFirebase, getDb } from './firebase.js';
 
@@ -9,8 +9,8 @@ var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août
 var indicData = {};
 
 function monthLabel(key) {
-  var p = key.split('-');
-  return MOIS_FR[parseInt(p[1], 10) - 1] + ' ' + p[0];
+  var p = String(key).split('-');
+  return (MOIS_FR[parseInt(p[1], 10) - 1] || p[1]) + ' ' + p[0];
 }
 function currentMonthKey() {
   var v = document.getElementById('dateJour').value;
@@ -51,6 +51,52 @@ function drawAll() {
   drawChart('chartPieces', jours, 'pieces', key);
 }
 
+// ─── Bulle d'info au survol des points ──────────────────────────────────────
+function ensureTooltip() {
+  var t = document.getElementById('indicTooltip');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'indicTooltip';
+    t.style.cssText = 'position:fixed;z-index:9999;background:#111827;color:#fff;font-size:11px;font-weight:700;' +
+      'padding:5px 10px;border-radius:6px;pointer-events:none;opacity:0;transition:opacity .12s;' +
+      'transform:translate(-50%,-130%);white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.25);';
+    document.body.appendChild(t);
+  }
+  return t;
+}
+
+function bindCanvasHover(canvas) {
+  if (canvas.__hoverBound) return;
+  canvas.__hoverBound = true;
+  canvas.addEventListener('mousemove', function (e) {
+    var r = canvas.getBoundingClientRect();
+    var mx = e.clientX - r.left, my = e.clientY - r.top;
+    var pts = canvas._pts || [];
+    var best = null, bd = 144; // rayon 12 px
+    pts.forEach(function (p) {
+      var dx = p.x - mx, dy = p.y - my, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = p; }
+    });
+    var t = ensureTooltip();
+    if (best) {
+      t.textContent = best.label + ' — ' + best.day + ' ' + monthLabel(canvas._monthKey) + ' : ' + String(best.v).replace('.', ',') + ' %';
+      t.style.left = (r.left + best.x) + 'px';
+      t.style.top = (r.top + best.y - 6) + 'px';
+      t.style.opacity = '1';
+      canvas.style.cursor = 'pointer';
+    } else {
+      t.style.opacity = '0';
+      canvas.style.cursor = 'default';
+    }
+  });
+  canvas.addEventListener('mouseleave', function () {
+    var t = document.getElementById('indicTooltip');
+    if (t) t.style.opacity = '0';
+    canvas.style.cursor = 'default';
+  });
+}
+
+// ─── Dessin du graphique ────────────────────────────────────────────────────
 function drawChart(canvasId, jours, field, monthKey) {
   var canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -60,6 +106,7 @@ function drawChart(canvasId, jours, field, monthKey) {
   var ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
+  canvas._monthKey = monthKey;
 
   var padL = 48, padR = 16, padT = 16, padB = 30;
   var W = cssW - padL - padR, H = cssH - padT - padB;
@@ -80,13 +127,18 @@ function drawChart(canvasId, jours, field, monthKey) {
     if (dd === 1 || dd % 5 === 0) ctx.fillText(String(dd), x, padT + H + 18);
   }
 
-  function line(lineKey, color) {
+  var hoverPts = [];
+  function line(lineKey, color, label) {
     var pts = [];
     for (var d2 = 1; d2 <= nDays; d2++) {
       var e = jours[String(d2)];
       var val = e && e[field] ? e[field][lineKey] : undefined;
       if (typeof val === 'number') {
-        pts.push({ x: padL + ((d2 - 1) / Math.max(nDays - 1, 1)) * W, y: padT + H - (Math.min(val, 100) / 100) * H });
+        pts.push({
+          x: padL + ((d2 - 1) / Math.max(nDays - 1, 1)) * W,
+          y: padT + H - (Math.min(val, 100) / 100) * H,
+          v: val, day: d2, label: label
+        });
       }
     }
     if (!pts.length) return;
@@ -95,9 +147,12 @@ function drawChart(canvasId, jours, field, monthKey) {
     ctx.stroke();
     ctx.fillStyle = color;
     pts.forEach(function (p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill(); });
+    hoverPts = hoverPts.concat(pts);
   }
-  line('j0', '#22a050');
-  line('j3', '#f97316');
+  line('j0', '#22a050', 'J-0');
+  line('j3', '#f97316', 'J-3');
+  canvas._pts = hoverPts;
+  bindCanvasHover(canvas);
 
   ctx.fillStyle = '#22a050'; ctx.fillRect(padL + W - 150, padT - 4, 10, 10);
   ctx.fillStyle = '#374151'; ctx.textAlign = 'left'; ctx.fillText('J-0', padL + W - 136, padT + 5);
