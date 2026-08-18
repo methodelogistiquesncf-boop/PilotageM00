@@ -11,9 +11,19 @@ export const D_FIXED = 4;
 export const BASE_ROLES = ['Approvisionneur', 'Ordonnanceur', 'Responsable', 'Opérateur', 'Administrateur'];
 export const ROLES = BASE_ROLES.slice();
 export function setCustomRoles(list) {
+  state.customRoles = list || [];
+  rebuildRoles();
+}
+export function setRemovedRoles(list) {
+  state.removedRoles = list || [];
+  rebuildRoles();
+}
+export function rebuildRoles() {
   ROLES.length = 0;
-  BASE_ROLES.forEach(function (r) { ROLES.push(r); });
-  (list || []).forEach(function (r) { if (ROLES.indexOf(r) === -1) ROLES.push(r); });
+  BASE_ROLES.forEach(function (r) {
+    if ((state.removedRoles || []).indexOf(r) === -1) ROLES.push(r);
+  });
+  (state.customRoles || []).forEach(function (r) { if (ROLES.indexOf(r) === -1) ROLES.push(r); });
 }
 
 export const state = {

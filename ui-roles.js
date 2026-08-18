@@ -1,23 +1,53 @@
-// ui-roles.js — gestion des rôles personnalisés (Administrateurs, onglet Utilisateurs)
-import { state, ROLES, setCustomRoles, markDirty, showConfirm } from './state.js';
+// ui-roles.js — gestion des rôles (Administrateurs) : création + suppression de TOUT rôle
+import { state, ROLES, BASE_ROLES, setCustomRoles, setRemovedRoles, markDirty, showConfirm } from './state.js';
+import { loadUsersList, updateUserRole } from './firebase.js';
+import { buildUsers } from './ui-users.js';
 
 function addCustomRole(name) {
   if (!name) return;
   if (ROLES.indexOf(name) !== -1) { alert('Ce rôle existe déjà.'); return; }
-  state.customRoles = (state.customRoles || []).slice();
-  state.customRoles.push(name);
-  setCustomRoles(state.customRoles);
+  var customs = (state.customRoles || []).slice();
+  customs.push(name);
+  setCustomRoles(customs);
   markDirty();
   buildRolesAdmin();
+  buildUsers();
 }
 
-async function removeCustomRole(name) {
-  var ok = await showConfirm('Le rôle « ' + name + ' » sera retiré de la liste. Les utilisateurs qui le portent le conserveront jusqu\u2019à changement.', { title: 'Supprimer ce rôle ?' });
+async function removeRole(name) {
+  var users = [];
+  try { users = await loadUsersList(); } catch (e) {}
+  var affected = users.filter(function (u) { return u.role === name; });
+
+  var msg;
+  if (affected.length) {
+    msg = affected.length + ' personne(s) ont actuellement le rôle « ' + name + ' ».\n' +
+          'En supprimant ce rôle, leur rôle sera effacé et il faudra le leur réaffecter.\nContinuer ?';
+  } else {
+    msg = 'Supprimer le rôle « ' + name + ' » ? Il disparaîtra de tous les menus déroulants.';
+  }
+  if (name === 'Administrateur') {
+    msg += '\n\n⚠️ Attention : sans rôle Administrateur, plus personne ne pourra gérer les utilisateurs tant qu\u2019il n\u2019est pas réattribué.';
+  }
+  var ok = await showConfirm(msg, { title: 'Supprimer ce rôle ?', okLabel: 'Supprimer le rôle' });
   if (!ok) return;
-  state.customRoles = (state.customRoles || []).filter(function (r) { return r !== name; });
-  setCustomRoles(state.customRoles);
+
+  if (BASE_ROLES.indexOf(name) !== -1) {
+    var removed = (state.removedRoles || []).slice();
+    if (removed.indexOf(name) === -1) removed.push(name);
+    setRemovedRoles(removed);
+  } else {
+    setCustomRoles((state.customRoles || []).filter(function (r) { return r !== name; }));
+  }
+
+  // 🔑 efface le rôle chez les personnes affectées (à réaffecter ensuite)
+  for (var i = 0; i < affected.length; i++) {
+    try { await updateUserRole(affected[i].uid, ''); } catch (e) {}
+  }
+
   markDirty();
   buildRolesAdmin();
+  buildUsers();
 }
 
 export function buildRolesAdmin() {
@@ -31,31 +61,39 @@ export function buildRolesAdmin() {
 
   var title = document.createElement('h3');
   title.style.cssText = 'font-size:14px;margin:0 0 10px;';
-  title.textContent = '🎭 Rôles personnalisés';
+  title.textContent = '🎭 Gestion des rôles';
   box.appendChild(title);
+
+  var hint = document.createElement('p');
+  hint.style.cssText = 'font-size:12px;color:var(--muted);margin:0 0 12px;';
+  hint.textContent = 'Le ✕ supprime n\u2019importe quel rôle. Si des personnes l\u2019ont, une confirmation le précise et leur rôle sera à réaffecter.';
+  box.appendChild(hint);
 
   var list = document.createElement('div');
   list.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
-  var customs = state.customRoles || [];
-  if (!customs.length) {
-    var none = document.createElement('span');
-    none.style.cssText = 'font-size:13px;color:var(--muted);';
-    none.textContent = 'Aucun rôle personnalisé pour l\u2019instant (les 5 rôles standards restent disponibles).';
-    list.appendChild(none);
-  }
-  customs.forEach(function (r) {
+  ROLES.slice().forEach(function (r) {
+    var isCustom = BASE_ROLES.indexOf(r) === -1;
     var chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent-dark);font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;' +
+      (isCustom
+        ? 'background:var(--accent-light);color:var(--accent-dark);'
+        : 'background:var(--surface2);color:var(--text);border:1px solid var(--border);');
     chip.appendChild(document.createTextNode(r));
     var del = document.createElement('button');
     del.type = 'button';
     del.textContent = '✕';
     del.title = 'Supprimer ce rôle';
     del.style.cssText = 'border:none;background:transparent;cursor:pointer;color:var(--danger);font-weight:700;padding:0;';
-    del.onclick = function () { removeCustomRole(r); };
+    del.onclick = function () { removeRole(r); };
     chip.appendChild(del);
     list.appendChild(chip);
   });
+  if (!ROLES.length) {
+    var none = document.createElement('span');
+    none.style.cssText = 'font-size:13px;color:var(--muted);';
+    none.textContent = 'Tous les rôles ont été supprimés.';
+    list.appendChild(none);
+  }
   box.appendChild(list);
 
   var row = document.createElement('div');
