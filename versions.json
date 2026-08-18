@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-3",
+    "date": "2026-08-18T08:24:52",
+    "message": "fix: onglet Indicateurs visible dans le menu"
+  },
+  {
     "version": "v2026.08.18-2",
     "date": "2026-08-18T08:21:06",
     "message": "chore: page Indicateurs vierge (contenu à venir)"

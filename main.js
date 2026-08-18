@@ -88,4 +88,7 @@ initState();
 
 initAuth(function () {
   finishBoot();
+  var h = (location.hash || '').replace('#', '');
+  if (h === 'users' && state.currentUserRole !== 'Administrateur') h = '';
+  if (['manquants', 'actions', 'users', 'aide'].indexOf(h) !== -1) switchMainTab(h);
 });
