@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indicateurs — Pilotage M00</title>
+<link rel="stylesheet" href="suivi.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a4fa0">
+<link rel="icon" type="image/svg+xml" href="icons/logo.svg">
+<link rel="apple-touch-icon" href="icons/logo.svg">
+<script src="version.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      var vEl = document.getElementById('appVersionBtn');
+      if (vEl && window.APP_VERSION) vEl.textContent = window.APP_VERSION;
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloading = false;
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        setInterval(function () { reg.update(); }, 60000);
+      }).catch(function (e) { console.error('SW :', e); });
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloading) return;
+        reloading = true;
+        var go = function () { window.location.reload(); };
+        if (typeof window.saveFirebase === 'function') {
+          Promise.resolve(window.saveFirebase()).then(go).catch(go);
+        } else { go(); }
+      });
+    });
+  }
+</script>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1>Pilotage M00</h1>
+    <button class="subtitle version-link" id="appVersionBtn" onclick="openVersions()" title="Historique des versions">…</button>
+  </div>
+  <div class="date-status-col">
+    <div class="date-box">
+      <label for="dateJour">Date du jour :</label>
+      <input type="date" id="dateJour">
+    </div>
+    <span id="fbStatus" class="sync">⏳ Connexion...</span>
+  </div>
+  <div class="main-tabs" id="mainTabs">
+    <button class="main-tab" onclick="location.href='suivi.html'">Supermarché</button>
+    <button class="main-tab" onclick="location.href='suivi.html#manquants'">Rassemblement <span class="badge-count" id="manquantsCount" style="display:none">0</span></button>
+    <button class="main-tab" onclick="location.href='suivi.html#actions'">Actions <span class="badge-count" id="actionsCount" style="display:none">0</span></button>
+    <button class="main-tab active">Indicateurs</button>
+    <button class="main-tab" id="tabViewUsers" style="display:none" onclick="location.href='suivi.html#users'">Utilisateurs</button>
+    <button class="main-tab" onclick="location.href='suivi.html#aide'">Aide</button>
+  </div>
+  <div id="userBadge" style="display:none">
+    <span id="userEmail"></span>
+    <button id="btnLogout" onclick="doLogout()">Déconnexion</button>
+  </div>
+  <button class="btn-print btn" onclick="window.print()">Imprimer</button>
+</div>
+
+<div class="view-panel active">
+  <div class="aide-wrap" style="max-width:1200px">
+    <!-- 🔥 Contenu des indicateurs : sera ajouté sur consigne -->
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script type="module" src="indicateurs.js"></script>
+<script src="recette.js"></script>
+
+<div class="modal-overlay" id="versionsOverlay">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closeVersions()">&#x2715;</button>
+    <h2>📦 Historique des versions</h2>
+    <div id="versionsList" class="versions-list"></div>
+  </div>
+</div>
+<style>
+  .version-link { background:none; border:none; cursor:pointer; font-size:13px; color:var(--accent); font-weight:700; padding:0; font-family:inherit; }
+  .version-link:hover { text-decoration:underline; }
+  .versions-list { display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; }
+  .version-entry { border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; background:var(--surface2); }
+  .version-entry.current { border-color:var(--accent); background:var(--accent-light); }
+  .version-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .version-tag { font-weight:700; color:var(--text); }
+  .version-current { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--accent); }
+  .version-date { margin-left:auto; font-size:12px; color:var(--muted); }
+  .version-msg { font-size:13px; color:var(--text); }
+</style>
+<script>
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function openVersions() {
+    var hist = window.APP_HISTORY || [], cur = window.APP_VERSION || 'dev', list = document.getElementById('versionsList');
+    if (!hist.length) { list.innerHTML = '<p style="color:var(--muted)">Aucun historique disponible.</p>'; }
+    else {
+      list.innerHTML = hist.map(function (h) {
+        var d = h.date ? new Date(h.date) : null;
+        var ds = d ? d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+        return '<div class="version-entry' + (h.version === cur ? ' current' : '') + '"><div class="version-head"><span class="version-tag">' + esc(h.version) + '</span>' + (h.version === cur ? '<span class="version-current">actuelle</span>' : '') + '<span class="version-date">' + ds + '</span></div><div class="version-msg">' + esc(h.message || '') + '</div></div>';
+      }).join('');
+    }
+    document.getElementById('versionsOverlay').classList.add('open');
+  }
+  function closeVersions() { document.getElementById('versionsOverlay').classList.remove('open'); }
+  document.getElementById('versionsOverlay').addEventListener('click', function (e) { if (e.target === this) closeVersions(); });
+</script>
+</body>
+</html>
