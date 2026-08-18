@@ -108,7 +108,7 @@ function drawChart(canvasId, jours, field, monthKey) {
   ctx.clearRect(0, 0, cssW, cssH);
   canvas._monthKey = monthKey;
 
-  var padL = 48, padR = 16, padT = 16, padB = 30;
+  var padL = 48, padR = 16, padT = 36, padB = 30;
   var W = cssW - padL - padR, H = cssH - padT - padB;
   var nDays = new Date(parseInt(monthKey.slice(0, 4), 10), parseInt(monthKey.slice(5, 7), 10), 0).getDate();
 
@@ -154,10 +154,10 @@ function drawChart(canvasId, jours, field, monthKey) {
   canvas._pts = hoverPts;
   bindCanvasHover(canvas);
 
-  ctx.fillStyle = '#22a050'; ctx.fillRect(padL + W - 150, padT - 4, 10, 10);
-  ctx.fillStyle = '#374151'; ctx.textAlign = 'left'; ctx.fillText('J-0', padL + W - 136, padT + 5);
-  ctx.fillStyle = '#f97316'; ctx.fillRect(padL + W - 90, padT - 4, 10, 10);
-  ctx.fillStyle = '#374151'; ctx.fillText('J-3', padL + W - 76, padT + 5);
+  ctx.fillStyle = '#22a050'; ctx.fillRect(padL + W - 150, padT - 24, 10, 10);
+  ctx.fillStyle = '#374151'; ctx.textAlign = 'left'; ctx.fillText('J-0', padL + W - 136, padT - 15);
+  ctx.fillStyle = '#f97316'; ctx.fillRect(padL + W - 90, padT - 24, 10, 10);
+  ctx.fillStyle = '#374151'; ctx.fillText('J-3', padL + W - 76, padT - 15);
 }
 
 window.addEventListener('resize', drawAll);
