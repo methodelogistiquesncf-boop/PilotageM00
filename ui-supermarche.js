@@ -6,6 +6,7 @@ import {
   makeSynthColData, initState, markDirty
 } from './state.js';
 import { sendToAction } from './ui-actions.js';
+import { recordJourPoint } from './indicateurs-data.js';
 
 export function build() {
   buildBody();
@@ -187,6 +188,13 @@ function positionJourButtons() {
   }
 }
 window.addEventListener('resize', positionJourButtons);
+
+// 🔌 Raccordement des boutons J-0 / J-3 → enregistrement des points indicateurs
+document.addEventListener('click', function (e) {
+  var b = e.target && e.target.closest ? e.target.closest('.btn-j0, .btn-j3') : null;
+  if (!b) return;
+  recordJourPoint(b.getAttribute('data-kind'), b.getAttribute('data-idx'), b.getAttribute('data-j'));
+});
 
 function syncJourInputs(kind, idx, value) {
   var sel = 'tr.header-row input.th-j[data-jour-kind="' + kind + '"][data-jour-idx="' + idx + '"]';

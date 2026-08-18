@@ -1,8 +1,8 @@
 [
   {
     "version": "v2026.08.18",
-    "date": "2026-08-18T11:40:57",
-    "message": "ui: suppression du texte ENGIN dans le supermarché • chore: page Indicateurs vierge (contenu à venir) • fix: onglet Indicateurs visible dans le menu • ui: affichage franc de la page Indicateurs (anti-flash) • perf: affichage accéléré de la page Indicateurs • perf: topbar 100% stable (espaces réservés) • feat: boutons J-0 / J-3 au-dessus des colonnes de dates (à raccorder) • ui: suppression du trait noir au-dessus des boutons J-0/J-3 • fix: suppression définitive du trait parasite (rangée hors tableau) • fix: suppression du trait noir (bordure haute du tableau) • fix: boutons J-0/J-3 réalignés (styles injectés par le JS)"
+    "date": "2026-08-18T12:17:47",
+    "message": "ui: suppression du texte ENGIN dans le supermarché • chore: page Indicateurs vierge (contenu à venir) • fix: onglet Indicateurs visible dans le menu • ui: affichage franc de la page Indicateurs (anti-flash) • perf: affichage accéléré de la page Indicateurs • perf: topbar 100% stable (espaces réservés) • feat: boutons J-0 / J-3 au-dessus des colonnes de dates (à raccorder) • ui: suppression du trait noir au-dessus des boutons J-0/J-3 • fix: suppression définitive du trait parasite (rangée hors tableau) • fix: suppression du trait noir (bordure haute du tableau) • fix: boutons J-0/J-3 réalignés (styles injectés par le JS) • feat: boutons J-0/J-3 → graphiques mensuels APPROS & PIÈCES avec historique par mois"
   },
   {
     "version": "v2026.08.17",

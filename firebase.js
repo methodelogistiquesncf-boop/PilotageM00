@@ -23,6 +23,8 @@ let lastLocalSavedAt = '';
 let rtStarted = false;
 let remoteTimer = null;
 
+export function getDb() { return db; }
+
 function setStatus(type, msg) {
   var el = document.getElementById('fbStatus');
   el.className = type;

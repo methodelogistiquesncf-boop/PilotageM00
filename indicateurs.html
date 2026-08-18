@@ -66,7 +66,15 @@
 
 <div class="view-panel active">
   <div class="aide-wrap" style="max-width:1200px">
-    <!-- 🔥 Contenu des indicateurs : sera ajouté sur consigne -->
+    <div class="stats-section-title">📈 Indicateurs mensuels</div>
+    <div style="display:flex;align-items:center;gap:12px;margin:8px 0 16px;">
+      <label for="indicMonthSelect" style="font-weight:600;">Mois :</label>
+      <select id="indicMonthSelect" class="actions-filter-select"></select>
+    </div>
+    <div class="stats-section-title" style="font-size:14px;">APPROS — taux du mois</div>
+    <canvas id="chartAppros" style="width:100%;height:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);"></canvas>
+    <div class="stats-section-title" style="font-size:14px;margin-top:20px;">PIÈCES DÉPOSÉES — taux du mois</div>
+    <canvas id="chartPieces" style="width:100%;height:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);"></canvas>
   </div>
 </div>
 
