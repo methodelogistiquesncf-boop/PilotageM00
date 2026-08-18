@@ -1028,3 +1028,6 @@ tr.row-jbtns th { background: var(--bg); border: none; padding: 2px 4px 6px; tex
 .btn-j0:hover, .btn-j3:hover { filter: brightness(1.1); }
 .btn-j0:active, .btn-j3:active { transform: scale(.95); }
 @media print { tr.row-jbtns { display: none; } }
+
+/* ─── Pas de trait noir au-dessus de la rangée J-0 / J-3 ─── */
+table.has-jbtns { border-top: 2px solid transparent; }

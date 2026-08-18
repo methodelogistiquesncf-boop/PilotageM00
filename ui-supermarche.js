@@ -117,6 +117,7 @@ function buildHeader() {
 function buildJourButtonsRow() {
   var thead = document.querySelector('#mainTable thead');
   if (!thead) return;
+  thead.parentNode.classList.add('has-jbtns');
   var row = document.getElementById('jourBtnRow');
   if (!row) {
     row = document.createElement('tr');
