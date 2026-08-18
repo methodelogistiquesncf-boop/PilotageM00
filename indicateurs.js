@@ -181,3 +181,51 @@ initAuth(function () {
   document.body.classList.add('ready');
   loadIndicateurs();
 });
+
+// ─── Bouton info (i) sur chaque graphique + modal d'aide ───
+(function () {
+  var style = document.createElement('style');
+  style.textContent =
+    '.indic-info-btn{position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;' +
+    'border:1px solid var(--border);background:var(--surface2);color:var(--accent);' +
+    'font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:13px;line-height:1;' +
+    'cursor:pointer;z-index:5;}' +
+    '.indic-info-btn:hover{background:var(--accent);color:#fff;}';
+  document.head.appendChild(style);
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'indicInfoOverlay';
+  overlay.innerHTML =
+    '<div class="modal-box">' +
+    '<button class="close-btn" id="indicInfoClose">&#x2715;</button>' +
+    '<h2>📊 Lecture des indicateurs</h2>' +
+    '<p>Deux graphiques mensuels — <strong>APPROS</strong> et <strong>PIÈCES DÉPOSÉES</strong> — suivent le taux de réalisation jour par jour.</p>' +
+    '<ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">' +
+    '<li><strong>Mois</strong> — sélecteur en haut de page pour consulter un autre mois.</li>' +
+    '<li><strong>Courbe J-0 (verte)</strong> — taux consolidé avec un recul de 3 jours.</li>' +
+    '<li><strong>Courbe J-3 (orange)</strong> — taux constaté le jour même ; l’écart entre les deux courbes montre ce qui a évolué entre-temps.</li>' +
+    '</ul></div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector('#indicInfoClose').addEventListener('click', function () { overlay.classList.remove('open'); });
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.classList.remove('open'); });
+
+  function inject() {
+    document.querySelectorAll('canvas').forEach(function (cv) {
+      var card = cv.parentElement;
+      if (!card || card.querySelector('.indic-info-btn')) return;
+      card.style.position = 'relative';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'indic-info-btn';
+      b.textContent = 'i';
+      b.title = 'Comment lire ce graphique ?';
+      b.addEventListener('click', function () { overlay.classList.add('open'); });
+      card.appendChild(b);
+    });
+  }
+
+  var obs = new MutationObserver(function () { inject(); });
+  obs.observe(document.body, { childList: true, subtree: true });
+  inject();
+})();
