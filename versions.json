@@ -1,5 +1,10 @@
 [
   {
+    "version": "v2026.08.18-11",
+    "date": "2026-08-18T11:35:50",
+    "message": "fix: suppression du trait noir (bordure haute du tableau)"
+  },
+  {
     "version": "v2026.08.18-10",
     "date": "2026-08-18T11:33:38",
     "message": "fix: suppression définitive du trait parasite (rangée hors tableau)"

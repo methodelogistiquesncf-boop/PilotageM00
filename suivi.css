@@ -1031,3 +1031,6 @@ tr.row-jbtns th { background: var(--bg); border: none; padding: 2px 4px 6px; tex
 
 /* ─── Pas de trait noir au-dessus de la rangée J-0 / J-3 ─── */
 table.has-jbtns { border-top: 2px solid transparent; }
+
+/* ─── Suppression de la bordure haute du tableau (zone des boutons J-0/J-3) ─── */
+#mainTable { border-top: none; }
