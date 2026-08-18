@@ -182,10 +182,11 @@ initAuth(function () {
   loadIndicateurs();
 });
 
-// ─── Bouton info (i) sur chaque graphique + modal d'aide ───
+// ─── Bouton info (i) DANS chaque carte graphique + modal d'aide ───
 (function () {
   var style = document.createElement('style');
   style.textContent =
+    '.indic-chart-card{position:relative;}' +
     '.indic-info-btn{position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;' +
     'border:1px solid var(--border);background:var(--surface2);color:var(--accent);' +
     'font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:13px;line-height:1;' +
@@ -210,11 +211,19 @@ initAuth(function () {
   overlay.querySelector('#indicInfoClose').addEventListener('click', function () { overlay.classList.remove('open'); });
   overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.classList.remove('open'); });
 
-  function inject() {
-    document.querySelectorAll('canvas').forEach(function (cv) {
-      var card = cv.parentElement;
-      if (!card || card.querySelector('.indic-info-btn')) return;
-      card.style.position = 'relative';
+  function setup() {
+    ['chartAppros', 'chartPieces'].forEach(function (id) {
+      var cv = document.getElementById(id);
+      if (!cv) return;
+      var card = (cv.parentElement && cv.parentElement.classList.contains('indic-chart-card'))
+        ? cv.parentElement : null;
+      if (!card) {
+        card = document.createElement('div');
+        card.className = 'indic-chart-card';
+        cv.parentNode.insertBefore(card, cv);
+        card.appendChild(cv);
+      }
+      if (card.querySelector('.indic-info-btn')) return;
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'indic-info-btn';
@@ -224,8 +233,5 @@ initAuth(function () {
       card.appendChild(b);
     });
   }
-
-  var obs = new MutationObserver(function () { inject(); });
-  obs.observe(document.body, { childList: true, subtree: true });
-  inject();
+  setup();
 })();
