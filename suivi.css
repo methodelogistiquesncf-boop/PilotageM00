@@ -1048,3 +1048,9 @@ table.has-jbtns { border-top: 2px solid transparent; }
   background: var(--accent-light); color: var(--accent-dark);
   font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
 }
+
+/* ─── Indicateurs : modales sans flou (graphiques lisibles derrière) ─── */
+#indicAddOverlay, #indicConfirmOverlay, #indicInfoOverlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
