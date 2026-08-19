@@ -79,7 +79,7 @@ function bindCanvasHover(canvas) {
     });
     var t = ensureTooltip();
     if (best) {
-      t.textContent = best.label + ' — ' + best.day + ' ' + monthLabel(canvas._monthKey) + ' : ' + String(best.v).replace('.', ',') + ' %';
+      t.textContent = best.label + ' — ' + best.day + ' ' + monthLabel(canvas._monthKey) + ' : ' + String(best.v).replace('.', ',') + ' %' + ((state.currentUserRole || '') === 'Administrateur' ? ' · 🗑️ cliquer pour supprimer' : '');
       t.style.left = (r.left + best.x) + 'px';
       t.style.top = (r.top + best.y - 6) + 'px';
       t.style.opacity = '1';
@@ -137,7 +137,7 @@ function drawChart(canvasId, jours, field, monthKey) {
         pts.push({
           x: padL + ((d2 - 1) / Math.max(nDays - 1, 1)) * W,
           y: padT + H - (Math.min(val, 100) / 100) * H,
-          v: val, day: d2, label: label
+          v: val, day: d2, label: label, field: field
         });
       }
     }
