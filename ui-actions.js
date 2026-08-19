@@ -289,17 +289,48 @@ function buildActionRow(a) {
   return tr;
 }
 
-// ─── Export CSV ─────────────────────────────────────────────────────────────
+// ─── Export CSV (nouvelle base : KIT / SYMBOLE + colonnes complètes) ──────
 export function exportActionsCSV() {
-  var rows = [['Engin', 'Poste', 'Section', 'Date', 'Action', 'Commentaire', 'Responsable', 'Échéance', 'Statut']];
-  state.actions.forEach(function (a) {
-    var echAff = a.echeance ? a.echeance.split('-').reverse().join('/') : '';
-    rows.push([a.engin, a.poste, a.section, a.date || '', a.texte, a.commentaire || '', a.responsable || '', echAff, a.done ? 'Fait' : 'À faire']);
+  function fmtD(iso) {
+    if (!iso) return '';
+    var p = String(iso).slice(0, 10).split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(iso);
+  }
+  function fmtDT(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  var today = todayISO();
+  var list = state.actions.slice();
+  list.sort(function (a, b) {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    var d = (b.date || '').localeCompare(a.date || '');
+    if (d !== 0) return d;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
   });
-  var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
+
+  var rows = [['Engin', 'Poste', 'Section', 'Date', 'KIT', 'SYMBOLE', 'Commentaire',
+               'Responsable', 'Échéance', 'Statut', 'Créée le', 'Faite le']];
+  list.forEach(function (a) {
+    var statut = a.done ? 'Fait' : ((a.echeance && a.echeance < today) ? 'En retard' : 'À faire');
+    rows.push([
+      a.engin || '', a.poste || '', a.section || '', a.date || '',
+      a.kit || '', a.symbole || '', a.commentaire || '', a.responsable || '',
+      fmtD(a.echeance), statut, fmtDT(a.createdAt), fmtDT(a.doneAt)
+    ]);
+  });
+
+  var csv = '\ufeff' + rows.map(function (r) {
+    return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';');
+  }).join('\n');
   var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = 'actions_' + (document.getElementById('dateJour').value || 'export') + '.csv';
-  a.click(); URL.revokeObjectURL(url);
+  var link = document.createElement('a');
+  link.href = url;
+  link.download = 'actions_' + (document.getElementById('dateJour').value || 'export') + '.csv';
+  link.click();
+  URL.revokeObjectURL(url);
 }
