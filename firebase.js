@@ -2,7 +2,7 @@
 
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
 
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDYo1JH1uqYX6OsHdV9QjtaG6CjP9gLQEo",
   authDomain: "pilotagem00-prod2.firebaseapp.com",
   projectId: "pilotagem00-prod2",
