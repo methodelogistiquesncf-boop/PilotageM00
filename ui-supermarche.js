@@ -116,10 +116,22 @@ function buildHeader() {
 // 🔥 Boutons J-0 / J-3 : barre FLOTTANTE au-dessus du tableau,
 // alignée sur les colonnes de dates (hors tableau → zéro impact layout).
 // Raccordement ultérieur via data-kind / data-idx / data-j.
+// 🔒 Boutons J-0 / J-3 réservés à ces rôles (masqués pour les autres)
+// Pour modifier la liste : ajouter/retirer des noms (en minuscules) ci-dessous.
+var JBTN_ROLES = ['administrateur', 'responsable', 'ordonnanceur li'];
+function canUseJourButtons() {
+  return JBTN_ROLES.indexOf((state.currentUserRole || '').trim().toLowerCase()) !== -1;
+}
+
 function buildJourButtonsRow() {
   var table = document.getElementById('mainTable');
   var wrap = table ? table.parentNode : null;
   if (!wrap) return;
+  if (!canUseJourButtons()) {
+    var bb = document.getElementById('jbtnsBar');
+    if (bb) bb.remove();
+    return;
+  }
 
   // 🔒 Styles injectés ici (garantis, indépendants de suivi.css)
   if (!document.getElementById('jbtnsStyle')) {
