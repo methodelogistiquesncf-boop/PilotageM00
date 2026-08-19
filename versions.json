@@ -2,7 +2,7 @@
   {
     "version": "v2026.08.19",
     "date": "2026-08-19T07:19:01",
-    "message": "page temporaire de migration pilotagem00 -> recette • migration avec connexion à l'ancienne base • migration avec config ancienne collable • migration en lecture seule (sans auth ancienne) • boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI"
+    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI"
   },
   {
     "version": "v2026.08.18",
