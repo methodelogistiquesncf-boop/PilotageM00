@@ -1,8 +1,8 @@
 [
   {
     "version": "v2026.08.19",
-    "date": "2026-08-19T09:09:06",
-    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut • badge de rôle à côté du nom connecté • badge de rôle en petit sous le nom • badge de rôle intégré dans la pastille utilisateur • bouton admin « Effacer le mois » sur les Indicateurs • admin peut supprimer une valeur ponctuelle des 4 courbes • confirmation locale pour suppressions dans Indicateurs • clic suppression des valeurs (version robuste + traces console) • admin peut ajouter/corriger un point des courbes • modal Ajouter un point — couleurs des J + déplaçable • titre du modal Ajouter un point centré • modales Indicateurs sans flou d'arrière-plan • inversion des boutons J-3 (gauche) / J-0 (droite) • définitions J-0 (jour même) / J-3 (recul 3 jours) remises à l'endroit • export CSV Actions aligné sur la nouvelle base (KIT/SYMBOLE)"
+    "date": "2026-08-19T09:11:03",
+    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut • badge de rôle à côté du nom connecté • badge de rôle en petit sous le nom • badge de rôle intégré dans la pastille utilisateur • bouton admin « Effacer le mois » sur les Indicateurs • admin peut supprimer une valeur ponctuelle des 4 courbes • confirmation locale pour suppressions dans Indicateurs • clic suppression des valeurs (version robuste + traces console) • admin peut ajouter/corriger un point des courbes • modal Ajouter un point — couleurs des J + déplaçable • titre du modal Ajouter un point centré • modales Indicateurs sans flou d'arrière-plan • inversion des boutons J-3 (gauche) / J-0 (droite) • définitions J-0 (jour même) / J-3 (recul 3 jours) remises à l'endroit • export CSV Actions aligné sur la nouvelle base (KIT/SYMBOLE) • correction de la ligne J-3 dans le modal Lecture des indicateurs"
   },
   {
     "version": "v2026.08.18",

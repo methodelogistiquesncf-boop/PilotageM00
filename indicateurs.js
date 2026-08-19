@@ -238,7 +238,7 @@ initAuth(function () {
     '<ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">' +
     '<li><strong>Mois</strong> — sélecteur en haut de page pour consulter un autre mois.</li>' +
     '<li><strong>Courbe J-0 (verte)</strong> — taux constaté le jour même ; l\u2019écart entre les deux courbes montre ce qui a évolué entre-temps.</li>' +
-    '<li><strong>Courbe J-3 (orange)</strong> — taux constaté le jour même ; l’écart entre les deux courbes montre ce qui a évolué entre-temps.</li>' +
+    '<li><strong>Courbe J-3 (orange)</strong> — taux consolidé avec un recul de 3 jours.</li>' +
     '</ul></div>';
   document.body.appendChild(overlay);
   overlay.querySelector('#indicInfoClose').addEventListener('click', function () { overlay.classList.remove('open'); });
