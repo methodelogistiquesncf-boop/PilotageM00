@@ -5,7 +5,7 @@
 <title>Migration pilotagem00 → recette</title>
 <style>
   body { font-family: system-ui, sans-serif; background: #eef1f5; margin: 0; padding: 40px 20px; color: #111827; }
-  .box { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+  .box { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
   h1 { font-size: 20px; margin: 0 0 6px; }
   p.sub { color: #6b7280; font-size: 13px; margin: 0 0 20px; }
   #status { padding: 10px 14px; border-radius: 8px; background: #e8f0fe; color: #1a4fa0; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
@@ -13,7 +13,8 @@
   #status.ok { background: #e6f4ea; color: #1e7e34; }
   .old-login { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; background: #fafafa; }
   .old-login h2 { font-size: 14px; margin: 0 0 10px; }
-  .old-login input { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; }
+  .old-login input, .old-login textarea { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 12px; font-family: monospace; }
+  .old-login input { font-family: system-ui; font-size: 13px; }
   #oldStatus { font-size: 12px; color: #6b7280; margin: 8px 0 0; }
   button { background: #1a4fa0; color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer; }
   button:disabled { opacity: .5; cursor: not-allowed; }
@@ -28,10 +29,11 @@
 
   <div class="old-login">
     <h2>🔐 Étape 1 — Connexion à l'ANCIENNE base (pilotagem00)</h2>
+    <textarea id="oldConfig" rows="3"></textarea>
     <input id="oldEmail" placeholder="Ton e-mail (identique à l'ancienne appli)">
     <input id="oldPass" type="password" placeholder="Ton mot de passe de l'ancienne appli">
     <button id="btnOldLogin">Se connecter à l'ancienne base</button>
-    <p id="oldStatus">Ton mot de passe sert uniquement à la connexion Firebase officielle, rien n'est stocké.</p>
+    <p id="oldStatus">Si la connexion échoue : sur l'ancienne appli, F12 → colle <code>console.log(JSON.stringify(firebase.app().options))</code> → copie le résultat dans le grand champ ci-dessus.</p>
   </div>
 
   <button id="btnMigrate" disabled>🚀 Étape 2 — Lancer la migration</button>
@@ -50,19 +52,12 @@ var NEW_CONFIG = {
   messagingSenderId: "848268615763",
   appId: "1:848268615763:web:757d9dd5a0e3c3b28a26a6"
 };
-var OLD_CONFIG = {
-  apiKey: "AIzaSyAYRfaLdg--2SkTCtyeNa1Xsq2vpSRBz8kY",
-  authDomain: "pilotagem00.firebaseapp.com",
-  projectId: "pilotagem00",
-  storageBucket: "pilotagem00.firebasestorage.app",
-  messagingSenderId: "455481915450",
-  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
-};
+
+document.getElementById('oldConfig').value = '{"apiKey":"AIzaSyAYRfaLdg--2SkTCtyeNa1Xsq2vpSRBz8kY","authDomain":"pilotagem00.firebaseapp.com","projectId":"pilotagem00","storageBucket":"pilotagem00.firebasestorage.app","messagingSenderId":"455481915450","appId":"1:455481915450:web:cbc9430df70b6f4107dd03"}';
 
 firebase.initializeApp(NEW_CONFIG);
-var oldApp = firebase.initializeApp(OLD_CONFIG, 'old');
 var newDb = firebase.firestore();
-var oldDb = oldApp.firestore();
+var oldApp = null, oldDb = null;
 
 var statusEl = document.getElementById('status');
 var btn = document.getElementById('btnMigrate');
@@ -82,12 +77,21 @@ firebase.auth().onAuthStateChanged(function (user) {
 });
 
 document.getElementById('btnOldLogin').onclick = function () {
+  var st = document.getElementById('oldStatus');
   var em = document.getElementById('oldEmail').value.trim();
   var pw = document.getElementById('oldPass').value;
-  var st = document.getElementById('oldStatus');
+  var cfg;
+  try { cfg = JSON.parse(document.getElementById('oldConfig').value.trim()); }
+  catch (e) { st.textContent = '❌ Config invalide : copie-colle la ligne JSON exacte (telle quelle).'; st.style.color = '#c62828'; return; }
   if (!em || !pw) { st.textContent = '❌ Renseigne e-mail et mot de passe.'; st.style.color = '#c62828'; return; }
+
   st.textContent = 'Connexion à pilotagem00…'; st.style.color = '#6b7280';
-  oldApp.auth().signInWithEmailAndPassword(em, pw).then(function () {
+  var name = 'old' + Date.now();
+  Promise.resolve(oldApp ? oldApp.delete() : null).then(function () {
+    oldApp = firebase.initializeApp(cfg, name);
+    oldDb = oldApp.firestore();
+    return oldApp.auth().signInWithEmailAndPassword(em, pw);
+  }).then(function () {
     oldOk = true; updateBtn();
     st.textContent = '✅ Ancienne base connectée — le bouton migration est actif.';
     st.style.color = '#1e7e34';
