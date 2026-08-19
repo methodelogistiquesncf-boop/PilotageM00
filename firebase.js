@@ -1,4 +1,4 @@
-// firebase.js — v3 : temps réel (onSnapshot) + split Firestore + purge auto
+// firebase.js — v4 : optimisé (temps réel ciblé + cache + historique paresseux)
 
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
 
@@ -22,6 +22,9 @@ let pendingApply = false;
 let lastLocalSavedAt = '';
 let rtStarted = false;
 let remoteTimer = null;
+let usersCache = { data: [], ts: 0 };
+let userDirectoryCache = { data: [], ts: 0 };
+const USERS_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 export function getDb() { return db; }
 
@@ -121,6 +124,7 @@ export async function createUser(email, role, prenom, nom) {
     });
     await secondaryAuth.signOut();
     await auth.sendPasswordResetEmail(email);
+    usersCache.ts = 0; // invalide le cache
     return { uid: uid };
   } finally {
     await secondaryApp.delete();
@@ -134,18 +138,30 @@ function generateTempPassword() {
 }
 
 export async function loadUsersList() {
+  var now = Date.now();
+  if (usersCache.data.length && (now - usersCache.ts) < USERS_CACHE_TTL) {
+    return usersCache.data;
+  }
   var snap = await db.collection('users').orderBy('email').get();
-  return snap.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); });
+  usersCache.data = snap.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); });
+  usersCache.ts = now;
+  return usersCache.data;
 }
 
 export async function tryLoadUserDirectory() {
   if (!db) return [];
+  var now = Date.now();
+  if (userDirectoryCache.data.length && (now - userDirectoryCache.ts) < USERS_CACHE_TTL) {
+    return userDirectoryCache.data;
+  }
   try {
     var snap = await db.collection('users').orderBy('email').get();
-    return snap.docs.map(function (d) {
+    userDirectoryCache.data = snap.docs.map(function (d) {
       var data = d.data();
       return { email: data.email || '', prenom: data.prenom || '', nom: data.nom || '' };
     }).filter(function (u) { return u.email; });
+    userDirectoryCache.ts = now;
+    return userDirectoryCache.data;
   } catch (e) {
     return [];
   }
@@ -154,14 +170,17 @@ export async function tryLoadUserDirectory() {
 export async function updateUserRole(uid, role) {
   await db.collection('users').doc(uid).update({ role: role });
   if (uid === state.currentUserUid) { state.currentUserRole = role; updateUserBadge(); }
+  usersCache.ts = 0; // invalide
 }
 
 export async function updateUserProfile(uid, patch) {
   await db.collection('users').doc(uid).update(patch);
+  usersCache.ts = 0;
 }
 
 export async function deleteUserDoc(uid) {
   await db.collection('users').doc(uid).delete();
+  usersCache.ts = 0;
 }
 
 // ─── Purge automatique ──────────────────────────────────────────────────────
@@ -198,7 +217,7 @@ function purgeOldData() {
   }
 }
 
-// ─── Lecture complète (boot + refresh temps réel) ───────────────────────────
+// ─── Lecture initiale (complète, une seule fois) ───────────────────────────
 async function fetchAll() {
   var parts = FIRESTORE_DOC.split('/');
   var snap = await db.collection(parts[0]).doc(parts[1]).get();
@@ -229,6 +248,24 @@ async function fetchAll() {
   return { patch: patch, dateJourSaved: dateJourSaved, savedAt: savedAt, hist: hist, acts: acts, actIds: actIds };
 }
 
+// ─── Lecture ciblée (seulement ce qui a changé) ───────────────────────────
+async function fetchChangedCollections() {
+  var hist = {};
+  var histSnap = await db.collection('historique').get();
+  histSnap.forEach(function (d) { hist[d.id] = d.data(); });
+
+  var acts = [];
+  var actIds = [];
+  var actSnap = await db.collection('actions').get();
+  actSnap.forEach(function (d) {
+    var a = d.data() || {};
+    if (!a.id) a.id = d.id;
+    acts.push(a); actIds.push(d.id);
+  });
+
+  return { hist: hist, acts: acts, actIds: actIds };
+}
+
 function applyFetched(r) {
   setState(r.patch);
   state.historique = r.hist;
@@ -240,6 +277,14 @@ function applyFetched(r) {
   setRemovedRoles(state.removedRoles || []);
   if (r.dateJourSaved) document.getElementById('dateJour').value = r.dateJourSaved;
   lastLocalSavedAt = r.savedAt;
+}
+
+function applyChangedCollections(r) {
+  state.historique = r.hist;
+  loadedHistDates = Object.keys(r.hist);
+  state.actions = r.acts;
+  loadedActionIds = r.actIds;
+  ensureFullStructure();
 }
 
 function rebuildUI() {
@@ -260,30 +305,22 @@ export async function loadFirebase() {
   }
 }
 
-// ─── Temps réel ─────────────────────────────────────────────────────────────
+// ─── Temps réel ciblé ─────────────────────────────────────────────────────
 function startRealtime() {
   if (rtStarted || !db) return;
   rtStarted = true;
 
+  // Un seul écouteur sur le document courant (pas sur les collections entières)
   db.collection('suivi').doc('default').onSnapshot(function (snap) {
     if (!snap.exists) return;
     var data = snap.data() || {};
     if (data.savedAt && data.savedAt === lastLocalSavedAt) return; // ma propre écriture
     handleRemote();
   }, function (e) { console.error('RT suivi :', e); });
-
-  db.collection('historique').onSnapshot(function () {
-    handleRemote();
-  }, function (e) { console.error('RT historique :', e); });
-
-  db.collection('actions').onSnapshot(function () {
-    handleRemote();
-  }, function (e) { console.error('RT actions :', e); });
 }
 
 function handleRemote() {
   if (dirty) {
-    // 🔑 protection : on attend que l'utilisateur sauvegarde ses saisies en cours
     pendingApply = true;
     setStatus('sync', '🔄 Modifs collègues reçues — application après ta sauvegarde');
     return;
@@ -294,8 +331,8 @@ function handleRemote() {
 
 async function refreshFromServer() {
   try {
-    var r = await fetchAll();
-    applyFetched(r);
+    var r = await fetchChangedCollections();
+    applyChangedCollections(r);
     rebuildUI();
     setStatus('ok', '✓ Synchronisé (temps réel)');
   } catch (e) { console.error(e); }
@@ -396,7 +433,7 @@ async function syncActions() {
 function scheduleAutoSave() {
   dirty = true;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(function () { saveFirebase(); }, 3000);
+  saveTimer = setTimeout(function () { saveFirebase(); }, 6000); // 3s → 6s
   setStatus('sync', 'Modifications en cours...');
 }
 onDirty(scheduleAutoSave);
