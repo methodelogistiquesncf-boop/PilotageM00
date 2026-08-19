@@ -11,6 +11,10 @@
   #status { padding: 10px 14px; border-radius: 8px; background: #e8f0fe; color: #1a4fa0; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
   #status.err { background: #fdecea; color: #c62828; }
   #status.ok { background: #e6f4ea; color: #1e7e34; }
+  .old-login { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; background: #fafafa; }
+  .old-login h2 { font-size: 14px; margin: 0 0 10px; }
+  .old-login input { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; }
+  #oldStatus { font-size: 12px; color: #6b7280; margin: 8px 0 0; }
   button { background: #1a4fa0; color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer; }
   button:disabled { opacity: .5; cursor: not-allowed; }
   pre { background: #0f172a; color: #a7f3d0; border-radius: 8px; padding: 14px; font-size: 12px; max-height: 420px; overflow: auto; white-space: pre-wrap; }
@@ -20,8 +24,17 @@
 <div class="box">
   <h1>🚀 Migration de l'ancienne base vers la recette</h1>
   <p class="sub">pilotagem00 → pilotagem00-recette · texte→KIT/SYMBOLE · historique & actions en collections · backup auto avant écriture</p>
-  <div id="status">Vérification de la connexion…</div>
-  <button id="btnMigrate" disabled>🚀 Lancer la migration</button>
+  <div id="status">Vérification de la connexion recette…</div>
+
+  <div class="old-login">
+    <h2>🔐 Étape 1 — Connexion à l'ANCIENNE base (pilotagem00)</h2>
+    <input id="oldEmail" placeholder="Ton e-mail (identique à l'ancienne appli)">
+    <input id="oldPass" type="password" placeholder="Ton mot de passe de l'ancienne appli">
+    <button id="btnOldLogin">Se connecter à l'ancienne base</button>
+    <p id="oldStatus">Ton mot de passe sert uniquement à la connexion Firebase officielle, rien n'est stocké.</p>
+  </div>
+
+  <button id="btnMigrate" disabled>🚀 Étape 2 — Lancer la migration</button>
   <pre id="report" style="display:none"></pre>
 </div>
 
@@ -58,6 +71,32 @@ var lines = [];
 function log(t) { lines.push(t); reportEl.style.display = 'block'; reportEl.textContent = lines.join('\n'); reportEl.scrollTop = reportEl.scrollHeight; }
 function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = cls || ''; }
 
+var newOk = false, oldOk = false;
+function updateBtn() { btn.disabled = !(newOk && oldOk); }
+
+firebase.auth().onAuthStateChanged(function (user) {
+  if (!user) { setStatus('❌ Non connecté à la recette. Ouvre d\u2019abord suivi.html, connecte-toi, puis reviens ici.', 'err'); return; }
+  setStatus('✅ Recette connectée : ' + user.email);
+  document.getElementById('oldEmail').value = user.email || '';
+  newOk = true; updateBtn();
+});
+
+document.getElementById('btnOldLogin').onclick = function () {
+  var em = document.getElementById('oldEmail').value.trim();
+  var pw = document.getElementById('oldPass').value;
+  var st = document.getElementById('oldStatus');
+  if (!em || !pw) { st.textContent = '❌ Renseigne e-mail et mot de passe.'; st.style.color = '#c62828'; return; }
+  st.textContent = 'Connexion à pilotagem00…'; st.style.color = '#6b7280';
+  oldApp.auth().signInWithEmailAndPassword(em, pw).then(function () {
+    oldOk = true; updateBtn();
+    st.textContent = '✅ Ancienne base connectée — le bouton migration est actif.';
+    st.style.color = '#1e7e34';
+  }).catch(function (e) {
+    st.textContent = '❌ ' + (e.message || e);
+    st.style.color = '#c62828';
+  });
+};
+
 // ─── Transformations ancien → nouveau ───
 function mapNote(n) {
   var t = (n.texte || '').trim();
@@ -66,11 +105,7 @@ function mapNote(n) {
 }
 function mapCell(c) {
   c = c || {};
-  return {
-    note: (c.note || []).map(mapNote).filter(function (x) { return x; }),
-    score: c.score || '',
-    dot: c.dot || null
-  };
+  return { note: (c.note || []).map(mapNote).filter(function (x) { return x; }), score: c.score || '', dot: c.dot || null };
 }
 function mapZone(z) {
   var out = {};
@@ -114,15 +149,6 @@ async function batchSet(docs) {
     await b.commit();
   }
 }
-
-firebase.auth().onAuthStateChanged(function (user) {
-  if (!user) {
-    setStatus('❌ Non connecté à la recette. Ouvre d\u2019abord suivi.html, connecte-toi, puis reviens ici.', 'err');
-    return;
-  }
-  setStatus('✅ Connecté : ' + user.email + ' — prêt à migrer.');
-  btn.disabled = false;
-});
 
 btn.onclick = async function () {
   btn.disabled = true;
@@ -170,22 +196,13 @@ btn.onclick = async function () {
     }));
     log('   ✔ ' + acts.length + ' actions migrées (texte → KIT).');
 
-    var nbNotes = 0;
-    [d.S, d.S_SC, d.S_TT].forEach(function (z) {
-      Object.keys(z || {}).forEach(function (e) {
-        ['APPROS', 'PIECES DEPOSEES'].forEach(function (s) {
-          ((z[e] || {})[s] || []).forEach(function (c) { nbNotes += (c.note || []).filter(function (n) { return (n.texte || '').trim(); }).length; });
-        });
-      });
-    });
     log('');
-    log('🎉 MIGRATION TERMINÉE : ' + nbNotes + ' remarques (→ KIT), ' + acts.length + ' actions, ' + histKeys.length + ' jours d\u2019historique, ' + (d.rassemblement || []).length + ' sections rassemblement.');
-    log('Ouvre maintenant suivi.html (Ctrl+Shift+R) pour vérifier les données.');
+    log('🎉 MIGRATION TERMINÉE ! Ouvre suivi.html (Ctrl+Shift+R) pour vérifier.');
     setStatus('🎉 Migration terminée ! Ouvre suivi.html pour vérifier.', 'ok');
   } catch (e) {
     console.error(e);
     log('❌ ERREUR : ' + (e.message || e));
-    setStatus('❌ Erreur : ' + (e.message || e) + ' — copie-colle ce message pour obtenir de l\u2019aide.', 'err');
+    setStatus('❌ Erreur : ' + (e.message || e), 'err');
     btn.disabled = false;
   }
 };
