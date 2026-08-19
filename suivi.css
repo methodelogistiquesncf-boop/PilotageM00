@@ -1037,9 +1037,14 @@ table.has-jbtns { border-top: 2px solid transparent; }
 #confirmMessage { white-space: pre-line; }
 
 /* ─── Badge de rôle à côté du nom connecté ─── */
-.user-id-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.user-id-col {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 4px 14px;
+}
+#userEmail { background: transparent !important; border: none !important; padding: 0 !important; border-radius: 0 !important; }
 .role-badge {
-  display: none; padding: 1px 8px; border-radius: 10px;
+  display: none; padding: 0 6px 1px; border-radius: 8px;
   background: var(--accent-light); color: var(--accent-dark);
-  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+  font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
 }
