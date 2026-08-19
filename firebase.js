@@ -54,6 +54,12 @@ export function updateUserBadge() {
   if (!el) return;
   var fullName = (state.currentUserPrenom + ' ' + state.currentUserNom).trim();
   el.textContent = '👤 ' + (fullName || state.currentUserEmail);
+  var rb = document.getElementById('userRoleBadge');
+  if (rb) {
+    var r = (state.currentUserRole || '').trim();
+    rb.textContent = r;
+    rb.style.display = r ? 'inline-block' : 'none';
+  }
 }
 
 async function ensureUserDoc(user) {
@@ -147,7 +153,7 @@ export async function tryLoadUserDirectory() {
 
 export async function updateUserRole(uid, role) {
   await db.collection('users').doc(uid).update({ role: role });
-  if (uid === state.currentUserUid) state.currentUserRole = role;
+  if (uid === state.currentUserUid) { state.currentUserRole = role; updateUserBadge(); }
 }
 
 export async function updateUserProfile(uid, patch) {

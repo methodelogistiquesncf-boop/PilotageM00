@@ -1035,3 +1035,10 @@ table.has-jbtns { border-top: 2px solid transparent; }
 /* ─── Suppression de la bordure haute du tableau (zone des boutons J-0/J-3) ─── */
 #mainTable { border-top: none; }
 #confirmMessage { white-space: pre-line; }
+
+/* ─── Badge de rôle à côté du nom connecté ─── */
+.role-badge {
+  display: none; margin-left: 8px; padding: 2px 10px; border-radius: 12px;
+  background: var(--accent-light); color: var(--accent-dark);
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+}

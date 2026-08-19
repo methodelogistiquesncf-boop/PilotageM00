@@ -1,8 +1,8 @@
 [
   {
     "version": "v2026.08.19",
-    "date": "2026-08-19T07:33:14",
-    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut"
+    "date": "2026-08-19T07:49:58",
+    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut • badge de rôle à côté du nom connecté"
   },
   {
     "version": "v2026.08.18",
