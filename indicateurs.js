@@ -1,5 +1,5 @@
 // indicateurs.js — page Indicateurs : graphiques mensuels + bulles au survol
-import { state } from './state.js';
+import { state, showConfirm } from './state.js';
 import { initAuth, doLogout, saveFirebase, getDb } from './firebase.js';
 
 window.doLogout = doLogout;
@@ -344,4 +344,42 @@ initAuth(function () {
     b2.onclick = exportIndicPNG;
     bar.appendChild(b1); bar.appendChild(b2);
   }
+})();
+
+// ─── Bouton Administrateur : effacer le mois affiché ───
+(function () {
+  function addDeleteBtn() {
+    var sel = document.getElementById('indicMonthSelect');
+    if (!sel || document.getElementById('btnIndicDelete')) return;
+    if ((state.currentUserRole || '') !== 'Administrateur') return;
+    var b = document.createElement('button');
+    b.id = 'btnIndicDelete';
+    b.className = 'btn btn-ghost';
+    b.textContent = '🗑️ Effacer le mois';
+    b.title = 'Réservé aux Administrateurs : efface les indicateurs du mois affiché';
+    b.style.color = '#c62828';
+    b.onclick = async function () {
+      var key = sel.value;
+      var ok = await showConfirm(
+        'Effacer définitivement les indicateurs de « ' + monthLabel(key) + ' » ?\nLes graphiques de ce mois seront vidés pour tous les utilisateurs.',
+        { title: 'Effacer ce mois ?', okLabel: 'Effacer le mois' }
+      );
+      if (!ok) return;
+      var db = getDb();
+      if (!db) return;
+      try {
+        await db.collection('indicateurs').doc(key).delete();
+        delete indicData[key];
+        buildMonthSelect();
+        drawAll();
+      } catch (e) {
+        console.error(e);
+        alert('Erreur : ' + (e.message || e));
+      }
+    };
+    sel.parentNode.appendChild(b);
+  }
+  var t = setInterval(function () {
+    if (state.currentUserRole) { clearInterval(t); addDeleteBtn(); }
+  }, 300);
 })();
