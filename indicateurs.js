@@ -463,3 +463,84 @@ initAuth(function () {
   var t = setInterval(scan, 500);
   setTimeout(function () { clearInterval(t); }, 15000);
 })();
+
+// ─── Bouton Administrateur : ajouter un point aux courbes ───
+(function () {
+  var addMonthKey = null;
+
+  function ensureAddModal() {
+    var ov = document.getElementById('indicAddOverlay');
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'indicAddOverlay';
+    ov.className = 'modal-overlay';
+    ov.innerHTML =
+      '<div class="modal-box" style="max-width:440px">' +
+      '<button class="close-btn" id="indicAddClose">&#x2715;</button>' +
+      '<h2>➕ Ajouter un point</h2>' +
+      '<div style="display:flex;flex-direction:column;gap:10px;margin:14px 0">' +
+      '<label style="font-size:13px;font-weight:600">Graphique<br><select id="indicAddChart" class="actions-filter-select"><option value="appro">APPROS</option><option value="pieces">PIÈCES DÉPOSÉES</option></select></label>' +
+      '<label style="font-size:13px;font-weight:600">Courbe<br><select id="indicAddLine" class="actions-filter-select"><option value="j0">J-0</option><option value="j3">J-3</option></select></label>' +
+      '<label style="font-size:13px;font-weight:600">Jour<br><select id="indicAddDay" class="actions-filter-select"></select></label>' +
+      '<label style="font-size:13px;font-weight:600">Valeur en % (0 à 100)<br><input id="indicAddVal" type="number" min="0" max="100" step="0.1" placeholder="ex : 88,5" style="padding:8px;border:1px solid var(--border);border-radius:7px;"></label>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+      '<button class="btn btn-ghost" id="indicAddNo">Annuler</button>' +
+      '<button class="btn btn-primary" id="indicAddYes">Ajouter</button>' +
+      '</div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#indicAddClose').onclick = function () { ov.classList.remove('open'); };
+    ov.querySelector('#indicAddNo').onclick = function () { ov.classList.remove('open'); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('open'); });
+    ov.querySelector('#indicAddYes').onclick = function () {
+      var field = ov.querySelector('#indicAddChart').value;
+      var lineKey = ov.querySelector('#indicAddLine').value;
+      var day = ov.querySelector('#indicAddDay').value;
+      var val = parseFloat(String(ov.querySelector('#indicAddVal').value).replace(',', '.'));
+      if (isNaN(val) || val < 0 || val > 100) { alert('Valeur invalide : entre 0 et 100.'); return; }
+      var key = addMonthKey;
+      if (!key) return;
+      if (!indicData[key]) indicData[key] = { jours: {} };
+      if (!indicData[key].jours) indicData[key].jours = {};
+      var jours = indicData[key].jours;
+      if (!jours[day]) jours[day] = {};
+      if (!jours[day][field]) jours[day][field] = {};
+      jours[day][field][lineKey] = Math.round(val * 10) / 10;
+      var db = getDb();
+      var done = function () { ov.classList.remove('open'); drawAll(); };
+      if (db) db.collection('indicateurs').doc(key).set({ jours: jours }, { merge: true }).then(done, function (e) { console.error(e); done(); });
+      else done();
+    };
+    return ov;
+  }
+
+  function openAddModal(key) {
+    addMonthKey = key;
+    var ov = ensureAddModal();
+    var n = new Date(parseInt(key.slice(0, 4), 10), parseInt(key.slice(5, 7), 10), 0).getDate();
+    var dSel = ov.querySelector('#indicAddDay');
+    dSel.innerHTML = '';
+    for (var d = 1; d <= n; d++) {
+      var o = document.createElement('option');
+      o.value = String(d); o.textContent = String(d);
+      dSel.appendChild(o);
+    }
+    ov.querySelector('#indicAddVal').value = '';
+    ov.classList.add('open');
+  }
+
+  function addBtn() {
+    var sel = document.getElementById('indicMonthSelect');
+    if (!sel || document.getElementById('btnIndicAdd')) return;
+    if ((state.currentUserRole || '') !== 'Administrateur') return;
+    var b = document.createElement('button');
+    b.id = 'btnIndicAdd';
+    b.className = 'btn btn-ghost';
+    b.textContent = '➕ Ajouter un point';
+    b.title = 'Réservé aux Administrateurs : ajoute ou corrige une valeur du mois affiché';
+    b.onclick = function () { openAddModal(sel.value); };
+    sel.parentNode.appendChild(b);
+  }
+  addBtn();
+  var t = setInterval(function () { if (state.currentUserRole) { clearInterval(t); addBtn(); } }, 300);
+})();
