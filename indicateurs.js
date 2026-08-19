@@ -481,6 +481,10 @@ initAuth(function () {
       '<div style="display:flex;flex-direction:column;gap:10px;margin:14px 0">' +
       '<label style="font-size:13px;font-weight:600">Graphique<br><select id="indicAddChart" class="actions-filter-select"><option value="appro">APPROS</option><option value="pieces">PIÈCES DÉPOSÉES</option></select></label>' +
       '<label style="font-size:13px;font-weight:600">Courbe<br><select id="indicAddLine" class="actions-filter-select"><option value="j0">J-0</option><option value="j3">J-3</option></select></label>' +
+      '<div style="display:flex;gap:8px;margin:-4px 0 2px">' +
+      '<span style="background:#22a050;color:#fff;font-size:10px;font-weight:800;padding:2px 9px;border-radius:10px">J-0</span>' +
+      '<span style="background:#f97316;color:#fff;font-size:10px;font-weight:800;padding:2px 9px;border-radius:10px">J-3</span>' +
+      '</div>' +
       '<label style="font-size:13px;font-weight:600">Jour<br><select id="indicAddDay" class="actions-filter-select"></select></label>' +
       '<label style="font-size:13px;font-weight:600">Valeur en % (0 à 100)<br><input id="indicAddVal" type="number" min="0" max="100" step="0.1" placeholder="ex : 88,5" style="padding:8px;border:1px solid var(--border);border-radius:7px;"></label>' +
       '</div>' +
@@ -511,6 +515,42 @@ initAuth(function () {
       if (db) db.collection('indicateurs').doc(key).set({ jours: jours }, { merge: true }).then(done, function (e) { console.error(e); done(); });
       else done();
     };
+    // 🎨 le sélecteur de courbe prend la couleur du J choisi
+    var selLine = ov.querySelector('#indicAddLine');
+    function paintLine() {
+      selLine.style.background = (selLine.value === 'j0') ? '#22a050' : '#f97316';
+      selLine.style.color = '#fff';
+      selLine.style.fontWeight = '700';
+      selLine.style.border = 'none';
+    }
+    selLine.addEventListener('change', paintLine);
+    paintLine();
+
+    // 🖱️ modal déplaçable en glissant par le titre
+    (function () {
+      var box = ov.querySelector('.modal-box');
+      var handle = box.querySelector('h2');
+      handle.style.cursor = 'move';
+      handle.title = 'Glisser pour déplacer';
+      var dragging = false, sx = 0, sy = 0;
+      handle.addEventListener('pointerdown', function (e) {
+        var r = box.getBoundingClientRect();
+        box.style.position = 'fixed';
+        box.style.left = r.left + 'px';
+        box.style.top = r.top + 'px';
+        box.style.margin = '0';
+        sx = e.clientX - r.left; sy = e.clientY - r.top;
+        dragging = true;
+        e.preventDefault();
+      });
+      document.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        box.style.left = (e.clientX - sx) + 'px';
+        box.style.top = (e.clientY - sy) + 'px';
+      });
+      document.addEventListener('pointerup', function () { dragging = false; });
+    })();
+
     return ov;
   }
 
