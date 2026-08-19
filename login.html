@@ -347,14 +347,14 @@ function togglePw(inputId, btn) {
 }
 
 function firebaseError(code) {
-  const map = {
-    'auth/user-not-found':         'Aucun compte associé à cet e-mail.',
-    'auth/wrong-password':         'Mot de passe incorrect.',
-    'auth/invalid-email':          'Adresse e-mail invalide.',
-    'auth/too-many-requests':      'Trop de tentatives. Réessayez dans quelques minutes.',
-    'auth/network-request-failed': 'Erreur réseau. Vérifiez votre connexion.',
-    'auth/invalid-credential':     'E-mail ou mot de passe incorrect.',
-  };
+  const firebaseConfig = {
+  apiKey: "AIzaSyDYo1JH1uqYX6OsHdV9QjtaG6CjP9gLQEo",
+  authDomain: "pilotagem00-prod2.firebaseapp.com",
+  projectId: "pilotagem00-prod2",
+  storageBucket: "pilotagem00-prod2.firebasestorage.app",
+  messagingSenderId: "66122797161",
+  appId: "1:66122797161:web:61468faf9ea1ffaf6cd2f8"
+};
   return map[code] || 'Erreur : ' + code;
 }
 
