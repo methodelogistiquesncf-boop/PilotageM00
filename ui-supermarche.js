@@ -173,7 +173,7 @@ function buildJourButtonsRow() {
     b3.type = 'button'; b3.className = 'btn-j3'; b3.textContent = 'J-3';
     b3.title = 'Action J-3 (à raccorder)';
     b3.setAttribute('data-kind', c.kind); b3.setAttribute('data-idx', String(c.idx)); b3.setAttribute('data-j', '3');
-    g.appendChild(b0); g.appendChild(b3);
+    g.appendChild(b3); g.appendChild(b0);
     bar.appendChild(g);
   });
 
