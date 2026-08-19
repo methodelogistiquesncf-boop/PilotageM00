@@ -1,8 +1,8 @@
 [
   {
     "version": "v2026.08.19",
-    "date": "2026-08-19T08:10:30",
-    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut • badge de rôle à côté du nom connecté • badge de rôle en petit sous le nom • badge de rôle intégré dans la pastille utilisateur • bouton admin « Effacer le mois » sur les Indicateurs • admin peut supprimer une valeur ponctuelle des 4 courbes"
+    "date": "2026-08-19T08:13:26",
+    "message": "boutons J-0/J-3 visibles uniquement par Admin/Responsable/Ordonnanceur LI • suppression du bouton Imprimer de la barre du haut • badge de rôle à côté du nom connecté • badge de rôle en petit sous le nom • badge de rôle intégré dans la pastille utilisateur • bouton admin « Effacer le mois » sur les Indicateurs • admin peut supprimer une valeur ponctuelle des 4 courbes • confirmation locale pour suppressions dans Indicateurs"
   },
   {
     "version": "v2026.08.18",

@@ -7,6 +7,39 @@ window.saveFirebase = saveFirebase;
 
 var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 var indicData = {};
+// ─── Confirmation locale à la page Indicateurs ───
+var _confirmResolve = null;
+function indicConfirm(message, title) {
+  var ov = document.getElementById('indicConfirmOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'indicConfirmOverlay';
+    ov.className = 'modal-overlay';
+    ov.innerHTML =
+      '<div class="modal-box">' +
+      '<button class="close-btn" id="indicConfirmClose">&#x2715;</button>' +
+      '<h2 id="indicConfirmTitle"></h2>' +
+      '<p id="indicConfirmMsg" style="white-space:pre-line;margin:10px 0 18px;"></p>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+      '<button class="btn btn-ghost" id="indicConfirmNo">Annuler</button>' +
+      '<button class="btn" id="indicConfirmYes" style="background:#c62828;color:#fff">Supprimer</button>' +
+      '</div></div>';
+    document.body.appendChild(ov);
+    function close(v) {
+      ov.classList.remove('open');
+      if (_confirmResolve) { _confirmResolve(v); _confirmResolve = null; }
+    }
+    ov.querySelector('#indicConfirmClose').onclick = function () { close(false); };
+    ov.querySelector('#indicConfirmNo').onclick = function () { close(false); };
+    ov.querySelector('#indicConfirmYes').onclick = function () { close(true); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(false); });
+  }
+  ov.querySelector('#indicConfirmTitle').textContent = title || 'Confirmation';
+  ov.querySelector('#indicConfirmMsg').textContent = message;
+  ov.classList.add('open');
+  return new Promise(function (res) { _confirmResolve = res; });
+}
+
 
 function monthLabel(key) {
   var p = String(key).split('-');
@@ -360,7 +393,7 @@ initAuth(function () {
     b.style.color = '#c62828';
     b.onclick = async function () {
       var key = sel.value;
-      var ok = await showConfirm(
+      var ok = await indicConfirm(
         'Effacer définitivement les indicateurs de « ' + monthLabel(key) + ' » ?\nLes graphiques de ce mois seront vidés pour tous les utilisateurs.',
         { title: 'Effacer ce mois ?', okLabel: 'Effacer le mois' }
       );
