@@ -416,3 +416,50 @@ initAuth(function () {
     if (state.currentUserRole) { clearInterval(t); addDeleteBtn(); }
   }, 300);
 })();
+
+// ─── Clic suppression (admin) — version robuste ───
+(function () {
+  function bindDeleteClick(canvas) {
+    if (canvas.__delBound) return;
+    canvas.__delBound = true;
+    canvas.addEventListener('click', function (e) {
+      if ((state.currentUserRole || '') !== 'Administrateur') return;
+      var r = canvas.getBoundingClientRect();
+      var mx = e.clientX - r.left, my = e.clientY - r.top;
+      var pts = canvas._pts || [];
+      var best = null, bd = 196;
+      for (var i = 0; i < pts.length; i++) {
+        var dx = pts[i].x - mx, dy = pts[i].y - my, d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; best = pts[i]; }
+      }
+      console.log('[indicateurs] clic admin, point trouvé :', best);
+      if (!best) return;
+      if (typeof indicConfirm !== 'function') { console.error('[indicateurs] indicConfirm absent !'); return; }
+      var key = canvas._monthKey;
+      var lineKey = best.label === 'J-0' ? 'j0' : 'j3';
+      var msg = 'Supprimer la valeur « ' + best.label + ' — ' + best.day + ' ' + monthLabel(key) + ' : ' + String(best.v).replace('.', ',') + ' % » ?';
+      indicConfirm(msg, 'Supprimer cette valeur ?').then(function (ok) {
+        console.log('[indicateurs] confirmation :', ok);
+        if (!ok) return;
+        var jours = indicData[key] && indicData[key].jours;
+        var ent = jours && jours[String(best.day)];
+        var f = ent && ent[best.field];
+        if (f) delete f[lineKey];
+        var db = getDb();
+        var done = function () { drawAll(); };
+        if (db) {
+          db.collection('indicateurs').doc(key).set({ jours: jours }, { merge: true }).then(done, function (err) { console.error(err); done(); });
+        } else { done(); }
+      });
+    });
+  }
+  function scan() {
+    ['chartAppros', 'chartPieces'].forEach(function (id) {
+      var cv = document.getElementById(id);
+      if (cv) bindDeleteClick(cv);
+    });
+  }
+  scan();
+  var t = setInterval(scan, 500);
+  setTimeout(function () { clearInterval(t); }, 15000);
+})();
