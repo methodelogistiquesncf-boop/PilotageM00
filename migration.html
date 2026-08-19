@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Migration pilotagem00 → recette</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #eef1f5; margin: 0; padding: 40px 20px; color: #111827; }
+  .box { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p.sub { color: #6b7280; font-size: 13px; margin: 0 0 20px; }
+  #status { padding: 10px 14px; border-radius: 8px; background: #e8f0fe; color: #1a4fa0; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+  #status.err { background: #fdecea; color: #c62828; }
+  #status.ok { background: #e6f4ea; color: #1e7e34; }
+  button { background: #1a4fa0; color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  pre { background: #0f172a; color: #a7f3d0; border-radius: 8px; padding: 14px; font-size: 12px; max-height: 420px; overflow: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🚀 Migration de l'ancienne base vers la recette</h1>
+  <p class="sub">pilotagem00 → pilotagem00-recette · texte→KIT/SYMBOLE · historique & actions en collections · backup auto avant écriture</p>
+  <div id="status">Vérification de la connexion…</div>
+  <button id="btnMigrate" disabled>🚀 Lancer la migration</button>
+  <pre id="report" style="display:none"></pre>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var NEW_CONFIG = {
+  apiKey: "AIzaSyDIOc6PJ42tmuEejKxph3bPKbgBJGWM-aw",
+  authDomain: "pilotagem00-recette.firebaseapp.com",
+  projectId: "pilotagem00-recette",
+  storageBucket: "pilotagem00-recette.firebasestorage.app",
+  messagingSenderId: "848268615763",
+  appId: "1:848268615763:web:757d9dd5a0e3c3b28a26a6"
+};
+var OLD_CONFIG = {
+  apiKey: "AIzaSyAYRfaLdg--2SkTCtyeNa1Xsq2vpSRBz8kY",
+  authDomain: "pilotagem00.firebaseapp.com",
+  projectId: "pilotagem00",
+  storageBucket: "pilotagem00.firebasestorage.app",
+  messagingSenderId: "455481915450",
+  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
+};
+
+firebase.initializeApp(NEW_CONFIG);
+var oldApp = firebase.initializeApp(OLD_CONFIG, 'old');
+var newDb = firebase.firestore();
+var oldDb = oldApp.firestore();
+
+var statusEl = document.getElementById('status');
+var btn = document.getElementById('btnMigrate');
+var reportEl = document.getElementById('report');
+var lines = [];
+function log(t) { lines.push(t); reportEl.style.display = 'block'; reportEl.textContent = lines.join('\n'); reportEl.scrollTop = reportEl.scrollHeight; }
+function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = cls || ''; }
+
+// ─── Transformations ancien → nouveau ───
+function mapNote(n) {
+  var t = (n.texte || '').trim();
+  if (!t) return null;
+  return { id: n.id || ('ni_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)), kit: t, symbole: '' };
+}
+function mapCell(c) {
+  c = c || {};
+  return {
+    note: (c.note || []).map(mapNote).filter(function (x) { return x; }),
+    score: c.score || '',
+    dot: c.dot || null
+  };
+}
+function mapZone(z) {
+  var out = {};
+  Object.keys(z || {}).forEach(function (eng) {
+    var src = z[eng] || {};
+    var o = { loco: (src.loco || []).slice() };
+    while (o.loco.length < 4) o.loco.push('');
+    ['APPROS', 'PIECES DEPOSEES'].forEach(function (sec) {
+      o[sec] = (src[sec] || []).map(mapCell);
+      while (o[sec].length < 4) o[sec].push({ note: [], score: '', dot: null });
+    });
+    out[eng] = o;
+  });
+  return out;
+}
+function normDate(d) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d || '')) { var p = d.split('-'); return p[2] + '/' + p[1]; }
+  return d || '';
+}
+function mapAction(a) {
+  return {
+    id: a.id, commentaire: a.commentaire || '', createdAt: a.createdAt || '',
+    date: normDate(a.date), done: !!a.done, doneAt: a.doneAt || '',
+    echeance: a.echeance || '', engin: a.engin || '', manual: !!a.manual,
+    poste: a.poste || '', responsable: a.responsable || '', section: a.section || '',
+    kit: (a.texte || '').trim(), symbole: ''
+  };
+}
+function mapRasRow(r) {
+  return {
+    id: r.id, engin: r.engin || '', kit: r.kit || '', symbole: r.symbole || '',
+    designation: r.designation || '', qte: r.qte || '', commentaire: r.commentaire || '',
+    responsable: r.responsable || '', recu: !!r.recu, dateRecu: r.dateRecu || ''
+  };
+}
+
+async function batchSet(docs) {
+  for (var s = 0; s < docs.length; s += 450) {
+    var b = newDb.batch();
+    docs.slice(s, s + 450).forEach(function (d) { b.set(d.ref, d.data); });
+    await b.commit();
+  }
+}
+
+firebase.auth().onAuthStateChanged(function (user) {
+  if (!user) {
+    setStatus('❌ Non connecté à la recette. Ouvre d\u2019abord suivi.html, connecte-toi, puis reviens ici.', 'err');
+    return;
+  }
+  setStatus('✅ Connecté : ' + user.email + ' — prêt à migrer.');
+  btn.disabled = false;
+});
+
+btn.onclick = async function () {
+  btn.disabled = true;
+  try {
+    setStatus('Lecture de l\u2019ancienne base…');
+    log('▶ Lecture pilotagem00 / suivi/default…');
+    var snap = await oldDb.collection('suivi').doc('default').get();
+    if (!snap.exists) throw new Error('Document suivi/default introuvable dans l\u2019ancienne base.');
+    var d = snap.data();
+    log('   ✔ Document lu.');
+
+    log('▶ Backup de l\u2019état actuel de la recette (localStorage)…');
+    var cur = await newDb.collection('suivi').doc('default').get();
+    localStorage.setItem('pre_migration_backup', JSON.stringify(cur.exists ? cur.data() : {}));
+    log('   ✔ Backup enregistré (clé pre_migration_backup).');
+
+    log('▶ Écriture du document courant (S, S_SC, S_TT, libellés, rassemblement…)…');
+    await newDb.collection('suivi').doc('default').set({
+      S: mapZone(d.S), S_SC: mapZone(d.S_SC), S_TT: mapZone(d.S_TT),
+      headersData: d.headersData || { dates: ['', '', '', ''], jours: ['J0', 'J-1', 'J-2', 'J-3'] },
+      enginLabels: d.enginLabels || {}, enginLabels_SC: d.enginLabels_SC || {}, enginLabels_TT: d.enginLabels_TT || {},
+      synthCols: d.synthCols || [],
+      colOrder: d.colOrder || [0, 1, 2, 3],
+      rassemblement: (d.rassemblement || []).map(function (s) {
+        return { id: s.id, date: s.date || '', jour: s.jour || '', rows: (s.rows || []).map(mapRasRow) };
+      }),
+      customRoles: (cur.exists && (cur.data().customRoles || [])) || [],
+      removedRoles: (cur.exists && (cur.data().removedRoles || [])) || [],
+      dateJour: d.dateJour || '',
+      savedAt: new Date().toISOString()
+    });
+    log('   ✔ Document courant migré.');
+
+    var histKeys = Object.keys(d.historique || {});
+    log('▶ Migration de l\u2019historique (' + histKeys.length + ' jours) → collection historique/…');
+    await batchSet(histKeys.map(function (k) {
+      return { ref: newDb.collection('historique').doc(k), data: d.historique[k] };
+    }));
+    log('   ✔ ' + histKeys.length + ' jours d\u2019historique migrés.');
+
+    var acts = d.actions || [];
+    log('▶ Migration des actions (' + acts.length + ') → collection actions/…');
+    await batchSet(acts.map(function (a) {
+      return { ref: newDb.collection('actions').doc(a.id), data: mapAction(a) };
+    }));
+    log('   ✔ ' + acts.length + ' actions migrées (texte → KIT).');
+
+    var nbNotes = 0;
+    [d.S, d.S_SC, d.S_TT].forEach(function (z) {
+      Object.keys(z || {}).forEach(function (e) {
+        ['APPROS', 'PIECES DEPOSEES'].forEach(function (s) {
+          ((z[e] || {})[s] || []).forEach(function (c) { nbNotes += (c.note || []).filter(function (n) { return (n.texte || '').trim(); }).length; });
+        });
+      });
+    });
+    log('');
+    log('🎉 MIGRATION TERMINÉE : ' + nbNotes + ' remarques (→ KIT), ' + acts.length + ' actions, ' + histKeys.length + ' jours d\u2019historique, ' + (d.rassemblement || []).length + ' sections rassemblement.');
+    log('Ouvre maintenant suivi.html (Ctrl+Shift+R) pour vérifier les données.');
+    setStatus('🎉 Migration terminée ! Ouvre suivi.html pour vérifier.', 'ok');
+  } catch (e) {
+    console.error(e);
+    log('❌ ERREUR : ' + (e.message || e));
+    setStatus('❌ Erreur : ' + (e.message || e) + ' — copie-colle ce message pour obtenir de l\u2019aide.', 'err');
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
