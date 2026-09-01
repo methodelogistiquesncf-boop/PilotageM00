@@ -25,6 +25,24 @@ function observeCommentSize(td, textarea) {
   ro.observe(td);
 }
 
+// Convertit une date (jj/mm, jj/mm/aaaa ou aaaa-mm-jj) en nombre aaaammjj
+// pour un tri chronologique fiable (un simple tri alphabétique de "jj/mm"
+// donnerait par exemple 04/09 < 25/08, ce qui est faux).
+function dateSortKey(s) {
+  var t = String(s || '').trim();
+  if (!t) return 0;
+  var jj, mm, aa;
+  var m1 = t.match(/^(\d{1,2})\D+(\d{1,2})(?:\D+(\d{4}))?/);
+  if (m1) {
+    jj = +m1[1]; mm = +m1[2]; aa = m1[3] ? +m1[3] : new Date().getFullYear();
+  } else {
+    var m2 = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m2) { aa = +m2[1]; mm = +m2[2]; jj = +m2[3]; }
+    else { return 0; }
+  }
+  return aa * 10000 + mm * 100 + jj;
+}
+
 // Filtres de vue (état d'affichage uniquement, pas persisté)
 var currentFilterPoste = '';
 var currentFilterSection = '';
@@ -151,11 +169,12 @@ export function buildActions() {
   if (currentFilterPoste) list = list.filter(function (a) { return a.poste === currentFilterPoste; });
   if (currentFilterSection) list = list.filter(function (a) { return a.section === currentFilterSection; });
 
+  // ✅ Tri modifié : actions non faites en haut, puis tri chronologique de la plus ancienne à la plus récente
   list.sort(function (a, b) {
     if (a.done !== b.done) return a.done ? 1 : -1;
-    var d = (b.date || '').localeCompare(a.date || '');
+    var d = dateSortKey(a.date) - dateSortKey(b.date);
     if (d !== 0) return d;
-    return (b.createdAt || '').localeCompare(a.createdAt || '');
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
   });
   if (!state.showDoneActions) list = list.filter(function (a) { return !a.done; });
 
@@ -309,11 +328,12 @@ export function exportActionsCSV() {
 
   var today = todayISO();
   var list = state.actions.slice();
+  // ✅ Tri modifié pour l'export CSV : chronologique (plus ancien au plus récent)
   list.sort(function (a, b) {
     if (a.done !== b.done) return a.done ? 1 : -1;
-    var d = (b.date || '').localeCompare(a.date || '');
+    var d = dateSortKey(a.date) - dateSortKey(b.date);
     if (d !== 0) return d;
-    return (b.createdAt || '').localeCompare(a.createdAt || '');
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
   });
 
   var rows = [['Engin', 'Poste', 'Section', 'Date', 'KIT', 'SYMBOLE', 'Commentaire',
