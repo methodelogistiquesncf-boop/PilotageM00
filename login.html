@@ -264,12 +264,12 @@ input:focus { border-color: var(--accent); }
 
 <script>
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDYo1JH1uqYX6OsHdV9QjtaG6CjP9gLQEo",
-  authDomain: "pilotagem00-prod2.firebaseapp.com",
-  projectId: "pilotagem00-prod2",
-  storageBucket: "pilotagem00-prod2.firebasestorage.app",
-  messagingSenderId: "66122797161",
-  appId: "1:66122797161:web:61468faf9ea1ffaf6cd2f8"
+  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
+  authDomain: "pilotagem00.firebaseapp.com",
+  projectId: "pilotagem00",
+  storageBucket: "pilotagem00.firebasestorage.app",
+  messagingSenderId: "455481915450",
+  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
 };
 
 const APP_PAGE = 'suivi.html';
@@ -342,21 +342,21 @@ function togglePw(inputId, btn) {
   const show = inp.type === 'password';
   inp.type = show ? 'text' : 'password';
   btn.innerHTML = show
-    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
 
 function firebaseError(code) {
-  const firebaseConfig = {
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
-  authDomain: "pilotagem00.firebaseapp.com",
-  projectId: "pilotagem00",
-  storageBucket: "pilotagem00.firebasestorage.app",
-  messagingSenderId: "455481915450",
-  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
-};
-
+  const map = {
+    'auth/invalid-credential': 'Identifiants invalides. Vérifiez votre e-mail et votre mot de passe.',
+    'auth/invalid-login-credentials': 'Identifiants invalides. Vérifiez votre e-mail et votre mot de passe.',
+    'auth/wrong-password': 'Mot de passe incorrect.',
+    'auth/user-not-found': 'Aucun compte trouvé avec cette adresse e-mail.',
+    'auth/too-many-requests': 'Trop de tentatives. Réessayez dans quelques minutes.',
+    'auth/network-request-failed': 'Problème de connexion réseau.',
+    'auth/invalid-email': 'Adresse e-mail invalide.',
+    'auth/user-disabled': 'Ce compte a été désactivé.'
+  };
   return map[code] || 'Erreur : ' + code;
 }
 
