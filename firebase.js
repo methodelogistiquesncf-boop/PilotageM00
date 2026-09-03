@@ -106,7 +106,7 @@ async function ensureUserDoc(user) {
     await db.runTransaction(async function (tx) {
       var userSnap = await tx.get(userRef);
       if (userSnap.exists) {
-        tx.update(userRef, { lastLogin: new Date().toISOString(), email: user.email });
+        tx.update(userRef, { lastLogin: new Date().toISOString(), email: user.email, appVersion: 'v6', lastSeen: new Date().toISOString() });
         return;
       }
       var bootSnap = await tx.get(bootstrapRef);
@@ -116,6 +116,7 @@ async function ensureUserDoc(user) {
         role: isFirstEver ? 'Administrateur' : '',
         prenom: '',
         nom: '',
+        appVersion: 'v6',
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       });
