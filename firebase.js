@@ -1,4 +1,4 @@
-// firebase.js — v5 : optimisé (cache localStorage + listeners ciblés)
+// firebase.js — v5.2 : optimisé + correctif doublons + suppressions fiables
 
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
 
@@ -28,6 +28,24 @@ const USERS_CACHE_TTL = 5 * 60 * 1000;
 // Cache persistant
 let dataCache = JSON.parse(localStorage.getItem('dataCache') || '{}');
 let lastSyncTimestamp = localStorage.getItem('lastSyncTimestamp') || '0';
+
+// ─── v5.2 : réparation auto du cache local (dédoublonnage + tombstones) ────
+(function repairCache() {
+  if (Array.isArray(dataCache.actions)) {
+    var seenIds = {};
+    dataCache.actions = dataCache.actions.filter(function (a) {
+      if (!a || !a.id || a.deleted || seenIds[a.id]) return false;
+      seenIds[a.id] = true;
+      return true;
+    });
+  }
+  if (dataCache.historique) {
+    Object.keys(dataCache.historique).forEach(function (k) {
+      if (!dataCache.historique[k] || dataCache.historique[k].deleted) delete dataCache.historique[k];
+    });
+  }
+  saveToCache();
+})();
 
 function saveToCache() {
   try {
@@ -146,7 +164,7 @@ export async function createUser(email, role, prenom, nom) {
 function generateTempPassword() {
   var arr = new Uint8Array(24);
   crypto.getRandomValues(arr);
-  return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
 
 export async function loadUsersList() {
@@ -228,13 +246,14 @@ function purgeOldData() {
   }
 }
 
+// ─── Lecture initiale avec cache (v5.2 : fusion par id, zéro doublon) ──────
 async function fetchAll() {
   var parts = FIRESTORE_DOC.split('/');
   var snap = await db.collection(parts[0]).doc(parts[1]).get();
   var patch = {};
   var dateJourSaved = '';
   var savedAt = '';
-  
+
   if (snap.exists) {
     var data = snap.data() || {};
     ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement', 'customRoles', 'removedRoles'].forEach(function (k) {
@@ -243,37 +262,48 @@ async function fetchAll() {
     dateJourSaved = data.dateJour || '';
     savedAt = data.savedAt || '';
   }
-  
+
   var hist = dataCache.historique || {};
   var acts = dataCache.actions || [];
-  
+
+  // v5.2 : fusion par identifiant (remplace au lieu d'empiler) + suppressions
+  function upsertAct(a) {
+    var idx = acts.findIndex(function (x) { return x.id === a.id; });
+    if (a.deleted) { if (idx >= 0) acts.splice(idx, 1); return; }
+    if (idx >= 0) acts[idx] = a; else acts.push(a);
+  }
+  function upsertHist(id, data) {
+    if (data && data.deleted) { delete hist[id]; return; }
+    hist[id] = data;
+  }
+
   if (lastSyncTimestamp !== '0') {
     var histSnap = await db.collection('historique').where('updatedAt', '>', lastSyncTimestamp).get();
-    histSnap.forEach(function (d) { hist[d.id] = d.data(); });
-    
+    histSnap.forEach(function (d) { upsertHist(d.id, d.data()); });
+
     var actSnap = await db.collection('actions').where('updatedAt', '>', lastSyncTimestamp).get();
     actSnap.forEach(function (d) {
       var a = d.data() || {};
       if (!a.id) a.id = d.id;
-      acts.push(a);
+      upsertAct(a);
     });
   } else {
-    var histSnap = await db.collection('historique').get();
-    histSnap.forEach(function (d) { hist[d.id] = d.data(); });
-    
-    var actSnap = await db.collection('actions').get();
-    actSnap.forEach(function (d) {
+    var histSnapFull = await db.collection('historique').get();
+    histSnapFull.forEach(function (d) { upsertHist(d.id, d.data()); });
+
+    var actSnapFull = await db.collection('actions').get();
+    actSnapFull.forEach(function (d) {
       var a = d.data() || {};
       if (!a.id) a.id = d.id;
-      acts.push(a);
+      upsertAct(a);
     });
   }
-  
+
   dataCache.historique = hist;
   dataCache.actions = acts;
   lastSyncTimestamp = new Date().toISOString();
   saveToCache();
-  
+
   var actIds = acts.map(function (a) { return a.id; });
   return { patch: patch, dateJourSaved: dateJourSaved, savedAt: savedAt, hist: hist, acts: acts, actIds: actIds };
 }
@@ -309,81 +339,91 @@ export async function loadFirebase() {
   }
 }
 
+// ─── Listeners temps réel ciblés (v5.2 : suppressions fiables) ─────────────
 function startRealtime() {
   if (rtStarted || !db) return;
   rtStarted = true;
-  
+
   db.collection('suivi').doc('default').onSnapshot(function (snap) {
     if (!snap.exists) return;
     var data = snap.data() || {};
     if (data.savedAt && data.savedAt === lastLocalSavedAt) return;
-    
+
     var patch = {};
     ['S', 'S_SC', 'S_TT', 'headersData', 'enginLabels', 'enginLabels_SC', 'enginLabels_TT', 'synthCols', 'colOrder', 'rassemblement', 'customRoles', 'removedRoles'].forEach(function (k) {
       if (data[k] !== undefined) patch[k] = data[k];
     });
-    
+
     setState(patch);
     ensureFullStructure();
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
     lastLocalSavedAt = data.savedAt;
     rebuildUI();
   }, function (e) { console.error('RT suivi :', e); });
-  
+
   db.collection('historique').onSnapshot(function (snapshot) {
     snapshot.docChanges().forEach(function (change) {
       var docData = change.doc.data();
-      
+
       if (change.type === 'added' || change.type === 'modified') {
         if (docData.updatedAt && docData.updatedAt > lastSyncTimestamp) {
-          state.historique[change.doc.id] = docData;
-          dataCache.historique = dataCache.historique || {};
-          dataCache.historique[change.doc.id] = docData;
+          if (docData.deleted) {
+            delete state.historique[change.doc.id];
+            if (dataCache.historique) delete dataCache.historique[change.doc.id];
+          } else {
+            state.historique[change.doc.id] = docData;
+            dataCache.historique = dataCache.historique || {};
+            dataCache.historique[change.doc.id] = docData;
+          }
         }
       }
-      
+
       if (change.type === 'removed') {
         delete state.historique[change.doc.id];
         if (dataCache.historique) delete dataCache.historique[change.doc.id];
       }
     });
-    
+
     loadedHistDates = Object.keys(state.historique);
     saveToCache();
     rebuildUI();
   }, function (e) { console.error('RT historique :', e); });
-  
+
   db.collection('actions').onSnapshot(function (snapshot) {
     snapshot.docChanges().forEach(function (change) {
       var docData = change.doc.data();
-      
+
       if (change.type === 'added' || change.type === 'modified') {
         if (docData.updatedAt && docData.updatedAt > lastSyncTimestamp) {
           var a = Object.assign({ id: change.doc.id }, docData);
           var idx = state.actions.findIndex(function (x) { return x.id === a.id; });
-          if (idx >= 0) state.actions[idx] = a;
-          else state.actions.push(a);
-          
           dataCache.actions = dataCache.actions || [];
           var cacheIdx = dataCache.actions.findIndex(function (x) { return x.id === a.id; });
-          if (cacheIdx >= 0) dataCache.actions[cacheIdx] = a;
-          else dataCache.actions.push(a);
+
+          if (a.deleted) {
+            if (idx >= 0) state.actions.splice(idx, 1);
+            if (cacheIdx >= 0) dataCache.actions.splice(cacheIdx, 1);
+          } else {
+            if (idx >= 0) state.actions[idx] = a; else state.actions.push(a);
+            if (cacheIdx >= 0) dataCache.actions[cacheIdx] = a; else dataCache.actions.push(a);
+          }
         }
       }
-      
+
       if (change.type === 'removed') {
         state.actions = state.actions.filter(function (a) { return a.id !== change.doc.id; });
         if (dataCache.actions) dataCache.actions = dataCache.actions.filter(function (a) { return a.id !== change.doc.id; });
         loadedActionIds = state.actions.map(function (a) { return a.id; });
       }
     });
-    
+
     loadedActionIds = state.actions.map(function (a) { return a.id; });
     saveToCache();
     rebuildUI();
   }, function (e) { console.error('RT actions :', e); });
 }
 
+// ─── Sauvegarde ─────────────────────────────────────────────────────────────
 export async function saveFirebase() {
   var dateJour = document.getElementById('dateJour').value;
 
@@ -440,10 +480,11 @@ export async function saveFirebase() {
 
     await syncActions();
 
+    // v5.2 : suppression fiable (marqueur deleted au lieu de delete brut)
     var currentDates = Object.keys(state.historique);
     for (var i = 0; i < loadedHistDates.length; i++) {
       if (currentDates.indexOf(loadedHistDates[i]) === -1) {
-        await db.collection('historique').doc(loadedHistDates[i]).delete();
+        await db.collection('historique').doc(loadedHistDates[i]).set({ deleted: true, updatedAt: savedAt });
       }
     }
     loadedHistDates = currentDates;
@@ -461,14 +502,15 @@ async function syncActions() {
   state.actions.forEach(function (a) { if (a.id) currentIds[a.id] = true; });
   var ops = [];
   loadedActionIds.forEach(function (id) { if (!currentIds[id]) ops.push({ del: id }); });
-  state.actions.forEach(function (a) { 
-    if (a.id) ops.push({ set: { ...a, updatedAt: new Date().toISOString() } }); 
+  state.actions.forEach(function (a) {
+    if (a.id) ops.push({ set: { ...a, updatedAt: new Date().toISOString() } });
   });
-  
+
   for (var s = 0; s < ops.length; s += 450) {
     var batch = db.batch();
     ops.slice(s, s + 450).forEach(function (op) {
-      if (op.del) batch.delete(db.collection('actions').doc(op.del));
+      // v5.2 : tombstone au lieu de delete → les autres postes le voient et le suppriment
+      if (op.del) batch.set(db.collection('actions').doc(op.del), { id: op.del, deleted: true, updatedAt: new Date().toISOString() });
       else batch.set(db.collection('actions').doc(op.set.id), op.set);
     });
     await batch.commit();
