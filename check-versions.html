@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>État des postes — Pilotage M00</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #eef1f5; margin: 0; padding: 40px 20px; color: #111827; }
+  .box { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p.sub { color: #6b7280; font-size: 13px; margin: 0 0 20px; }
+  #status { padding: 10px 14px; border-radius: 8px; background: #e8f0fe; color: #1a4fa0; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+  #status.err { background: #fdecea; color: #c62828; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  th { background: #f9fafb; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+  .ok { background: #e6f4ea; color: #1e7e34; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; }
+  .ko { background: #fdecea; color: #c62828; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; }
+  button { background: #1a4fa0; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🖥️ État des postes — version de l'application</h1>
+  <p class="sub">Vert = passé en v6 · Rouge = pas encore reconnecté depuis le déploiement</p>
+  <div id="status">Connexion…</div>
+  <button id="btnRefresh">🔄 Actualiser</button>
+  <table>
+    <thead><tr><th>E-mail</th><th>Version</th><th>Dernière ouverture</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
+  authDomain: "pilotagem00.firebaseapp.com",
+  projectId: "pilotagem00",
+  storageBucket: "pilotagem00.firebasestorage.app",
+  messagingSenderId: "455481915450",
+  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+var db = firebase.firestore();
+var statusEl = document.getElementById('status');
+
+function fmt(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function load() {
+  db.collection('users').orderBy('email').get().then(function (snap) {
+    var ok = 0, total = 0, html = '';
+    snap.forEach(function (d) {
+      var u = d.data();
+      total++;
+      var v = u.appVersion || '';
+      var isV6 = v.indexOf('v6') === 0;
+      if (isV6) ok++;
+      html += '<tr><td>' + (u.email || d.id) + '</td>' +
+        '<td>' + (isV6 ? '<span class="ok">' + v + '</span>' : '<span class="ko">' + (v || 'inconnue (≤ v5.2)') + '</span>') + '</td>' +
+        '<td>' + fmt(u.lastSeen || u.lastLogin) + '</td></tr>';
+    });
+    document.getElementById('rows').innerHTML = html;
+    statusEl.textContent = '✅ ' + ok + ' / ' + total + ' postes passés en v6';
+  }).catch(function (e) {
+    statusEl.textContent = '❌ ' + (e.message || e);
+    statusEl.className = 'err';
+  });
+}
+
+firebase.auth().onAuthStateChanged(function (user) {
+  if (!user) { statusEl.textContent = '❌ Connectez-vous d\'abord sur login.html'; statusEl.className = 'err'; return; }
+  statusEl.textContent = '✅ Connecté : ' + user.email;
+  load();
+});
+
+document.getElementById('btnRefresh').onclick = load;
+</script>
+</body>
+</html>
