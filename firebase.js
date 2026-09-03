@@ -1,6 +1,8 @@
-// firebase.js — v5.2 : optimisé + correctif doublons + suppressions fiables
+// firebase.js — v6 : quota-friendly (lectures ciblées + écritures différentielles)
 
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
+
+console.info('%c🔥 firebase.js v6 — quota-friendly', 'background:#1a4fa0;color:#fff;font-weight:bold;padding:2px 8px;border-radius:4px');
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
@@ -21,6 +23,7 @@ let dirty = false;
 let pendingApply = false;
 let lastLocalSavedAt = '';
 let rtStarted = false;
+let pullTimer = null;
 let usersCache = { data: [], ts: 0 };
 let userDirectoryCache = { data: [], ts: 0 };
 const USERS_CACHE_TTL = 5 * 60 * 1000;
@@ -28,8 +31,9 @@ const USERS_CACHE_TTL = 5 * 60 * 1000;
 // Cache persistant
 let dataCache = JSON.parse(localStorage.getItem('dataCache') || '{}');
 let lastSyncTimestamp = localStorage.getItem('lastSyncTimestamp') || '0';
+let lastSavedActionJson = {};
 
-// ─── v5.2 : réparation auto du cache local (dédoublonnage + tombstones) ────
+// ─── Réparation auto du cache local (dédoublonnage + tombstones) ───────────
 (function repairCache() {
   if (Array.isArray(dataCache.actions)) {
     var seenIds = {};
@@ -164,7 +168,7 @@ export async function createUser(email, role, prenom, nom) {
 function generateTempPassword() {
   var arr = new Uint8Array(24);
   crypto.getRandomValues(arr);
-    return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  return Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
 
 export async function loadUsersList() {
@@ -246,7 +250,7 @@ function purgeOldData() {
   }
 }
 
-// ─── Lecture initiale avec cache (v5.2 : fusion par id, zéro doublon) ──────
+// ─── Lecture initiale avec cache (fusion par id, zéro doublon) ─────────────
 async function fetchAll() {
   var parts = FIRESTORE_DOC.split('/');
   var snap = await db.collection(parts[0]).doc(parts[1]).get();
@@ -263,21 +267,23 @@ async function fetchAll() {
     savedAt = data.savedAt || '';
   }
 
-  var hist = dataCache.historique || {};
-  var acts = dataCache.actions || [];
+  var hist, acts;
 
-  // v5.2 : fusion par identifiant (remplace au lieu d'empiler) + suppressions
   function upsertAct(a) {
     var idx = acts.findIndex(function (x) { return x.id === a.id; });
     if (a.deleted) { if (idx >= 0) acts.splice(idx, 1); return; }
     if (idx >= 0) acts[idx] = a; else acts.push(a);
   }
-  function upsertHist(id, data) {
-    if (data && data.deleted) { delete hist[id]; return; }
-    hist[id] = data;
+  function upsertHist(id, d) {
+    if (d && d.deleted) { delete hist[id]; return; }
+    hist[id] = d;
   }
 
   if (lastSyncTimestamp !== '0') {
+    // Mode delta : cache local + uniquement ce qui a changé depuis la dernière synchro
+    hist = dataCache.historique || {};
+    acts = dataCache.actions || [];
+
     var histSnap = await db.collection('historique').where('updatedAt', '>', lastSyncTimestamp).get();
     histSnap.forEach(function (d) { upsertHist(d.id, d.data()); });
 
@@ -288,6 +294,10 @@ async function fetchAll() {
       upsertAct(a);
     });
   } else {
+    // Première fois : lecture complète, on repart de zéro (cohérent)
+    hist = {};
+    acts = [];
+
     var histSnapFull = await db.collection('historique').get();
     histSnapFull.forEach(function (d) { upsertHist(d.id, d.data()); });
 
@@ -319,6 +329,12 @@ function applyFetched(r) {
   setRemovedRoles(state.removedRoles || []);
   if (r.dateJourSaved) document.getElementById('dateJour').value = r.dateJourSaved;
   lastLocalSavedAt = r.savedAt;
+
+  // v6 : référence pour la sauvegarde différentielle
+  lastSavedActionJson = {};
+  state.actions.forEach(function (a) {
+    if (a.id) lastSavedActionJson[a.id] = JSON.stringify(a);
+  });
 }
 
 function rebuildUI() {
@@ -339,7 +355,7 @@ export async function loadFirebase() {
   }
 }
 
-// ─── Listeners temps réel ciblés (v5.2 : suppressions fiables) ─────────────
+// ─── v6 : UN SEUL listener (document suivi) + lectures ciblées à la demande ─
 function startRealtime() {
   if (rtStarted || !db) return;
   rtStarted = true;
@@ -359,68 +375,59 @@ function startRealtime() {
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
     lastLocalSavedAt = data.savedAt;
     rebuildUI();
+
+    // v6 : on ne lit historique/actions QUE si un collègue a sauvegardé
+    schedulePull();
   }, function (e) { console.error('RT suivi :', e); });
+}
 
-  db.collection('historique').onSnapshot(function (snapshot) {
-    snapshot.docChanges().forEach(function (change) {
-      var docData = change.doc.data();
+function schedulePull() {
+  clearTimeout(pullTimer);
+  pullTimer = setTimeout(pullChanges, 600);
+}
 
-      if (change.type === 'added' || change.type === 'modified') {
-        if (docData.updatedAt && docData.updatedAt > lastSyncTimestamp) {
-          if (docData.deleted) {
-            delete state.historique[change.doc.id];
-            if (dataCache.historique) delete dataCache.historique[change.doc.id];
-          } else {
-            state.historique[change.doc.id] = docData;
-            dataCache.historique = dataCache.historique || {};
-            dataCache.historique[change.doc.id] = docData;
-          }
-        }
-      }
-
-      if (change.type === 'removed') {
-        delete state.historique[change.doc.id];
-        if (dataCache.historique) delete dataCache.historique[change.doc.id];
+async function pullChanges() {
+  if (!db) return;
+  try {
+    var histSnap = await db.collection('historique').where('updatedAt', '>', lastSyncTimestamp).get();
+    histSnap.forEach(function (d) {
+      var data = d.data();
+      if (data && data.deleted) {
+        delete state.historique[d.id];
+        if (dataCache.historique) delete dataCache.historique[d.id];
+      } else {
+        state.historique[d.id] = data;
+        dataCache.historique = dataCache.historique || {};
+        dataCache.historique[d.id] = data;
       }
     });
 
+    var actSnap = await db.collection('actions').where('updatedAt', '>', lastSyncTimestamp).get();
+    actSnap.forEach(function (d) {
+      var a = Object.assign({ id: d.id }, d.data() || {});
+      var idx = state.actions.findIndex(function (x) { return x.id === a.id; });
+      dataCache.actions = dataCache.actions || [];
+      var cIdx = dataCache.actions.findIndex(function (x) { return x.id === a.id; });
+
+      if (a.deleted) {
+        if (idx >= 0) state.actions.splice(idx, 1);
+        if (cIdx >= 0) dataCache.actions.splice(cIdx, 1);
+        delete lastSavedActionJson[a.id];
+      } else {
+        if (idx >= 0) state.actions[idx] = a; else state.actions.push(a);
+        if (cIdx >= 0) dataCache.actions[cIdx] = a; else dataCache.actions.push(a);
+        lastSavedActionJson[a.id] = JSON.stringify(a);
+      }
+    });
+
+    lastSyncTimestamp = new Date().toISOString();
     loadedHistDates = Object.keys(state.historique);
-    saveToCache();
-    rebuildUI();
-  }, function (e) { console.error('RT historique :', e); });
-
-  db.collection('actions').onSnapshot(function (snapshot) {
-    snapshot.docChanges().forEach(function (change) {
-      var docData = change.doc.data();
-
-      if (change.type === 'added' || change.type === 'modified') {
-        if (docData.updatedAt && docData.updatedAt > lastSyncTimestamp) {
-          var a = Object.assign({ id: change.doc.id }, docData);
-          var idx = state.actions.findIndex(function (x) { return x.id === a.id; });
-          dataCache.actions = dataCache.actions || [];
-          var cacheIdx = dataCache.actions.findIndex(function (x) { return x.id === a.id; });
-
-          if (a.deleted) {
-            if (idx >= 0) state.actions.splice(idx, 1);
-            if (cacheIdx >= 0) dataCache.actions.splice(cacheIdx, 1);
-          } else {
-            if (idx >= 0) state.actions[idx] = a; else state.actions.push(a);
-            if (cacheIdx >= 0) dataCache.actions[cacheIdx] = a; else dataCache.actions.push(a);
-          }
-        }
-      }
-
-      if (change.type === 'removed') {
-        state.actions = state.actions.filter(function (a) { return a.id !== change.doc.id; });
-        if (dataCache.actions) dataCache.actions = dataCache.actions.filter(function (a) { return a.id !== change.doc.id; });
-        loadedActionIds = state.actions.map(function (a) { return a.id; });
-      }
-    });
-
     loadedActionIds = state.actions.map(function (a) { return a.id; });
     saveToCache();
     rebuildUI();
-  }, function (e) { console.error('RT actions :', e); });
+  } catch (e) {
+    console.error('pullChanges :', e);
+  }
 }
 
 // ─── Sauvegarde ─────────────────────────────────────────────────────────────
@@ -480,7 +487,7 @@ export async function saveFirebase() {
 
     await syncActions();
 
-    // v5.2 : suppression fiable (marqueur deleted au lieu de delete brut)
+    // Suppression fiable (marqueur deleted au lieu de delete brut)
     var currentDates = Object.keys(state.historique);
     for (var i = 0; i < loadedHistDates.length; i++) {
       if (currentDates.indexOf(loadedHistDates[i]) === -1) {
@@ -497,24 +504,33 @@ export async function saveFirebase() {
   }
 }
 
+// v6 : écritures différentielles (seules les actions modifiées sont écrites)
 async function syncActions() {
   var currentIds = {};
   state.actions.forEach(function (a) { if (a.id) currentIds[a.id] = true; });
   var ops = [];
+  var written = [];
   loadedActionIds.forEach(function (id) { if (!currentIds[id]) ops.push({ del: id }); });
   state.actions.forEach(function (a) {
-    if (a.id) ops.push({ set: { ...a, updatedAt: new Date().toISOString() } });
+    if (!a.id) return;
+    var j = JSON.stringify(a);
+    if (lastSavedActionJson[a.id] !== j) {
+      ops.push({ set: Object.assign({}, a, { updatedAt: new Date().toISOString() }) });
+      written.push({ id: a.id, json: j });
+    }
   });
 
   for (var s = 0; s < ops.length; s += 450) {
     var batch = db.batch();
     ops.slice(s, s + 450).forEach(function (op) {
-      // v5.2 : tombstone au lieu de delete → les autres postes le voient et le suppriment
       if (op.del) batch.set(db.collection('actions').doc(op.del), { id: op.del, deleted: true, updatedAt: new Date().toISOString() });
       else batch.set(db.collection('actions').doc(op.set.id), op.set);
     });
     await batch.commit();
   }
+
+  written.forEach(function (w) { lastSavedActionJson[w.id] = w.json; });
+  ops.forEach(function (op) { if (op.del) delete lastSavedActionJson[op.del]; });
   loadedActionIds = Object.keys(currentIds);
 }
 
