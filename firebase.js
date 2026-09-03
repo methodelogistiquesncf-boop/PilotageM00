@@ -3,12 +3,12 @@
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDYo1JH1uqYX6OsHdV9QjtaG6CjP9gLQEo",
-  authDomain: "pilotagem00-prod2.firebaseapp.com",
-  projectId: "pilotagem00-prod2",
-  storageBucket: "pilotagem00-prod2.firebasestorage.app",
-  messagingSenderId: "66122797161",
-  appId: "1:66122797161:web:61468faf9ea1ffaf6cd2f8"
+  apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
+  authDomain: "pilotagem00.firebaseapp.com",
+  projectId: "pilotagem00",
+  storageBucket: "pilotagem00.firebasestorage.app",
+  messagingSenderId: "455481915450",
+  appId: "1:455481915450:web:cbc9430df70b6f4107dd03"
 };
 const FIRESTORE_DOC = "suivi/default";
 
