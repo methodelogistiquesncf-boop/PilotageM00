@@ -7,11 +7,18 @@ import {
 } from './state.js';
 import { sendToAction } from './ui-actions.js';
 import { recordJourPoint } from './indicateurs-data.js';
+import { removeSynthCol } from './firebase.js';
 
 export function build() {
   buildBody();
   buildHeader();
   buildJourButtonsRow();
+}
+
+// 🔒 Helper pour filtrer les colonnes supprimées (tombstones)
+function getActiveSynthCols() {
+  if (!Array.isArray(state.synthCols)) return [];
+  return state.synthCols.filter(function (c) { return !c.deleted; });
 }
 
 function fillHeaderRow(row) {
@@ -53,7 +60,7 @@ function fillHeaderRow(row) {
     row.appendChild(th);
   }
 
-  state.synthCols.forEach(function (col) {
+  getActiveSynthCols().forEach(function (col) {
     var th = document.createElement('th');
     th.className = 'th-top synth-col';
 
@@ -96,9 +103,12 @@ function fillHeaderRow(row) {
     delBtn.textContent = '✕ Supprimer';
     (function (c) {
       delBtn.onclick = function () {
-        state.synthCols = state.synthCols.filter(function (x) { return x.id !== c.id; });
+        // 🔒 Confirmation + suppression avec tombstone
+        if (!confirm('Supprimer cette colonne de synthèse ?\n\nCette action est irréversible et effacera toutes les données associées.')) {
+          return;
+        }
+        removeSynthCol(c.id);
         build();
-        markDirty();
       };
     })(col);
     th.appendChild(delBtn);
@@ -160,7 +170,7 @@ function buildJourButtonsRow() {
 
   var cols = [];
   for (var d = 0; d < D_FIXED; d++) cols.push({ kind: 'fixed', idx: d });
-  state.synthCols.forEach(function (c) { cols.push({ kind: 'synth', idx: c.id }); });
+  getActiveSynthCols().forEach(function (c) { cols.push({ kind: 'synth', idx: c.id }); });
 
   cols.forEach(function (c) {
     var g = document.createElement('div');
@@ -246,6 +256,7 @@ function buildBody() {
   ];
 
   var currentTbody = tb;
+  var activeSynthCols = getActiveSynthCols();
 
   zones.forEach(function (zone, index) {
 
@@ -279,7 +290,7 @@ function buildBody() {
 
     var rZone = document.createElement('tr');
     var tdZone = document.createElement('td');
-    tdZone.colSpan = 1 + D_FIXED + state.synthCols.length;
+    tdZone.colSpan = 1 + D_FIXED + activeSynthCols.length;
     tdZone.textContent = zone.label;
     tdZone.style.background = '#2c3e50';
     tdZone.style.color = 'white';
@@ -296,7 +307,7 @@ function buildBody() {
         var td = document.createElement('td'); td.className = 'loco-cell';
         td.appendChild(makeLoco_fixed(zone.data, e.id, state.colOrder[d])); rEngin.appendChild(td);
       }
-      state.synthCols.forEach(function (col) {
+      activeSynthCols.forEach(function (col) {
         var td = document.createElement('td'); td.className = 'loco-cell'; td.style.background = '#d4dff0';
         td.appendChild(makeLoco_synth(col, e.id)); rEngin.appendChild(td);
       });
@@ -306,7 +317,7 @@ function buildBody() {
       var tdT = document.createElement('td'); tdT.className = 'label';
       tdT.appendChild(makeEnginLabelInput(zone.labels, e.id)); rTitle.appendChild(tdT);
       for (var d2 = 0; d2 < D_FIXED; d2++) { var td2 = document.createElement('td'); td2.className = 'data-cell'; rTitle.appendChild(td2); }
-      state.synthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
+      activeSynthCols.forEach(function () { var td = document.createElement('td'); td.className = 'data-cell synth-cell'; rTitle.appendChild(td); });
       currentTbody.appendChild(rTitle);
 
       e.sections.forEach(function (s) {
@@ -316,7 +327,7 @@ function buildBody() {
           var td3 = document.createElement('td'); td3.className = 'data-cell';
           td3.appendChild(makeNoteList_fixed(zone.labels, zone.data, e.id, s, state.colOrder[d3], d3)); rNote.appendChild(td3);
         }
-        state.synthCols.forEach(function (col) {
+        activeSynthCols.forEach(function (col) {
           var td = document.createElement('td'); td.className = 'data-cell synth-cell';
           td.appendChild(makeNoteList_synth(col, e.id, s)); rNote.appendChild(td);
         });
@@ -328,7 +339,7 @@ function buildBody() {
           var td4 = document.createElement('td');
           td4.appendChild(makeScoreInner_fixed(zone.labels, zone.data, e.id, s, state.colOrder[d4], d4)); rScore.appendChild(td4);
         }
-        state.synthCols.forEach(function (col) {
+        activeSynthCols.forEach(function (col) {
           var td = document.createElement('td'); td.className = 'synth-cell';
           td.appendChild(makeScoreInner_synth(col, e.id, s)); rScore.appendChild(td);
         });
@@ -587,7 +598,7 @@ export function exportCSV() {
     });
   });
 
-  state.synthCols.forEach(function (col, ci) {
+  getActiveSynthCols().forEach(function (col, ci) {
     ENGINS_CONFIG.forEach(function (e) {
       e.sections.forEach(function (s) {
         var data = col.enginData[e.id][s];
