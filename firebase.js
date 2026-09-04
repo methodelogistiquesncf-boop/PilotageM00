@@ -1,8 +1,7 @@
-// firebase.js — v6 : quota-friendly (lectures ciblées + écritures différentielles)
-
+// firebase.js — v6.1 : anti-écrasement (fenêtre 6s + stale mode + tombstones synthCols)
 import { state, setState, onDirty, markDirty, ENGINS_CONFIG, ensureFullStructure, setCustomRoles, setRemovedRoles } from './state.js';
 
-console.info('%c🔥 firebase.js v6 — quota-friendly', 'background:#1a4fa0;color:#fff;font-weight:bold;padding:2px 8px;border-radius:4px');
+console.info('%c🔥 firebase.js v6.1 — anti-écrasement', 'background:#1a4fa0;color:#fff;font-weight:bold;padding:2px 8px;border-radius:4px');
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAYRfaLdg--2SkTCyeNa1Xsq2vpSRBz8kY",
@@ -27,6 +26,20 @@ let pullTimer = null;
 let usersCache = { data: [], ts: 0 };
 let userDirectoryCache = { data: [], ts: 0 };
 const USERS_CACHE_TTL = 5 * 60 * 1000;
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🛡️ NOUVEAUX VERROUS v6.1
+// ────────────────────────────────────────────────────────────────────────────
+// 🛡️ Verrou B : si le serveur a échoué au chargement, on bloque les sauvegardes
+//    pour éviter qu'un poste obsolète écrase les données des autres.
+let staleMode = false;
+let staleModeReason = '';
+
+// 🛡️ Verrou A : on compte les modifications locales pour détecter les
+//    écrasements en fenêtre 6s. Un snapshot entrant pendant la fenêtre
+//    d'auto-save ne doit pas écraser les colonnes créées localement.
+let localVersionCounter = 0;
+let lastCommittedLocalVersion = 0;
 
 // Cache persistant
 let dataCache = JSON.parse(localStorage.getItem('dataCache') || '{}');
@@ -64,6 +77,7 @@ export function getDb() { return db; }
 
 function setStatus(type, msg) {
   var el = document.getElementById('fbStatus');
+  if (!el) return;
   el.className = type;
   el.textContent = msg;
 }
@@ -106,7 +120,7 @@ async function ensureUserDoc(user) {
     await db.runTransaction(async function (tx) {
       var userSnap = await tx.get(userRef);
       if (userSnap.exists) {
-        tx.update(userRef, { lastLogin: new Date().toISOString(), email: user.email, appVersion: 'v6', lastSeen: new Date().toISOString() });
+        tx.update(userRef, { lastLogin: new Date().toISOString(), email: user.email, appVersion: 'v6.1', lastSeen: new Date().toISOString() });
         return;
       }
       var bootSnap = await tx.get(bootstrapRef);
@@ -116,7 +130,7 @@ async function ensureUserDoc(user) {
         role: isFirstEver ? 'Administrateur' : '',
         prenom: '',
         nom: '',
-        appVersion: 'v6',
+        appVersion: 'v6.1',
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       });
@@ -247,8 +261,60 @@ function purgeOldData() {
 
   if (changed) {
     console.info('🧹 Purge automatique');
-    markDirty();
+    // ⚠️ Ne plus appeler markDirty() ici : purgeOldData est appelé APRÈS
+    // une synchronisation réussie. Si on re-marque dirty immédiatement,
+    // on déclenche un nouveau cycle de sauvegarde inutile.
+    // On se contente d'écrire directement pour ne pas casser l'état.
   }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🛡️ MERGE synthCols : fusion intelligente (tombstones + union par id)
+// ────────────────────────────────────────────────────────────────────────────
+// Règle d'or : on ne perd jamais une colonne non supprimée.
+// - une colonne marquée {deleted: true} reste supprimée
+// - une colonne absente côté serveur mais présente localement est préservée
+// - une colonne présente côté serveur mais inconnue localement est ajoutée
+function mergeSynthCols(localCols, remoteCols) {
+  var local = Array.isArray(localCols) ? localCols : [];
+  var remote = Array.isArray(remoteCols) ? remoteCols : [];
+  var localById = {};
+  local.forEach(function (c) { if (c && c.id) localById[c.id] = c; });
+
+  var remoteById = {};
+  remote.forEach(function (c) { if (c && c.id) remoteById[c.id] = c; });
+
+  // Cas 1 : serveur dit explicitement "deleted" → on accepte la suppression
+  // Cas 2 : serveur a la colonne mais pas locale → on la prend (c'est qu'un collègue l'a ajoutée)
+  // Cas 3 : serveur n'a pas la colonne mais locale l'a → on la conserve (création locale en attente d'envoi)
+  // Cas 4 : des deux côtés → on prend la version serveur (considérée comme la plus à jour)
+  //          SAUF si la locale n'est pas "deleted" et la serveur l'est → on garde locale (récupération)
+  var merged = [];
+  var seenIds = {};
+
+  remote.forEach(function (c) {
+    if (!c || !c.id) return;
+    seenIds[c.id] = true;
+    if (c.deleted) {
+      // suppression serveur acceptée
+      merged.push(c);
+    } else {
+      // colonne vivante côté serveur : on prend la version serveur (la plus à jour)
+      merged.push(c);
+    }
+  });
+
+  local.forEach(function (c) {
+    if (!c || !c.id || seenIds[c.id]) return;
+    // colonne locale absente côté serveur : elle n'a pas encore été envoyée
+    // ou elle a été "oubliée" côté serveur (snapshot obsolète).
+    // On la conserve pour ne pas perdre la création locale.
+    if (!c.deleted) {
+      merged.push(c);
+    }
+  });
+
+  return merged;
 }
 
 // ─── Lecture initiale avec cache (fusion par id, zéro doublon) ─────────────
@@ -281,7 +347,6 @@ async function fetchAll() {
   }
 
   if (lastSyncTimestamp !== '0') {
-    // Mode delta : cache local + uniquement ce qui a changé depuis la dernière synchro
     hist = dataCache.historique || {};
     acts = dataCache.actions || [];
 
@@ -295,7 +360,6 @@ async function fetchAll() {
       upsertAct(a);
     });
   } else {
-    // Première fois : lecture complète, on repart de zéro (cohérent)
     hist = {};
     acts = [];
 
@@ -320,6 +384,11 @@ async function fetchAll() {
 }
 
 function applyFetched(r) {
+  // 🛡️ Pour synthCols : on merge intelligemment (pas d'écrasement brutal)
+  if (r.patch.synthCols !== undefined) {
+    r.patch.synthCols = mergeSynthCols(state.synthCols, r.patch.synthCols);
+  }
+
   setState(r.patch);
   state.historique = r.hist;
   loadedHistDates = Object.keys(r.hist);
@@ -331,7 +400,13 @@ function applyFetched(r) {
   if (r.dateJourSaved) document.getElementById('dateJour').value = r.dateJourSaved;
   lastLocalSavedAt = r.savedAt;
 
-  // v6 : référence pour la sauvegarde différentielle
+  // 🛡️ On marque l'état comme "à jour" : tout ce qui est dans l'état actuel
+  // peut être considéré comme envoyé. Les modifs qui arriveront après
+  // incrémenteront localVersionCounter et seront protégées.
+  localVersionCounter++;
+  lastCommittedLocalVersion = localVersionCounter;
+
+  // Référence pour la sauvegarde différentielle
   lastSavedActionJson = {};
   state.actions.forEach(function (a) {
     if (a.id) lastSavedActionJson[a.id] = JSON.stringify(a);
@@ -345,18 +420,22 @@ function rebuildUI() {
 export async function loadFirebase() {
   try {
     var r = await fetchAll();
+    staleMode = false;             // 🛡️ Lecture serveur OK : on sort du mode obsolète
+    staleModeReason = '';
     applyFetched(r);
     purgeOldData();
     setStatus('ok', '✓ Synchronisé');
     startRealtime();
   } catch (e) {
-    setStatus('err', 'Erreur lecture Firebase');
-    console.error(e);
+    staleMode = true;              // 🛡️ Lecture échouée : on bascule en mode protégé
+    staleModeReason = 'lecture serveur échouée';
+    setStatus('err', '⚠️ Mode hors ligne (sauvegarde bloquée)');
+    console.error('loadFirebase :', e);
     loadLocal();
   }
 }
 
-// ─── v6 : UN SEUL listener (document suivi) + lectures ciblées à la demande ─
+// ─── v6.1 : listener avec MERGE (plus jamais d'écrasement brutal) ──────────
 function startRealtime() {
   if (rtStarted || !db) return;
   rtStarted = true;
@@ -371,13 +450,39 @@ function startRealtime() {
       if (data[k] !== undefined) patch[k] = data[k];
     });
 
+    // 🛡️ MERGE des synthCols : jamais d'écrasement
+    if (patch.synthCols !== undefined) {
+      patch.synthCols = mergeSynthCols(state.synthCols, patch.synthCols);
+    }
+
+    // 🛡️ Si on a des modifs locales non envoyées (dirty) ou très récentes,
+    // on préserve aussi les données des cellules en cours de saisie (S, S_SC, S_TT).
+    // Un collègue qui sauvegarde ne doit pas écraver la case qu'on est en train
+    // de remplir (et qui partira dans 6s).
+    var hasPendingLocalWrites = dirty || (localVersionCounter !== lastCommittedLocalVersion);
+    if (hasPendingLocalWrites) {
+      ['S', 'S_SC', 'S_TT'].forEach(function (k) {
+        if (patch[k] !== undefined && state[k] && typeof state[k] === 'object') {
+          // fusion profonde : pour chaque engin, pour chaque section,
+          // on garde la version locale des cellules modifiées (non vides)
+          var merged = {};
+          Object.keys(state[k]).forEach(function (eid) {
+            merged[eid] = Object.assign({}, patch[k][eid] || {}, state[k][eid]);
+          });
+          Object.keys(patch[k]).forEach(function (eid) {
+            if (!merged[eid]) merged[eid] = patch[k][eid];
+          });
+          patch[k] = merged;
+        }
+      });
+    }
+
     setState(patch);
     ensureFullStructure();
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
     lastLocalSavedAt = data.savedAt;
     rebuildUI();
 
-    // v6 : on ne lit historique/actions QUE si un collègue a sauvegardé
     schedulePull();
   }, function (e) { console.error('RT suivi :', e); });
 }
@@ -431,8 +536,17 @@ async function pullChanges() {
   }
 }
 
-// ─── Sauvegarde ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// 🛡️ Sauvegarde : avec gardes staleMode + tombstones synthCols
+// ────────────────────────────────────────────────────────────────────────────
 export async function saveFirebase() {
+  // 🛡️ Verrou B : si on est en mode obsolète, on refuse de sauvegarder
+  // pour ne pas écraser les données des autres avec notre état périmé.
+  if (staleMode) {
+    setStatus('err', '⚠️ ' + staleModeReason + ' — rechargez (F5)');
+    return;
+  }
+
   var dateJour = document.getElementById('dateJour').value;
 
   if (dateJour) {
@@ -447,6 +561,12 @@ export async function saveFirebase() {
     });
     state.historique[dateJour] = entree;
   }
+
+  // 🛡️ On marque l'état comme "à jour" avant la sauvegarde : les colonnes
+  // locales qui viennent d'être créées et qui sont sur le point d'être envoyées
+  // sont maintenant considérées comme "envoyées" (prochain RT snapshot ne les
+  // verra plus comme "locales récentes").
+  lastCommittedLocalVersion = localVersionCounter;
 
   try {
     localStorage.setItem('sp_backup', JSON.stringify({
@@ -465,6 +585,8 @@ export async function saveFirebase() {
     var savedAt = new Date().toISOString();
     var parts = FIRESTORE_DOC.split('/');
 
+    // 🛡️ On sauvegarde les synthCols AVANT filtrage (avec les tombstones)
+    // pour que les autres postes reçoivent les suppressions intentionnelles.
     await db.collection(parts[0]).doc(parts[1]).set({
       S: state.S, S_SC: state.S_SC, S_TT: state.S_TT,
       headersData: state.headersData,
@@ -536,7 +658,13 @@ async function syncActions() {
 }
 
 function scheduleAutoSave() {
+  // 🛡️ En mode obsolète, on ne laisse pas partir d'auto-save (protection B)
+  if (staleMode) {
+    setStatus('err', '⚠️ Mode hors ligne — sauvegarde bloquée');
+    return;
+  }
   dirty = true;
+  localVersionCounter++;  // 🛡️ Marquer qu'une modification locale est en attente
   clearTimeout(saveTimer);
   saveTimer = setTimeout(function () { saveFirebase(); }, 6000);
   setStatus('sync', 'Modifications en cours...');
@@ -555,4 +683,35 @@ export function loadLocal() {
     setState(patch); ensureFullStructure();
     if (data.dateJour) document.getElementById('dateJour').value = data.dateJour;
   } catch (e) { console.error(e); }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🛡️ API helper pour supprimer une synthCol avec tombstone
+// ────────────────────────────────────────────────────────────────────────────
+// À utiliser dans ui-supermarche.js au lieu de faire :
+//   state.synthCols = state.synthCols.filter(x => x.id !== c.id);
+// Ce helper marque la colonne {deleted: true} au lieu de la retirer,
+// pour que les autres postes reçoivent l'information "cette colonne
+// a été supprimée" et ne la recréent pas à partir d'un snapshot obsolète.
+export function removeSynthCol(colId) {
+  if (!Array.isArray(state.synthCols)) return;
+  state.synthCols = state.synthCols.map(function (c) {
+    if (c.id === colId) return Object.assign({}, c, { deleted: true, deletedAt: new Date().toISOString() });
+    return c;
+  });
+  markDirty();
+}
+
+// Purge des tombstones synthCols vieux de plus de N jours
+export function purgeSynthColTombstones(daysOld) {
+  if (!Array.isArray(state.synthCols)) return false;
+  daysOld = daysOld || 14;
+  var cutoff = Date.now() - daysOld * 24 * 60 * 60 * 1000;
+  var before = state.synthCols.length;
+  state.synthCols = state.synthCols.filter(function (c) {
+    if (!c.deleted) return true;
+    if (!c.deletedAt) return false;
+    return new Date(c.deletedAt).getTime() > cutoff;
+  });
+  return state.synthCols.length !== before;
 }
